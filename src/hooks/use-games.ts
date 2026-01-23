@@ -39,11 +39,8 @@ export function useGames(options: UseGamesOptions = {}) {
       // Filter by date if provided
       // Use Hawaii timezone (HST = UTC-10) for date filtering
       if (options.date) {
-        // Format the date as YYYY-MM-DD in local time
-        const year = options.date.getFullYear()
-        const month = String(options.date.getMonth() + 1).padStart(2, '0')
-        const day = String(options.date.getDate()).padStart(2, '0')
-        const dateStr = `${year}-${month}-${day}`
+        // Format the date as YYYY-MM-DD in Hawaii time
+        const dateStr = options.date.toLocaleDateString('en-CA', { timeZone: 'Pacific/Honolulu' })
 
         // Create start and end times in Hawaii timezone (UTC-10)
         const startOfDay = new Date(`${dateStr}T00:00:00-10:00`)

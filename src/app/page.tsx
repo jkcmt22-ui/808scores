@@ -15,10 +15,15 @@ const COMPETITIVE_GAME_TYPES: GameType[] = ['regular_season', 'playoff', 'champi
 // Non-competitive game types shown in the "Other Games" section
 const OTHER_GAME_TYPES: GameType[] = ['exhibition', 'scrimmage']
 
-// Helper to check if date is today
+// Helper to get date string in Hawaii time
+function getHawaiiDateStr(date: Date): string {
+  return date.toLocaleDateString('en-CA', { timeZone: 'Pacific/Honolulu' })
+}
+
+// Helper to check if date is today in Hawaii time
 function isToday(date: Date): boolean {
   const today = new Date()
-  return date.toDateString() === today.toDateString()
+  return getHawaiiDateStr(date) === getHawaiiDateStr(today)
 }
 
 // Helper to format date for display
@@ -29,11 +34,16 @@ function formatDateDisplay(date: Date): string {
   const tomorrow = new Date(today)
   tomorrow.setDate(tomorrow.getDate() + 1)
 
-  if (date.toDateString() === today.toDateString()) {
+  const dateStr = getHawaiiDateStr(date)
+  const todayStr = getHawaiiDateStr(today)
+  const yesterdayStr = getHawaiiDateStr(yesterday)
+  const tomorrowStr = getHawaiiDateStr(tomorrow)
+
+  if (dateStr === todayStr) {
     return 'Today'
-  } else if (date.toDateString() === yesterday.toDateString()) {
+  } else if (dateStr === yesterdayStr) {
     return 'Yesterday'
-  } else if (date.toDateString() === tomorrow.toDateString()) {
+  } else if (dateStr === tomorrowStr) {
     return 'Tomorrow'
   }
   return formatFullDate(date)
@@ -219,7 +229,7 @@ export default function HomePage() {
         {/* Full Date Display (when not today/yesterday/tomorrow) */}
         {!['Today', 'Yesterday', 'Tomorrow'].includes(formatDateDisplay(selectedDate)) && (
           <p className="mb-4 font-display text-sm text-foreground-muted">
-            {selectedDate.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' })}
+            {selectedDate.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric', timeZone: 'Pacific/Honolulu' })}
           </p>
         )}
 
