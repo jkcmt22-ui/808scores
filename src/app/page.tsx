@@ -207,14 +207,18 @@ export default function HomePage() {
               <ChevronLeft className="h-5 w-5" />
             </button>
 
-            {!isToday(selectedDate) && (
-              <button
-                onClick={goToToday}
-                className="h-10 px-3 border-2 border-neon-pink bg-neon-pink/10 text-neon-pink font-display text-xs font-bold uppercase tracking-wider hover:bg-neon-pink/20 transition-colors"
-              >
-                Today
-              </button>
-            )}
+            <button
+              onClick={goToToday}
+              className={`h-10 px-3 border-2 font-display text-xs font-bold uppercase tracking-wider transition-colors ${
+                isToday(selectedDate)
+                  ? 'border-neon-yellow bg-neon-yellow/10 text-neon-yellow'
+                  : 'border-neon-pink bg-neon-pink/10 text-neon-pink hover:bg-neon-pink/20'
+              }`}
+            >
+              {isToday(selectedDate)
+                ? 'Today'
+                : selectedDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric', timeZone: 'Pacific/Honolulu' })}
+            </button>
 
             <button
               onClick={goToNextDay}
