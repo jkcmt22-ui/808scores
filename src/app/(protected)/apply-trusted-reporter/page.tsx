@@ -13,6 +13,7 @@ import {
   Zap,
   Award,
   Star,
+  Key,
 } from 'lucide-react'
 import { Button, Card, Input } from '@/components/ui'
 import { useRequireAuth } from '@/hooks'
@@ -43,6 +44,10 @@ export default function ApplyTrustedReporterPage() {
   const [schoolAffiliation, setSchoolAffiliation] = useState('')
   const [reason, setReason] = useState('')
 
+  // Invite code state
+  const [inviteCode, setInviteCode] = useState('')
+  const [isRedeemingCode, setIsRedeemingCode] = useState(false)
+
   // Check for existing application
   useEffect(() => {
     const checkExistingApplication = async () => {
@@ -66,6 +71,44 @@ export default function ApplyTrustedReporterPage() {
       checkExistingApplication()
     }
   }, [profile, supabase])
+
+  // Handle invite code redemption
+  const handleRedeemCode = async (e: React.FormEvent) => {
+    e.preventDefault()
+
+    if (!inviteCode.trim()) {
+      setMessage({ type: 'error', text: 'Please enter an invite code' })
+      return
+    }
+
+    setIsRedeemingCode(true)
+    setMessage(null)
+
+    try {
+      // Call the database function to redeem the code
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const { data, error } = await (supabase as any).rpc('redeem_trusted_reporter_code', {
+        code_input: inviteCode.trim().toUpperCase(),
+      })
+
+      if (error) throw error
+
+      const result = data as { success: boolean; error?: string; message?: string }
+
+      if (result.success) {
+        setMessage({ type: 'success', text: result.message || 'You are now a Trusted Reporter!' })
+        // Redirect to profile after a short delay
+        setTimeout(() => router.push('/profile'), 2000)
+      } else {
+        setMessage({ type: 'error', text: result.error || 'Failed to redeem code' })
+      }
+    } catch (err) {
+      console.error('Error redeeming code:', err)
+      setMessage({ type: 'error', text: 'Failed to redeem code. Please try again.' })
+    } finally {
+      setIsRedeemingCode(false)
+    }
+  }
 
   // Handle form submission
   const handleSubmit = async (e: React.FormEvent) => {
@@ -298,6 +341,49 @@ export default function ApplyTrustedReporterPage() {
             <span>{message.text}</span>
           </div>
         )}
+
+        {/* Invite Code Section */}
+        <Card className="mb-6 border-2 border-neon-green/30 bg-neon-green/5">
+          <form onSubmit={handleRedeemCode} className="p-4">
+            <div className="flex items-center gap-2 mb-3">
+              <Key className="h-5 w-5 text-neon-green" />
+              <h3 className="font-display font-bold text-neon-green">Have an Invite Code?</h3>
+            </div>
+            <p className="text-sm text-foreground-muted mb-4">
+              If you received an invite code from a trusted source, enter it below to instantly become a Trusted Reporter.
+            </p>
+            <div className="flex gap-3">
+              <Input
+                type="text"
+                placeholder="Enter code (e.g., ABC12345)"
+                value={inviteCode}
+                onChange={(e) => setInviteCode(e.target.value.toUpperCase())}
+                className="flex-1 font-mono uppercase"
+                maxLength={10}
+              />
+              <Button
+                type="submit"
+                disabled={isRedeemingCode || !inviteCode.trim()}
+                className="bg-neon-green hover:bg-neon-green/80 text-background"
+              >
+                {isRedeemingCode ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  'Redeem'
+                )}
+              </Button>
+            </div>
+          </form>
+        </Card>
+
+        <div className="relative mb-6">
+          <div className="absolute inset-0 flex items-center">
+            <div className="w-full border-t border-border"></div>
+          </div>
+          <div className="relative flex justify-center text-xs uppercase">
+            <span className="bg-background px-3 text-foreground-subtle">Or apply below</span>
+          </div>
+        </div>
 
         {/* Application Form */}
         <Card className="border-2 border-border">

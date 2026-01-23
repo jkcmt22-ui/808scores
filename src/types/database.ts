@@ -13,6 +13,11 @@ export type UserTier = 'new' | 'standard' | 'verified' | 'elite' | 'trusted'
 export type VerificationMethod = 'trusted' | 'majority' | 'timer' | 'manual'
 export type SportGender = 'boys' | 'girls' | 'coed'
 export type GameType = 'regular_season' | 'playoff' | 'championship' | 'tournament' | 'exhibition' | 'scrimmage'
+export type BanType = 'timeout_24h' | 'ban_1week' | 'permanent'
+export type ImportStatus = 'pending' | 'processing' | 'completed' | 'failed'
+export type PrizeType = 'gift_card' | 'merchandise' | 'cash' | 'experience'
+export type RaffleType = 'monthly' | 'season_end' | 'special'
+export type RaffleStatus = 'upcoming' | 'open' | 'closed' | 'drawing' | 'completed' | 'canceled'
 
 // Periods configuration for different sport types
 export interface PeriodsConfig {
@@ -135,9 +140,13 @@ export interface Database {
           accuracy_rate: number | null
           submission_count: number
           verified_count: number
+          strike_count: number
+          is_banned: boolean
+          ban_expires_at: string | null
+          onboarding_completed: boolean
           created_at: string
         }
-        Insert: Omit<Database['public']['Tables']['users']['Row'], 'id' | 'created_at' | 'reputation_score' | 'tier' | 'is_trusted_reporter' | 'total_points' | 'season_points' | 'submission_count' | 'verified_count'>
+        Insert: Omit<Database['public']['Tables']['users']['Row'], 'id' | 'created_at' | 'reputation_score' | 'tier' | 'is_trusted_reporter' | 'total_points' | 'season_points' | 'submission_count' | 'verified_count' | 'strike_count' | 'is_banned' | 'onboarding_completed'>
         Update: Partial<Database['public']['Tables']['users']['Insert']>
       }
       submissions: {
@@ -232,6 +241,16 @@ export interface Database {
         }
         Insert: Omit<Database['public']['Tables']['team_follows']['Row'], 'created_at'>
         Update: Partial<Database['public']['Tables']['team_follows']['Insert']>
+      }
+      sport_follows: {
+        Row: {
+          user_id: string
+          sport_id: string
+          notify: boolean
+          created_at: string
+        }
+        Insert: Omit<Database['public']['Tables']['sport_follows']['Row'], 'created_at'>
+        Update: Partial<Database['public']['Tables']['sport_follows']['Insert']>
       }
       notifications: {
         Row: {
@@ -343,6 +362,155 @@ export interface Database {
         Insert: Omit<Database['public']['Tables']['game_rosters']['Row'], 'id' | 'created_at' | 'is_starter'>
         Update: Partial<Database['public']['Tables']['game_rosters']['Insert']>
       }
+      user_strikes: {
+        Row: {
+          id: string
+          user_id: string
+          reason: string
+          details: string | null
+          issued_by: string | null
+          submission_id: string | null
+          active: boolean
+          created_at: string
+        }
+        Insert: Omit<Database['public']['Tables']['user_strikes']['Row'], 'id' | 'created_at' | 'active'>
+        Update: Partial<Database['public']['Tables']['user_strikes']['Insert']>
+      }
+      user_bans: {
+        Row: {
+          id: string
+          user_id: string
+          ban_type: BanType
+          reason: string
+          strike_count: number
+          issued_by: string | null
+          starts_at: string
+          expires_at: string | null
+          active: boolean
+          created_at: string
+        }
+        Insert: Omit<Database['public']['Tables']['user_bans']['Row'], 'id' | 'created_at' | 'active' | 'starts_at'>
+        Update: Partial<Database['public']['Tables']['user_bans']['Insert']>
+      }
+      scraped_scores: {
+        Row: {
+          id: string
+          game_id: string | null
+          source: string
+          home_score: number
+          away_score: number
+          game_status: string
+          scraped_at: string
+          raw_data: Json | null
+          matched: boolean
+          match_confidence: number | null
+        }
+        Insert: Omit<Database['public']['Tables']['scraped_scores']['Row'], 'id' | 'scraped_at' | 'matched'>
+        Update: Partial<Database['public']['Tables']['scraped_scores']['Insert']>
+      }
+      schedule_imports: {
+        Row: {
+          id: string
+          imported_by: string | null
+          source: string
+          filename: string | null
+          games_created: number
+          games_updated: number
+          games_skipped: number
+          errors: Json
+          status: ImportStatus
+          started_at: string | null
+          completed_at: string | null
+          created_at: string
+        }
+        Insert: Omit<Database['public']['Tables']['schedule_imports']['Row'], 'id' | 'created_at' | 'games_created' | 'games_updated' | 'games_skipped' | 'status'>
+        Update: Partial<Database['public']['Tables']['schedule_imports']['Insert']>
+      }
+      prizes: {
+        Row: {
+          id: string
+          name: string
+          description: string | null
+          value_cents: number
+          prize_type: PrizeType
+          sponsor: string | null
+          image_url: string | null
+          quantity: number
+          active: boolean
+          created_at: string
+          updated_at: string
+        }
+        Insert: Omit<Database['public']['Tables']['prizes']['Row'], 'id' | 'created_at' | 'updated_at' | 'active' | 'quantity'>
+        Update: Partial<Database['public']['Tables']['prizes']['Insert']>
+      }
+      raffles: {
+        Row: {
+          id: string
+          name: string
+          description: string | null
+          raffle_type: RaffleType
+          prize_id: string | null
+          entries_open_at: string
+          entries_close_at: string
+          drawing_at: string
+          winner_count: number
+          min_points_to_enter: number
+          points_per_entry: number
+          max_entries_per_user: number | null
+          status: RaffleStatus
+          legal_disclaimer: string | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: Omit<Database['public']['Tables']['raffles']['Row'], 'id' | 'created_at' | 'updated_at' | 'status' | 'winner_count' | 'min_points_to_enter' | 'points_per_entry'>
+        Update: Partial<Database['public']['Tables']['raffles']['Insert']>
+      }
+      raffle_entries: {
+        Row: {
+          id: string
+          raffle_id: string
+          user_id: string
+          entry_count: number
+          points_used: number
+          created_at: string
+          updated_at: string
+        }
+        Insert: Omit<Database['public']['Tables']['raffle_entries']['Row'], 'id' | 'created_at' | 'updated_at'>
+        Update: Partial<Database['public']['Tables']['raffle_entries']['Insert']>
+      }
+      raffle_winners: {
+        Row: {
+          id: string
+          raffle_id: string
+          user_id: string
+          prize_id: string | null
+          position: number
+          winning_entry_number: number | null
+          claimed: boolean
+          claimed_at: string | null
+          claim_notes: string | null
+          created_at: string
+        }
+        Insert: Omit<Database['public']['Tables']['raffle_winners']['Row'], 'id' | 'created_at' | 'claimed'>
+        Update: Partial<Database['public']['Tables']['raffle_winners']['Insert']>
+      }
+      trusted_reporter_codes: {
+        Row: {
+          id: string
+          code: string
+          created_by: string | null
+          redeemed_by: string | null
+          redeemed_at: string | null
+          expires_at: string | null
+          max_uses: number
+          use_count: number
+          note: string | null
+          active: boolean
+          created_at: string
+        }
+        Insert: Omit<Database['public']['Tables']['trusted_reporter_codes']['Row'], 'id' | 'created_at' | 'use_count' | 'active'>
+        Update: Partial<Database['public']['Tables']['trusted_reporter_codes']['Insert']>
+      }
     }
   }
 }
@@ -362,6 +530,16 @@ export type ChatReport = Database['public']['Tables']['chat_reports']['Row']
 export type Player = Database['public']['Tables']['players']['Row']
 export type PlayerSeason = Database['public']['Tables']['player_seasons']['Row']
 export type GameRoster = Database['public']['Tables']['game_rosters']['Row']
+export type UserStrike = Database['public']['Tables']['user_strikes']['Row']
+export type UserBan = Database['public']['Tables']['user_bans']['Row']
+export type ScrapedScore = Database['public']['Tables']['scraped_scores']['Row']
+export type ScheduleImport = Database['public']['Tables']['schedule_imports']['Row']
+export type Prize = Database['public']['Tables']['prizes']['Row']
+export type Raffle = Database['public']['Tables']['raffles']['Row']
+export type RaffleEntry = Database['public']['Tables']['raffle_entries']['Row']
+export type RaffleWinner = Database['public']['Tables']['raffle_winners']['Row']
+export type SportFollow = Database['public']['Tables']['sport_follows']['Row']
+export type TrustedReporterCode = Database['public']['Tables']['trusted_reporter_codes']['Row']
 
 // Extended types with relations
 export interface GameWithTeams extends Game {
@@ -401,4 +579,40 @@ export interface TeamRoster {
 export interface GameWithRosters extends GameWithTeams {
   home_roster?: TeamRoster
   away_roster?: TeamRoster
+}
+
+// Strike/Ban extended types
+export interface UserStrikeWithDetails extends UserStrike {
+  user?: Pick<User, 'id' | 'display_name' | 'email'>
+  issued_by_user?: Pick<User, 'id' | 'display_name'>
+  submission?: Submission
+}
+
+export interface UserBanWithDetails extends UserBan {
+  user?: Pick<User, 'id' | 'display_name' | 'email'>
+  issued_by_user?: Pick<User, 'id' | 'display_name'>
+}
+
+// Raffle extended types
+export interface RaffleWithPrize extends Raffle {
+  prize: Prize | null
+}
+
+export interface RaffleEntryWithUser extends RaffleEntry {
+  user: Pick<User, 'id' | 'display_name' | 'avatar_url'>
+}
+
+export interface RaffleWinnerWithDetails extends RaffleWinner {
+  user: Pick<User, 'id' | 'display_name' | 'avatar_url'>
+  prize: Prize | null
+  raffle?: Raffle
+}
+
+// Ban status for checking user access
+export interface BanStatus {
+  isBanned: boolean
+  banType?: BanType
+  reason?: string
+  expiresAt?: string
+  isPermanent?: boolean
 }

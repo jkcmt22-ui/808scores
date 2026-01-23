@@ -1,20 +1,69 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useMemo } from 'react'
 import { Header } from '@/components/layout'
 import { GameCard, SportFilter } from '@/components/game'
-import { useLiveGames } from '@/hooks'
-import { Radio, Loader2 } from 'lucide-react'
+import { useLiveGames, useAuth, useFavoriteTeams, useFavoriteSports } from '@/hooks'
+import { Radio, Loader2, Star } from 'lucide-react'
+import type { GameWithTeams } from '@/types/database'
+
+// Sort games with favorites first
+function sortByFavorites(
+  games: GameWithTeams[],
+  favoriteTeamIds: string[],
+  favoriteSportIds: string[]
+): { favorites: GameWithTeams[]; others: GameWithTeams[] } {
+  const favorites: GameWithTeams[] = []
+  const others: GameWithTeams[] = []
+
+  games.forEach((game) => {
+    const isFavorite =
+      favoriteTeamIds.includes(game.home_team.id) ||
+      favoriteTeamIds.includes(game.away_team.id) ||
+      favoriteSportIds.includes(game.sport.id)
+
+    if (isFavorite) {
+      favorites.push(game)
+    } else {
+      others.push(game)
+    }
+  })
+
+  return { favorites, others }
+}
 
 export default function LivePage() {
   const [selectedSport, setSelectedSport] = useState('all')
   const { games, isLoading } = useLiveGames()
+
+  // Auth and favorites
+  const { user } = useAuth()
+  const { favoriteTeams } = useFavoriteTeams(user?.id)
+  const { favoriteSports } = useFavoriteSports(user?.id)
+
+  // Get favorite IDs
+  const favoriteTeamIds = useMemo(
+    () => favoriteTeams.map((f) => f.school_id),
+    [favoriteTeams]
+  )
+  const favoriteSportIds = useMemo(
+    () => favoriteSports.map((f) => f.sport_id),
+    [favoriteSports]
+  )
+
+  const hasFavorites = favoriteTeamIds.length > 0 || favoriteSportIds.length > 0
 
   // Filter by sport
   const filteredGames =
     selectedSport === 'all'
       ? games
       : games.filter((g) => g.sport?.code === selectedSport || g.sport?.name?.toLowerCase().includes(selectedSport.toLowerCase()))
+
+  // Sort with favorites first
+  const sortedGames = useMemo(
+    () => sortByFavorites(filteredGames, favoriteTeamIds, favoriteSportIds),
+    [filteredGames, favoriteTeamIds, favoriteSportIds]
+  )
 
   return (
     <>
@@ -42,7 +91,23 @@ export default function LivePage() {
         {/* Live Games */}
         {!isLoading && filteredGames.length > 0 && (
           <div className="space-y-3">
-            {filteredGames.map((game) => (
+            {/* Favorite live games */}
+            {hasFavorites && sortedGames.favorites.length > 0 && (
+              <>
+                <div className="flex items-center gap-2 text-xs text-neon-yellow">
+                  <Star className="h-3 w-3 fill-current" />
+                  <span className="font-display uppercase tracking-wider">Your Teams</span>
+                </div>
+                {sortedGames.favorites.map((game) => (
+                  <GameCard key={game.id} game={game} showSport />
+                ))}
+                {sortedGames.others.length > 0 && (
+                  <div className="border-t border-border/50 pt-3 mt-3" />
+                )}
+              </>
+            )}
+            {/* Other live games */}
+            {(hasFavorites ? sortedGames.others : filteredGames).map((game) => (
               <GameCard key={game.id} game={game} showSport />
             ))}
           </div>

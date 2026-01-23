@@ -1,13 +1,14 @@
 'use client'
 
 import { useState, useMemo } from 'react'
-import { Header } from '@/components/layout'
+import { Header, Footer } from '@/components/layout'
 import { GameCard, SportFilter } from '@/components/game'
 import { GameCardSkeleton } from '@/components/ui'
-import { useGames } from '@/hooks'
+import { FavoritesModal } from '@/components/onboarding'
+import { useGames, useAuth, useFavoriteTeams, useFavoriteSports } from '@/hooks'
 import { formatFullDate } from '@/lib/utils'
-import { Calendar, ChevronDown, ChevronUp, ChevronLeft, ChevronRight } from 'lucide-react'
-import type { GameType } from '@/types/database'
+import { Calendar, ChevronDown, ChevronUp, ChevronLeft, ChevronRight, Star } from 'lucide-react'
+import type { GameType, GameWithTeams } from '@/types/database'
 
 // Main competitive game types shown in the main feed
 const COMPETITIVE_GAME_TYPES: GameType[] = ['regular_season', 'playoff', 'championship', 'tournament']
@@ -38,10 +39,57 @@ function formatDateDisplay(date: Date): string {
   return formatFullDate(date)
 }
 
+// Sort games with favorites first
+function sortByFavorites(
+  games: GameWithTeams[],
+  favoriteTeamIds: string[],
+  favoriteSportIds: string[]
+): { favorites: GameWithTeams[]; others: GameWithTeams[] } {
+  const favorites: GameWithTeams[] = []
+  const others: GameWithTeams[] = []
+
+  games.forEach((game) => {
+    const isFavorite =
+      favoriteTeamIds.includes(game.home_team.id) ||
+      favoriteTeamIds.includes(game.away_team.id) ||
+      favoriteSportIds.includes(game.sport.id)
+
+    if (isFavorite) {
+      favorites.push(game)
+    } else {
+      others.push(game)
+    }
+  })
+
+  return { favorites, others }
+}
+
 export default function HomePage() {
   const [selectedSport, setSelectedSport] = useState('all')
   const [otherGamesExpanded, setOtherGamesExpanded] = useState(false)
   const [selectedDate, setSelectedDate] = useState(() => new Date())
+  const [showOnboarding, setShowOnboarding] = useState(false)
+
+  // Auth and favorites
+  const { user, profile, isAuthenticated, refreshProfile } = useAuth()
+  const { favoriteTeams } = useFavoriteTeams(user?.id)
+  const { favoriteSports } = useFavoriteSports(user?.id)
+
+  // Get favorite IDs
+  const favoriteTeamIds = useMemo(
+    () => favoriteTeams.map((f) => f.school_id),
+    [favoriteTeams]
+  )
+  const favoriteSportIds = useMemo(
+    () => favoriteSports.map((f) => f.sport_id),
+    [favoriteSports]
+  )
+
+  // Check if onboarding should be shown
+  const shouldShowOnboarding = useMemo(
+    () => isAuthenticated && profile && !profile.onboarding_completed,
+    [isAuthenticated, profile]
+  )
 
   // Navigate to previous day
   const goToPreviousDay = () => {
@@ -80,14 +128,45 @@ export default function HomePage() {
     gameTypes: OTHER_GAME_TYPES,
   })
 
+  // Categorize games by status
   const liveGames = games.filter((g) => g.status === 'in_progress')
   const scheduledGames = games.filter((g) => g.status === 'scheduled')
   const finalGames = games.filter((g) => g.status === 'final')
+
+  // Sort each category with favorites first
+  const hasFavorites = favoriteTeamIds.length > 0 || favoriteSportIds.length > 0
+
+  const sortedLive = useMemo(
+    () => sortByFavorites(liveGames, favoriteTeamIds, favoriteSportIds),
+    [liveGames, favoriteTeamIds, favoriteSportIds]
+  )
+  const sortedScheduled = useMemo(
+    () => sortByFavorites(scheduledGames, favoriteTeamIds, favoriteSportIds),
+    [scheduledGames, favoriteTeamIds, favoriteSportIds]
+  )
+  const sortedFinal = useMemo(
+    () => sortByFavorites(finalGames, favoriteTeamIds, favoriteSportIds),
+    [finalGames, favoriteTeamIds, favoriteSportIds]
+  )
+
+  // Handle onboarding complete
+  const handleOnboardingComplete = () => {
+    setShowOnboarding(false)
+    refreshProfile()
+  }
 
   return (
     <>
       <Header />
       <SportFilter selected={selectedSport} onChange={setSelectedSport} />
+
+      {/* Onboarding Modal */}
+      {(shouldShowOnboarding || showOnboarding) && user && (
+        <FavoritesModal
+          userId={user.id}
+          onComplete={handleOnboardingComplete}
+        />
+      )}
 
       <main className="px-4 pb-24 grid-bg">
         {/* Date Navigation */}
@@ -162,7 +241,23 @@ export default function HomePage() {
               <span className="font-display text-xs text-foreground-muted">({liveGames.length})</span>
             </div>
             <div className="space-y-3">
-              {liveGames.map((game) => (
+              {/* Favorite live games */}
+              {hasFavorites && sortedLive.favorites.length > 0 && (
+                <>
+                  <div className="flex items-center gap-2 text-xs text-neon-yellow">
+                    <Star className="h-3 w-3 fill-current" />
+                    <span className="font-display uppercase tracking-wider">Your Teams</span>
+                  </div>
+                  {sortedLive.favorites.map((game) => (
+                    <GameCard key={game.id} game={game} showSport />
+                  ))}
+                  {sortedLive.others.length > 0 && (
+                    <div className="border-t border-border/50 pt-3 mt-3" />
+                  )}
+                </>
+              )}
+              {/* Other live games */}
+              {(hasFavorites ? sortedLive.others : liveGames).map((game) => (
                 <GameCard key={game.id} game={game} showSport />
               ))}
             </div>
@@ -177,7 +272,23 @@ export default function HomePage() {
               <span className="font-display text-xs text-foreground-muted">({scheduledGames.length})</span>
             </div>
             <div className="space-y-3">
-              {scheduledGames.map((game) => (
+              {/* Favorite upcoming games */}
+              {hasFavorites && sortedScheduled.favorites.length > 0 && (
+                <>
+                  <div className="flex items-center gap-2 text-xs text-neon-yellow">
+                    <Star className="h-3 w-3 fill-current" />
+                    <span className="font-display uppercase tracking-wider">Your Teams</span>
+                  </div>
+                  {sortedScheduled.favorites.map((game) => (
+                    <GameCard key={game.id} game={game} showSport />
+                  ))}
+                  {sortedScheduled.others.length > 0 && (
+                    <div className="border-t border-border/50 pt-3 mt-3" />
+                  )}
+                </>
+              )}
+              {/* Other upcoming games */}
+              {(hasFavorites ? sortedScheduled.others : scheduledGames).map((game) => (
                 <GameCard key={game.id} game={game} showSport />
               ))}
             </div>
@@ -192,7 +303,23 @@ export default function HomePage() {
               <span className="font-display text-xs text-foreground-muted">({finalGames.length})</span>
             </div>
             <div className="space-y-3">
-              {finalGames.map((game) => (
+              {/* Favorite final games */}
+              {hasFavorites && sortedFinal.favorites.length > 0 && (
+                <>
+                  <div className="flex items-center gap-2 text-xs text-neon-yellow">
+                    <Star className="h-3 w-3 fill-current" />
+                    <span className="font-display uppercase tracking-wider">Your Teams</span>
+                  </div>
+                  {sortedFinal.favorites.map((game) => (
+                    <GameCard key={game.id} game={game} showSport />
+                  ))}
+                  {sortedFinal.others.length > 0 && (
+                    <div className="border-t border-border/50 pt-3 mt-3" />
+                  )}
+                </>
+              )}
+              {/* Other final games */}
+              {(hasFavorites ? sortedFinal.others : finalGames).map((game) => (
                 <GameCard key={game.id} game={game} showSport />
               ))}
             </div>
@@ -257,6 +384,9 @@ export default function HomePage() {
             )}
           </section>
         )}
+
+        {/* Footer */}
+        <Footer />
       </main>
     </>
   )

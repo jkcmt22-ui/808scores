@@ -15,17 +15,26 @@ import {
   AlertCircle,
 } from 'lucide-react'
 import { Button, Card, Input, Avatar } from '@/components/ui'
-import { useRequireAuth, useSchools, useFavoriteTeams } from '@/hooks'
+import { useRequireAuth, useSchools, useSports, useFavoriteTeams, useFavoriteSports } from '@/hooks'
+import { getSportEmoji } from '@/lib/sport-utils'
 import { validateUsername } from '@/lib/username-validation'
 import { createClient } from '@/lib/supabase/client'
 import { cn } from '@/lib/utils'
-import type { School } from '@/types/database'
+import type { School, Sport } from '@/types/database'
 
 export default function ProfileSettingsPage() {
   const router = useRouter()
   const { user, profile, isLoading: authLoading, updateProfile } = useRequireAuth()
   const { schools, isLoading: schoolsLoading } = useSchools()
+  const { sports, isLoading: sportsLoading } = useSports()
   const { favoriteTeams, addFavorite, removeFavorite, toggleNotify, isFavorite } = useFavoriteTeams(user?.id)
+  const {
+    favoriteSports,
+    addFavorite: addSportFavorite,
+    removeFavorite: removeSportFavorite,
+    toggleNotify: toggleSportNotify,
+    isFavorite: isSportFavorite,
+  } = useFavoriteSports(user?.id)
 
   // Username state
   const [username, setUsername] = useState('')
@@ -42,6 +51,9 @@ export default function ProfileSettingsPage() {
   // Team search state
   const [teamSearch, setTeamSearch] = useState('')
   const [isAddingTeam, setIsAddingTeam] = useState<string | null>(null)
+
+  // Sport toggle state
+  const [isAddingSport, setIsAddingSport] = useState<string | null>(null)
 
   const supabase = createClient()
 
@@ -150,7 +162,7 @@ export default function ProfileSettingsPage() {
     school.short_name.toLowerCase().includes(teamSearch.toLowerCase())
   )
 
-  // Handle adding/removing favorite
+  // Handle adding/removing team favorite
   const handleToggleFavorite = async (school: School) => {
     setIsAddingTeam(school.id)
     try {
@@ -161,6 +173,20 @@ export default function ProfileSettingsPage() {
       }
     } finally {
       setIsAddingTeam(null)
+    }
+  }
+
+  // Handle adding/removing sport favorite
+  const handleToggleSportFavorite = async (sport: Sport) => {
+    setIsAddingSport(sport.id)
+    try {
+      if (isSportFavorite(sport.id)) {
+        await removeSportFavorite(sport.id)
+      } else {
+        await addSportFavorite(sport.id)
+      }
+    } finally {
+      setIsAddingSport(null)
     }
   }
 
@@ -398,6 +424,105 @@ export default function ProfileSettingsPage() {
               <p className="text-center text-sm text-foreground-muted">
                 Type to search for teams to add
               </p>
+            )}
+          </div>
+        </Card>
+
+        {/* Favorite Sports Section */}
+        <Card className="border-2 border-border">
+          <div className="p-6">
+            <h2 className="mb-4 font-display text-sm font-bold uppercase tracking-wider text-foreground-muted">
+              Favorite Sports
+            </h2>
+
+            {/* Current sport favorites */}
+            {favoriteSports.length > 0 && (
+              <div className="mb-4 space-y-2">
+                {favoriteSports.map((follow) => (
+                  <div
+                    key={follow.sport_id}
+                    className="flex items-center justify-between rounded-lg border border-border bg-background-secondary p-3"
+                  >
+                    <div className="flex items-center gap-3">
+                      <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-neon-pink/10 text-xl">
+                        {getSportEmoji(follow.sport.code)}
+                      </div>
+                      <div>
+                        <p className="font-medium text-foreground">
+                          {follow.sport.display_name || follow.sport.name}
+                        </p>
+                        <p className="text-xs text-foreground-muted capitalize">
+                          {follow.sport.gender}
+                        </p>
+                      </div>
+                    </div>
+
+                    <div className="flex items-center gap-2">
+                      <button
+                        onClick={() => toggleSportNotify(follow.sport_id, !follow.notify)}
+                        className={cn(
+                          'rounded-lg p-2 transition-colors',
+                          follow.notify
+                            ? 'bg-neon-green/10 text-neon-green'
+                            : 'bg-background text-foreground-muted hover:text-foreground'
+                        )}
+                        title={follow.notify ? 'Notifications on' : 'Notifications off'}
+                      >
+                        {follow.notify ? (
+                          <Bell className="h-4 w-4" />
+                        ) : (
+                          <BellOff className="h-4 w-4" />
+                        )}
+                      </button>
+                      <button
+                        onClick={() => removeSportFavorite(follow.sport_id)}
+                        className="rounded-lg bg-neon-pink/10 p-2 text-neon-pink transition-colors hover:bg-neon-pink/20"
+                        title="Remove favorite"
+                      >
+                        <X className="h-4 w-4" />
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {/* Sports list */}
+            <p className="mb-3 text-sm text-foreground-muted">
+              Add sports to follow
+            </p>
+            {sportsLoading ? (
+              <div className="flex items-center justify-center py-8">
+                <Loader2 className="h-6 w-6 animate-spin text-neon-blue" />
+              </div>
+            ) : (
+              <div className="grid grid-cols-2 gap-2">
+                {sports
+                  .filter((sport) => !isSportFavorite(sport.id))
+                  .map((sport) => (
+                    <button
+                      key={sport.id}
+                      onClick={() => handleToggleSportFavorite(sport)}
+                      disabled={isAddingSport === sport.id}
+                      className={cn(
+                        'flex items-center gap-2 rounded-lg border border-border p-3 text-left transition-colors hover:border-neon-pink hover:bg-neon-pink/5'
+                      )}
+                    >
+                      <span className="text-xl">{getSportEmoji(sport.code)}</span>
+                      <div className="min-w-0 flex-1">
+                        <p className="truncate text-sm font-medium text-foreground">
+                          {sport.display_name || sport.name}
+                        </p>
+                        <p className="text-xs text-foreground-muted capitalize">
+                          {sport.gender}
+                        </p>
+                      </div>
+                      {isAddingSport === sport.id && (
+                        <Loader2 className="h-4 w-4 animate-spin text-neon-pink" />
+                      )}
+                    </button>
+                  ))}
+              </div>
             )}
           </div>
         </Card>

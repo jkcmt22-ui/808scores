@@ -16,14 +16,20 @@ import {
   Shield,
   UserCheck,
   UserX,
+  Calendar,
+  Gift,
+  ShieldAlert,
+  Key,
+  Copy,
+  Check,
 } from 'lucide-react'
 import { Button, Badge, Input, Card } from '@/components/ui'
 import { useAuth } from '@/hooks'
 import { createClient } from '@/lib/supabase/client'
 import { cn, formatGameTime, isGameLive, isGameFinal } from '@/lib/utils'
-import type { GameWithTeams, Sport, School, GameStatus, GameType } from '@/types/database'
+import type { GameWithTeams, Sport, School, GameStatus, GameType, TrustedReporterCode } from '@/types/database'
 
-type TabType = 'games' | 'create' | 'applications'
+type TabType = 'games' | 'create' | 'applications' | 'codes'
 
 interface TrustedReporterApplication {
   id: string
@@ -95,6 +101,10 @@ export default function AdminPage() {
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null)
   const [applications, setApplications] = useState<TrustedReporterApplication[]>([])
   const [applicationFilter, setApplicationFilter] = useState<'pending' | 'all'>('pending')
+  const [codes, setCodes] = useState<TrustedReporterCode[]>([])
+  const [newCodeNote, setNewCodeNote] = useState('')
+  const [isGeneratingCode, setIsGeneratingCode] = useState(false)
+  const [copiedCode, setCopiedCode] = useState<string | null>(null)
 
   // Check if user has admin access (trusted reporter or elite)
   const hasAdminAccess = profile?.is_trusted_reporter || profile?.tier === 'elite' || profile?.tier === 'trusted'
@@ -145,6 +155,14 @@ export default function AdminPage() {
         .order('created_at', { ascending: false })
 
       if (applicationsData) setApplications(applicationsData as TrustedReporterApplication[])
+
+      // Fetch trusted reporter codes
+      const { data: codesData } = await supabase
+        .from('trusted_reporter_codes')
+        .select('*')
+        .order('created_at', { ascending: false })
+
+      if (codesData) setCodes(codesData as TrustedReporterCode[])
 
       setIsLoading(false)
     }
@@ -391,6 +409,76 @@ export default function AdminPage() {
     return applications
   }, [applications, applicationFilter])
 
+  // Generate a random code
+  const generateRandomCode = () => {
+    const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789' // Avoid confusing chars like O/0, I/1
+    let code = ''
+    for (let i = 0; i < 8; i++) {
+      code += chars.charAt(Math.floor(Math.random() * chars.length))
+    }
+    return code
+  }
+
+  // Create a new trusted reporter code
+  const handleGenerateCode = async () => {
+    setIsGeneratingCode(true)
+    try {
+      const code = generateRandomCode()
+      const { data, error } = await supabase
+        .from('trusted_reporter_codes')
+        .insert({
+          code,
+          created_by: user?.id,
+          note: newCodeNote || null,
+          max_uses: 1,
+        } as never)
+        .select()
+        .single()
+
+      if (error) throw error
+
+      setCodes((prev) => [data as TrustedReporterCode, ...prev])
+      setNewCodeNote('')
+      setMessage({ type: 'success', text: `Code ${code} created!` })
+    } catch (err) {
+      console.error('Error generating code:', err)
+      setMessage({ type: 'error', text: 'Failed to generate code' })
+    } finally {
+      setIsGeneratingCode(false)
+    }
+  }
+
+  // Deactivate a code
+  const handleDeactivateCode = async (codeId: string) => {
+    try {
+      const { error } = await supabase
+        .from('trusted_reporter_codes')
+        .update({ active: false } as never)
+        .eq('id', codeId)
+
+      if (error) throw error
+
+      setCodes((prev) =>
+        prev.map((c) => (c.id === codeId ? { ...c, active: false } : c))
+      )
+      setMessage({ type: 'success', text: 'Code deactivated' })
+    } catch (err) {
+      console.error('Error deactivating code:', err)
+      setMessage({ type: 'error', text: 'Failed to deactivate code' })
+    }
+  }
+
+  // Copy code to clipboard
+  const handleCopyCode = async (code: string) => {
+    try {
+      await navigator.clipboard.writeText(code)
+      setCopiedCode(code)
+      setTimeout(() => setCopiedCode(null), 2000)
+    } catch (err) {
+      console.error('Failed to copy:', err)
+    }
+  }
+
   // Start editing a game
   const startEditing = (game: GameWithTeams) => {
     setEditingGame(game)
@@ -471,6 +559,26 @@ export default function AdminPage() {
           </div>
         )}
 
+        {/* Quick Links */}
+        <div className="flex flex-wrap gap-2 mb-4">
+          <Button variant="outline" size="sm" onClick={() => router.push('/admin/moderation')}>
+            <ShieldAlert className="mr-2 h-4 w-4" />
+            Moderation
+          </Button>
+          <Button variant="outline" size="sm" onClick={() => router.push('/admin/schedule')}>
+            <Calendar className="mr-2 h-4 w-4" />
+            Schedule
+          </Button>
+          <Button variant="outline" size="sm" onClick={() => router.push('/admin/raffles')}>
+            <Gift className="mr-2 h-4 w-4" />
+            Raffles
+          </Button>
+          <Button variant="outline" size="sm" onClick={() => router.push('/admin/prizes')}>
+            <Trophy className="mr-2 h-4 w-4" />
+            Prizes
+          </Button>
+        </div>
+
         {/* Tabs */}
         <div className="flex gap-2 mb-6">
           <Button
@@ -505,6 +613,13 @@ export default function AdminPage() {
                 {applications.filter((a) => a.status === 'pending').length}
               </span>
             )}
+          </Button>
+          <Button
+            variant={activeTab === 'codes' ? 'default' : 'outline'}
+            onClick={() => setActiveTab('codes')}
+          >
+            <Key className="mr-2 h-4 w-4" />
+            Invite Codes
           </Button>
         </div>
 
@@ -661,6 +776,124 @@ export default function AdminPage() {
                     onApprove={() => handleApproveApplication(application)}
                     onReject={() => handleRejectApplication(application)}
                   />
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Codes Tab */}
+        {activeTab === 'codes' && (
+          <div>
+            <div className="mb-6">
+              <h2 className="font-display font-bold text-lg neon-text-green mb-4">
+                Generate Trusted Reporter Code
+              </h2>
+              <Card className="p-4">
+                <p className="text-sm text-foreground-muted mb-4">
+                  Generate a one-time code that can be given to someone you trust.
+                  When they enter this code, they&apos;ll automatically become a Trusted Reporter.
+                </p>
+                <div className="flex gap-3">
+                  <Input
+                    placeholder="Note (optional, e.g., 'For Coach Smith')"
+                    value={newCodeNote}
+                    onChange={(e) => setNewCodeNote(e.target.value)}
+                    className="flex-1"
+                  />
+                  <Button
+                    onClick={handleGenerateCode}
+                    disabled={isGeneratingCode}
+                  >
+                    {isGeneratingCode ? (
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    ) : (
+                      <Key className="mr-2 h-4 w-4" />
+                    )}
+                    Generate Code
+                  </Button>
+                </div>
+              </Card>
+            </div>
+
+            <h3 className="font-display font-bold text-foreground mb-3">
+              Existing Codes ({codes.length})
+            </h3>
+
+            {isLoading ? (
+              <div className="flex justify-center py-12">
+                <Loader2 className="h-8 w-8 animate-spin text-neon-green" />
+              </div>
+            ) : codes.length === 0 ? (
+              <Card className="p-8 text-center">
+                <Key className="mx-auto mb-4 h-12 w-12 text-foreground-muted" />
+                <p className="text-foreground-muted font-display">
+                  No codes generated yet
+                </p>
+              </Card>
+            ) : (
+              <div className="space-y-3">
+                {codes.map((code) => (
+                  <Card
+                    key={code.id}
+                    className={cn(
+                      'border-2 p-4',
+                      code.active ? 'border-neon-green/30' : 'border-border opacity-50'
+                    )}
+                  >
+                    <div className="flex items-center justify-between gap-4">
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-3 mb-2">
+                          <code className="font-mono text-lg font-bold text-neon-green">
+                            {code.code}
+                          </code>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => handleCopyCode(code.code)}
+                            className="h-8 px-2"
+                          >
+                            {copiedCode === code.code ? (
+                              <Check className="h-4 w-4 text-neon-green" />
+                            ) : (
+                              <Copy className="h-4 w-4" />
+                            )}
+                          </Button>
+                          {!code.active && (
+                            <Badge variant="secondary" className="text-[10px]">
+                              Inactive
+                            </Badge>
+                          )}
+                          {code.use_count >= code.max_uses && (
+                            <Badge variant="default" className="text-[10px]">
+                              Used
+                            </Badge>
+                          )}
+                        </div>
+                        {code.note && (
+                          <p className="text-sm text-foreground-muted mb-1">
+                            {code.note}
+                          </p>
+                        )}
+                        <p className="text-xs text-foreground-subtle">
+                          Created: {new Date(code.created_at).toLocaleDateString()}
+                          {code.redeemed_at && (
+                            <> &middot; Redeemed: {new Date(code.redeemed_at).toLocaleDateString()}</>
+                          )}
+                          <> &middot; Uses: {code.use_count}/{code.max_uses}</>
+                        </p>
+                      </div>
+                      {code.active && code.use_count < code.max_uses && (
+                        <Button
+                          variant="destructive"
+                          size="sm"
+                          onClick={() => handleDeactivateCode(code.id)}
+                        >
+                          Deactivate
+                        </Button>
+                      )}
+                    </div>
+                  </Card>
                 ))}
               </div>
             )}
