@@ -16,7 +16,7 @@ export function useSports() {
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<Error | null>(null)
 
-  const supabase = useMemo(() => createClient(), [])
+  const supabase = useMemo(() => createClient()!, [])
 
   useEffect(() => {
     const fetchSports = async () => {

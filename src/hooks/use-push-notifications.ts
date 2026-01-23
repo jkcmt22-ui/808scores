@@ -31,7 +31,7 @@ export function usePushNotifications(): UsePushNotificationsReturn {
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
-  const supabase = createClient()
+  const supabase = createClient()!
 
   // Check initial state
   useEffect(() => {
@@ -51,8 +51,14 @@ export function usePushNotifications(): UsePushNotificationsReturn {
 
         setPermission(getNotificationPermission())
 
-        // Check if already subscribed
-        const subscription = await getCurrentSubscription()
+        // Check if already subscribed with a timeout
+        // navigator.serviceWorker.ready can hang if SW fails to load
+        const subscriptionPromise = getCurrentSubscription()
+        const timeoutPromise = new Promise<null>((resolve) =>
+          setTimeout(() => resolve(null), 3000)
+        )
+
+        const subscription = await Promise.race([subscriptionPromise, timeoutPromise])
         setIsSubscribed(!!subscription)
       } catch (err) {
         console.error('Error checking push state:', err)

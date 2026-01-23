@@ -19,7 +19,7 @@ export function useGames(options: UseGamesOptions = {}) {
   const [error, setError] = useState<Error | null>(null)
 
   // Memoize the supabase client
-  const supabase = useMemo(() => createClient(), [])
+  const supabase = useMemo(() => createClient()!, [])
 
   const fetchGames = useCallback(async () => {
     setIsLoading(true)
@@ -182,7 +182,7 @@ export function useLiveGames() {
   const [games, setGames] = useState<GameWithTeams[]>([])
   const [isLoading, setIsLoading] = useState(true)
 
-  const supabase = useMemo(() => createClient(), [])
+  const supabase = useMemo(() => createClient()!, [])
 
   useEffect(() => {
     const fetchLiveGames = async () => {
@@ -235,7 +235,7 @@ export function useGame(gameId: string) {
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<Error | null>(null)
 
-  const supabase = useMemo(() => createClient(), [])
+  const supabase = useMemo(() => createClient()!, [])
 
   useEffect(() => {
     const fetchGame = async () => {

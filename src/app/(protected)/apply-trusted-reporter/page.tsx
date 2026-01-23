@@ -31,7 +31,7 @@ interface ExistingApplication {
 export default function ApplyTrustedReporterPage() {
   const router = useRouter()
   const { profile, isLoading: authLoading } = useRequireAuth()
-  const supabase = useMemo(() => createClient(), [])
+  const supabase = useMemo(() => createClient()!, [])
 
   const [existingApplication, setExistingApplication] = useState<ExistingApplication | null>(null)
   const [isCheckingApplication, setIsCheckingApplication] = useState(true)

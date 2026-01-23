@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState, useCallback } from 'react'
+import { useEffect, useState, useCallback, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import type { User as SupabaseUser } from '@supabase/supabase-js'
 import { createClient } from '@/lib/supabase/client'
@@ -22,37 +22,43 @@ export function useAuth() {
     isAuthenticated: false,
   })
 
-  const supabase = createClient()
+  // Use ref to ensure supabase client is stable
+  const supabaseRef = useRef(createClient()!)
+  const supabase = supabaseRef.current
 
-  // Fetch user profile from our users table
-  const fetchProfile = useCallback(async (userId: string) => {
-    try {
-      const { data, error } = await supabase
-        .from('users')
-        .select('*')
-        .eq('id', userId)
-        .single()
+  // Initialize auth state - only run once on mount
+  useEffect(() => {
+    let mounted = true
 
-      if (error) {
-        console.error('Error fetching profile:', error)
+    const fetchProfile = async (userId: string): Promise<User | null> => {
+      try {
+        const { data, error } = await supabase
+          .from('users')
+          .select('*')
+          .eq('id', userId)
+          .single()
+
+        if (error) {
+          console.error('Error fetching profile:', error)
+          return null
+        }
+
+        return data as User
+      } catch (err) {
+        console.error('Profile fetch error:', err)
         return null
       }
-
-      return data as User
-    } catch (err) {
-      console.error('Profile fetch error:', err)
-      return null
     }
-  }, [supabase])
 
-  // Initialize auth state
-  useEffect(() => {
     const initAuth = async () => {
       try {
         const { data: { user } } = await supabase.auth.getUser()
 
+        if (!mounted) return
+
         if (user) {
           const profile = await fetchProfile(user.id)
+          if (!mounted) return
           setState({
             user,
             profile,
@@ -69,6 +75,7 @@ export function useAuth() {
         }
       } catch (err) {
         console.error('Auth init error:', err)
+        if (!mounted) return
         setState({
           user: null,
           profile: null,
@@ -83,8 +90,11 @@ export function useAuth() {
     // Listen for auth changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
+        if (!mounted) return
+
         if (event === 'SIGNED_IN' && session?.user) {
           const profile = await fetchProfile(session.user.id)
+          if (!mounted) return
           setState({
             user: session.user,
             profile,
@@ -103,9 +113,10 @@ export function useAuth() {
     )
 
     return () => {
+      mounted = false
       subscription.unsubscribe()
     }
-  }, [supabase, fetchProfile])
+  }, [supabase])
 
   // Sign out
   const signOut = useCallback(async () => {
@@ -149,11 +160,20 @@ export function useAuth() {
   const refreshProfile = useCallback(async () => {
     if (!state.user) return
 
-    const profile = await fetchProfile(state.user.id)
-    if (profile) {
-      setState((prev) => ({ ...prev, profile }))
+    try {
+      const { data, error } = await supabase
+        .from('users')
+        .select('*')
+        .eq('id', state.user.id)
+        .single()
+
+      if (!error && data) {
+        setState((prev) => ({ ...prev, profile: data as User }))
+      }
+    } catch (err) {
+      console.error('Refresh profile error:', err)
     }
-  }, [state.user, fetchProfile])
+  }, [state.user, supabase])
 
   return {
     ...state,

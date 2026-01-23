@@ -11,7 +11,9 @@
   "dependencies": {
     "@supabase/ssr": "^0.8.0",
     "@supabase/supabase-js": "^2.91.0",
+    "@types/cheerio": "^0.22.35",
     "bad-words": "^4.0.0",
+    "cheerio": "^1.2.0",
     "clsx": "^2.1.1",
     "date-fns": "^4.1.0",
     "lucide-react": "^0.562.0",

@@ -1,14 +1,57 @@
-// Service Worker for Push Notifications
-// Hawaii Sports Center - Hawaii High School Sports
+// Service Worker for Hawaii Sports Center
+// Version 2 - Fixed caching issues
+
+const CACHE_VERSION = 'v2'
 
 self.addEventListener('install', (event) => {
   console.log('[SW] Service Worker installed')
+  // Skip waiting to activate immediately
   self.skipWaiting()
 })
 
 self.addEventListener('activate', (event) => {
   console.log('[SW] Service Worker activated')
-  event.waitUntil(self.clients.claim())
+  // Clear old caches
+  event.waitUntil(
+    caches.keys().then((cacheNames) => {
+      return Promise.all(
+        cacheNames.map((cacheName) => {
+          if (cacheName !== CACHE_VERSION) {
+            console.log('[SW] Deleting old cache:', cacheName)
+            return caches.delete(cacheName)
+          }
+        })
+      )
+    }).then(() => self.clients.claim())
+  )
+})
+
+// Handle fetch - NEVER cache HTML pages or API routes
+self.addEventListener('fetch', (event) => {
+  const url = new URL(event.request.url)
+
+  // Never intercept:
+  // - API routes
+  // - Navigation requests (HTML pages)
+  // - Supabase requests
+  // - Auth-related requests
+  if (
+    url.pathname.startsWith('/api/') ||
+    url.pathname.startsWith('/_next/') ||
+    url.hostname.includes('supabase') ||
+    event.request.mode === 'navigate' ||
+    event.request.headers.get('accept')?.includes('text/html')
+  ) {
+    // Let the browser handle these normally - no caching
+    return
+  }
+
+  // For other requests (images, fonts, etc.), use network-first strategy
+  event.respondWith(
+    fetch(event.request).catch(() => {
+      return caches.match(event.request)
+    })
+  )
 })
 
 // Handle push notifications
@@ -18,8 +61,8 @@ self.addEventListener('push', (event) => {
   let data = {
     title: 'Hawaii Sports Center',
     body: 'Score update!',
-    icon: '/icon-192.png',
-    badge: '/icon-192.png',
+    icon: '/icons/icon-192.png',
+    badge: '/icons/icon-192.png',
     tag: 'score-update',
     data: {}
   }
@@ -77,7 +120,7 @@ self.addEventListener('notificationclick', (event) => {
       .then((clientList) => {
         // Check if there's already a window open
         for (const client of clientList) {
-          if (client.url.includes('hawaiisportscenter') && 'focus' in client) {
+          if ('focus' in client) {
             client.navigate(url)
             return client.focus()
           }

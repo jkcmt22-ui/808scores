@@ -3,12 +3,6 @@ import { createClient } from '@supabase/supabase-js'
 
 const SITE_URL = 'https://808scores.vercel.app'
 
-// Create a Supabase client for server-side use
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-)
-
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   // Static pages
   const staticPages: MetadataRoute.Sitemap = [
@@ -45,6 +39,16 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   ]
 
   // Fetch recent games (last 30 days + upcoming 7 days)
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
+  const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+
+  if (!supabaseUrl || !supabaseKey) {
+    // Return static pages only if Supabase isn't configured (build time)
+    return staticPages
+  }
+
+  const supabase = createClient(supabaseUrl, supabaseKey)
+
   const thirtyDaysAgo = new Date()
   thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30)
 

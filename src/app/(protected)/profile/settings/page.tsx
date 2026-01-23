@@ -55,7 +55,7 @@ export default function ProfileSettingsPage() {
   // Sport toggle state
   const [isAddingSport, setIsAddingSport] = useState<string | null>(null)
 
-  const supabase = createClient()
+  const supabase = createClient()!
 
   // Initialize from profile
   useEffect(() => {

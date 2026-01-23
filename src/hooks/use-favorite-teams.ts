@@ -26,7 +26,7 @@ export function useFavoriteTeams(userId: string | undefined): UseFavoriteTeamsRe
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
-  const supabase = createClient()
+  const supabase = createClient()!
 
   // Fetch favorite teams
   useEffect(() => {

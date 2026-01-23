@@ -63,6 +63,9 @@ function LoginForm() {
 
     try {
       const supabase = createClient()
+      if (!supabase) {
+        throw new Error('Unable to connect. Please try again.')
+      }
 
       const { error: signInError } = await supabase.auth.signInWithOtp({
         phone: cleanPhone,
@@ -105,6 +108,9 @@ function LoginForm() {
 
     try {
       const supabase = createClient()
+      if (!supabase) {
+        throw new Error('Unable to connect. Please try again.')
+      }
 
       if (isSignUp) {
         // Sign up

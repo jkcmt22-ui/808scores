@@ -86,7 +86,7 @@ const initialFormData: GameFormData = {
 export default function AdminPage() {
   const router = useRouter()
   const { user, profile, isLoading: authLoading } = useAuth()
-  const supabase = useMemo(() => createClient(), [])
+  const supabase = useMemo(() => createClient()!, [])
 
   const [activeTab, setActiveTab] = useState<TabType>('games')
   const [games, setGames] = useState<GameWithTeams[]>([])

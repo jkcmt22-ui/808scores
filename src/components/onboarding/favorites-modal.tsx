@@ -38,7 +38,7 @@ export function FavoritesModal({ userId, onComplete }: FavoritesModalProps) {
   const { addFavorite: addTeamFavorite } = useFavoriteTeams(userId)
   const { addFavorite: addSportFavorite } = useFavoriteSports(userId)
 
-  const supabase = createClient()
+  const supabase = createClient()!
 
   // Filter schools by search
   const filteredSchools = schools.filter((school) =>

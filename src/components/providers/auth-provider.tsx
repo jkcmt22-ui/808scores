@@ -25,6 +25,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   // Fetch user profile
   const fetchProfile = async (userId: string) => {
+    if (!supabase) return null
     try {
       const { data, error } = await supabase
         .from('users')
@@ -46,6 +47,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   // Initialize auth
   useEffect(() => {
+    // If supabase client isn't available (build time), skip initialization
+    if (!supabase) {
+      setIsLoading(false)
+      return
+    }
+
     const initAuth = async () => {
       try {
         const { data: { user: authUser } } = await supabase.auth.getUser()
@@ -85,6 +92,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [])
 
   const signOut = async () => {
+    if (!supabase) return
     await supabase.auth.signOut()
     setUser(null)
     setProfile(null)

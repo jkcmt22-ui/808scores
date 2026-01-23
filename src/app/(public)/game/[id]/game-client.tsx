@@ -79,7 +79,7 @@ export function GameClient({ params }: GamePageProps) {
   const [loadingSubmissions, setLoadingSubmissions] = useState(true)
   const [shareStatus, setShareStatus] = useState<'idle' | 'copied' | 'shared'>('idle')
 
-  const supabase = useMemo(() => createClient(), [])
+  const supabase = useMemo(() => createClient()!, [])
 
   // Share functionality
   const handleShare = useCallback(async () => {

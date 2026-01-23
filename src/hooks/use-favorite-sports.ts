@@ -26,7 +26,7 @@ export function useFavoriteSports(userId: string | undefined): UseFavoriteSports
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
-  const supabase = createClient()
+  const supabase = createClient()!
 
   // Fetch favorite sports
   useEffect(() => {

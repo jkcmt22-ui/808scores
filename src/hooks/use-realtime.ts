@@ -13,7 +13,7 @@ export function useRealtimeGame(gameId: string) {
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<Error | null>(null)
 
-  const supabase = createClient()
+  const supabase = createClient()!
 
   // Fetch initial game data
   const fetchGame = useCallback(async () => {
@@ -79,7 +79,7 @@ export function useRealtimeLiveGames() {
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<Error | null>(null)
 
-  const supabase = createClient()
+  const supabase = createClient()!
 
   // Fetch live games
   const fetchLiveGames = useCallback(async () => {
@@ -142,7 +142,7 @@ export function useRealtimeSubmissions(gameId: string) {
   const [submissions, setSubmissions] = useState<Submission[]>([])
   const [isLoading, setIsLoading] = useState(true)
 
-  const supabase = createClient()
+  const supabase = createClient()!
 
   const fetchSubmissions = useCallback(async () => {
     try {

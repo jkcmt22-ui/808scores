@@ -15,7 +15,7 @@ export function useSchools(): UseSchoolsReturn {
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
-  const supabase = createClient()
+  const supabase = createClient()!
 
   useEffect(() => {
     const fetchSchools = async () => {

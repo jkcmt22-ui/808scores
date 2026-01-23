@@ -4,18 +4,25 @@ import { GameClient } from './game-client'
 
 const SITE_URL = 'https://808scores.vercel.app'
 
-// Create a Supabase client for server-side metadata generation
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-)
-
 interface GamePageProps {
   params: Promise<{ id: string }>
 }
 
 export async function generateMetadata({ params }: GamePageProps): Promise<Metadata> {
   const { id } = await params
+
+  // Create Supabase client inside function to avoid build-time errors
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
+  const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+
+  if (!supabaseUrl || !supabaseKey) {
+    return {
+      title: 'Game | Hawaii Sports Center',
+      description: 'Hawaii high school sports scores and updates.',
+    }
+  }
+
+  const supabase = createClient(supabaseUrl, supabaseKey)
 
   // Fetch game data for metadata
   const { data: game } = await supabase

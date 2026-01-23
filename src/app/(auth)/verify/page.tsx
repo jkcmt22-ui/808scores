@@ -91,6 +91,9 @@ export default function VerifyPage() {
 
     try {
       const supabase = createClient()
+      if (!supabase) {
+        throw new Error('Unable to connect. Please try again.')
+      }
 
       const { error: verifyError } = await supabase.auth.verifyOtp({
         phone,
@@ -135,6 +138,9 @@ export default function VerifyPage() {
 
     try {
       const supabase = createClient()
+      if (!supabase) {
+        throw new Error('Unable to connect. Please try again.')
+      }
 
       const { error: resendError } = await supabase.auth.signInWithOtp({
         phone,

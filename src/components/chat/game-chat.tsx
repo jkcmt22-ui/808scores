@@ -45,7 +45,7 @@ export function GameChat({ gameId }: GameChatProps) {
   const [error, setError] = useState<string | null>(null)
   const [lastMessageTime, setLastMessageTime] = useState<number>(0)
   const messagesEndRef = useRef<HTMLDivElement>(null)
-  const supabase = createClient()
+  const supabase = createClient()!
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
