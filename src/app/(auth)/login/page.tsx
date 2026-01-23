@@ -128,8 +128,8 @@ function LoginForm() {
 
         if (signInError) throw signInError
 
-        router.push(redirect)
-        router.refresh()
+        // Force full page reload to ensure cookies are sent to server middleware
+        window.location.href = redirect
       }
     } catch (err) {
       console.error('Auth error:', err)
@@ -175,7 +175,7 @@ function LoginForm() {
         </div>
 
         <h1 className="mb-2 text-center text-xl font-bold font-display text-foreground">
-          Welcome to 808Scores
+          Welcome to Hawaii Sports Center
         </h1>
         <p className="mb-6 text-center text-sm text-foreground-muted">
           {authMethod === 'email'
@@ -333,8 +333,9 @@ export default function LoginPage() {
     <div className="flex min-h-screen flex-col bg-background grid-bg">
       <header className="flex h-14 items-center justify-center border-b-2 border-border bg-background-secondary">
         <Link href="/" className="flex items-center gap-0.5">
-          <span className="font-display text-lg font-black text-neon-pink uppercase">808</span>
-          <span className="font-display text-lg font-bold text-neon-blue uppercase">Scores</span>
+          <span className="font-display text-lg font-black text-neon-pink uppercase">Hawaii</span>
+          <span className="font-display text-lg font-bold text-neon-blue uppercase">Sports</span>
+          <span className="font-display text-lg font-bold text-neon-yellow uppercase">Center</span>
         </Link>
       </header>
 
