@@ -108,9 +108,9 @@ export default function VerifyPage() {
       sessionStorage.removeItem('verifyPhone')
       sessionStorage.removeItem('verifyRedirect')
 
-      // Force a full page reload to ensure cookies are sent to server
-      // This is needed because middleware needs to see the new auth cookies
-      window.location.href = redirect
+      // Navigate and refresh to ensure server sees auth cookies
+      router.push(redirect)
+      router.refresh()
     } catch (err) {
       console.error('Verification error:', err)
       setError(

@@ -128,8 +128,9 @@ function LoginForm() {
 
         if (signInError) throw signInError
 
-        // Force full page reload to ensure cookies are sent to server middleware
-        window.location.href = redirect
+        // Navigate and refresh to ensure server sees auth cookies
+        router.push(redirect)
+        router.refresh()
       }
     } catch (err) {
       console.error('Auth error:', err)
