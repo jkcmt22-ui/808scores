@@ -52,7 +52,7 @@ export function useLeaderboard(options: UseLeaderboardOptions = {}): UseLeaderbo
 
         // Fetch from public_leaderboard view
         // The view already orders by total_points DESC
-        let query = supabase
+        const query = supabase
           .from('public_leaderboard')
           .select('*')
           .limit(limit)

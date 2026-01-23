@@ -175,6 +175,13 @@ body {
   border-color: #1a3a1a;
 }
 
+.score-led-white {
+  color: #ffffff;
+  text-shadow: 0 0 8px rgba(255, 255, 255, 0.6), 0 0 16px rgba(255, 255, 255, 0.3);
+  background: linear-gradient(180deg, #1a1a1a 0%, #0a0a0a 100%);
+  border-color: #3a3a3a;
+}
+
 /* 80s Scoreboard panel */
 .scoreboard-panel {
   background: linear-gradient(180deg, #1a1a2e 0%, #0f0f1a 100%);

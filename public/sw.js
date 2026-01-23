@@ -1,5 +1,5 @@
 // Service Worker for Push Notifications
-// 808scores - Hawaii High School Sports
+// Hawaii Sports Center - Hawaii High School Sports
 
 self.addEventListener('install', (event) => {
   console.log('[SW] Service Worker installed')
@@ -16,7 +16,7 @@ self.addEventListener('push', (event) => {
   console.log('[SW] Push received:', event)
 
   let data = {
-    title: '808scores',
+    title: 'Hawaii Sports Center',
     body: 'Score update!',
     icon: '/icon-192.png',
     badge: '/icon-192.png',
@@ -77,7 +77,7 @@ self.addEventListener('notificationclick', (event) => {
       .then((clientList) => {
         // Check if there's already a window open
         for (const client of clientList) {
-          if (client.url.includes('808scores') && 'focus' in client) {
+          if (client.url.includes('hawaiisportscenter') && 'focus' in client) {
             client.navigate(url)
             return client.focus()
           }

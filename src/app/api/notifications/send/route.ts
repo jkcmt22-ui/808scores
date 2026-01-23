@@ -13,7 +13,7 @@ let vapidConfigured = false
 if (VAPID_PUBLIC_KEY && VAPID_PRIVATE_KEY) {
   try {
     webpush.setVapidDetails(
-      'mailto:support@808scores.com',
+      'mailto:contact@hawaiisportscenter.com',
       VAPID_PUBLIC_KEY,
       VAPID_PRIVATE_KEY
     )

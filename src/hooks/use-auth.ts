@@ -111,8 +111,8 @@ export function useAuth() {
   const signOut = useCallback(async () => {
     try {
       await supabase.auth.signOut()
+      // Navigate to home - no refresh needed
       router.push('/')
-      router.refresh()
     } catch (err) {
       console.error('Sign out error:', err)
     }

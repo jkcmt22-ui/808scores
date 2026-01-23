@@ -98,18 +98,13 @@ export function GameCard({ game, showSport = false }: GameCardProps) {
               <div className="flex h-9 w-9 items-center justify-center bg-background-tertiary text-xs font-display font-black text-neon-blue border-2 border-neon-blue/30">
                 {game.away_team.short_name.slice(0, 2).toUpperCase()}
               </div>
-              <span className={cn(
-                'font-display font-bold text-foreground truncate',
-                isFinal && game.away_score > game.home_score && 'neon-text-green'
-              )}>
+              <span className="font-display font-bold text-foreground truncate">
                 {game.away_team.short_name}
               </span>
             </div>
             <div className={cn(
-              'score-led text-2xl tabular-nums min-w-[70px] text-center',
-              isLive && 'animate-led-blink',
-              isFinal && game.away_score > game.home_score && 'score-led-green',
-              isFinal && game.away_score <= game.home_score && 'score-led-amber'
+              'score-led score-led-white text-2xl tabular-nums min-w-[70px] text-center',
+              isLive && 'animate-led-blink'
             )}>
               {!isScheduled ? game.away_score : '--'}
             </div>
@@ -121,18 +116,13 @@ export function GameCard({ game, showSport = false }: GameCardProps) {
               <div className="flex h-9 w-9 items-center justify-center bg-background-tertiary text-xs font-display font-black text-neon-pink border-2 border-neon-pink/30">
                 {game.home_team.short_name.slice(0, 2).toUpperCase()}
               </div>
-              <span className={cn(
-                'font-display font-bold text-foreground truncate',
-                isFinal && game.home_score > game.away_score && 'neon-text-green'
-              )}>
+              <span className="font-display font-bold text-foreground truncate">
                 {game.home_team.short_name}
               </span>
             </div>
             <div className={cn(
-              'score-led text-2xl tabular-nums min-w-[70px] text-center',
-              isLive && 'animate-led-blink',
-              isFinal && game.home_score > game.away_score && 'score-led-green',
-              isFinal && game.home_score <= game.away_score && 'score-led-amber'
+              'score-led score-led-white text-2xl tabular-nums min-w-[70px] text-center',
+              isLive && 'animate-led-blink'
             )}>
               {!isScheduled ? game.home_score : '--'}
             </div>

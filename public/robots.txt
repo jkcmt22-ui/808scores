@@ -1,0 +1,20 @@
+# Hawaii Sports Center - robots.txt
+# https://808scores.vercel.app
+
+User-agent: *
+Allow: /
+
+# Sitemap location
+Sitemap: https://808scores.vercel.app/sitemap.xml
+
+# Disallow protected/admin routes
+Disallow: /admin
+Disallow: /profile
+Disallow: /api/
+Disallow: /submit
+
+# Allow game pages (important for SEO)
+Allow: /game/
+Allow: /live
+Allow: /standings
+Allow: /leaderboard

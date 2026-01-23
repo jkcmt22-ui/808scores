@@ -1,4 +1,4 @@
-// Push Notification utilities for 808scores
+// Push Notification utilities for Hawaii Sports Center
 
 const VAPID_PUBLIC_KEY = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY
 

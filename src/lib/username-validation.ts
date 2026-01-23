@@ -29,7 +29,7 @@ const RESERVED_USERNAMES = new Set([
   'moderator',
   'support',
   'help',
-  '808scores',
+  'hawaiisportscenter',
   'official',
   'staff',
   'team',

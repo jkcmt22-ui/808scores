@@ -213,7 +213,7 @@ export function isScoreReasonable(
 ): boolean {
   const maxScores: Record<string, number> = {
     football: 100,
-    basketball: 150,
+    basketball: 120, // Updated from 150 - high school basketball rarely exceeds 100
     volleyball: 30, // per set
     baseball: 30,
     softball: 30,
