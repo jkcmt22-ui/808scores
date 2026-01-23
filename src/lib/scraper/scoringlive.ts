@@ -296,6 +296,7 @@ export function parseSchedulePage(html: string, sportUrlPath: string): ScrapedGa
 
     // Parse the scheduled time
     const scheduledAt = parseGameDateTime(gameDate, timeStr)
+    console.log(`Game ${gameId}: date="${gameDate}" time="${timeStr}" -> ${scheduledAt.toISOString()}`)
 
     // Normalize team names
     const awayTeam = normalizeSchoolName(teams[0].name)

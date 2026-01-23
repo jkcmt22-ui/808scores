@@ -119,6 +119,7 @@ async function upsertGame(
     const { error } = await supabase
       .from('games')
       .update({
+        scheduled_at: game.scheduledAt.toISOString(),
         status: game.status,
         home_score: game.homeScore ?? 0,
         away_score: game.awayScore ?? 0,
