@@ -1,0 +1,190 @@
+'use client'
+
+import { useEffect, useState, useCallback } from 'react'
+import { createClient } from '@/lib/supabase/client'
+import type { GameWithTeams, Submission } from '@/types/database'
+import type { RealtimeChannel } from '@supabase/supabase-js'
+
+/**
+ * Hook for subscribing to real-time game updates
+ */
+export function useRealtimeGame(gameId: string) {
+  const [game, setGame] = useState<GameWithTeams | null>(null)
+  const [isLoading, setIsLoading] = useState(true)
+  const [error, setError] = useState<Error | null>(null)
+
+  const supabase = createClient()
+
+  // Fetch initial game data
+  const fetchGame = useCallback(async () => {
+    try {
+      const { data, error: fetchError } = await supabase
+        .from('games')
+        .select(`
+          *,
+          home_team:schools!games_home_team_id_fkey(*),
+          away_team:schools!games_away_team_id_fkey(*),
+          sport:sports(*)
+        `)
+        .eq('id', gameId)
+        .single()
+
+      if (fetchError) throw fetchError
+
+      setGame(data as GameWithTeams)
+      setError(null)
+    } catch (err) {
+      console.error('Error fetching game:', err)
+      setError(err instanceof Error ? err : new Error('Failed to fetch game'))
+    } finally {
+      setIsLoading(false)
+    }
+  }, [supabase, gameId])
+
+  useEffect(() => {
+    fetchGame()
+
+    // Subscribe to real-time updates
+    const channel = supabase
+      .channel(`game-${gameId}`)
+      .on(
+        'postgres_changes',
+        {
+          event: 'UPDATE',
+          schema: 'public',
+          table: 'games',
+          filter: `id=eq.${gameId}`,
+        },
+        (payload) => {
+          console.log('Game update received:', payload)
+          // Refetch to get full data with relations
+          fetchGame()
+        }
+      )
+      .subscribe()
+
+    return () => {
+      supabase.removeChannel(channel)
+    }
+  }, [supabase, gameId, fetchGame])
+
+  return { game, isLoading, error, refetch: fetchGame }
+}
+
+/**
+ * Hook for subscribing to real-time live games
+ */
+export function useRealtimeLiveGames() {
+  const [games, setGames] = useState<GameWithTeams[]>([])
+  const [isLoading, setIsLoading] = useState(true)
+  const [error, setError] = useState<Error | null>(null)
+
+  const supabase = createClient()
+
+  // Fetch live games
+  const fetchLiveGames = useCallback(async () => {
+    try {
+      const { data, error: fetchError } = await supabase
+        .from('games')
+        .select(`
+          *,
+          home_team:schools!games_home_team_id_fkey(*),
+          away_team:schools!games_away_team_id_fkey(*),
+          sport:sports(*)
+        `)
+        .eq('status', 'in_progress')
+        .order('scheduled_at', { ascending: true })
+
+      if (fetchError) throw fetchError
+
+      setGames(data as GameWithTeams[])
+      setError(null)
+    } catch (err) {
+      console.error('Error fetching live games:', err)
+      setError(err instanceof Error ? err : new Error('Failed to fetch live games'))
+    } finally {
+      setIsLoading(false)
+    }
+  }, [supabase])
+
+  useEffect(() => {
+    fetchLiveGames()
+
+    // Subscribe to all game updates
+    const channel = supabase
+      .channel('live-games')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'games',
+        },
+        (payload) => {
+          console.log('Games update received:', payload)
+          fetchLiveGames()
+        }
+      )
+      .subscribe()
+
+    return () => {
+      supabase.removeChannel(channel)
+    }
+  }, [supabase, fetchLiveGames])
+
+  return { games, isLoading, error, refetch: fetchLiveGames }
+}
+
+/**
+ * Hook for subscribing to game submissions (for verification UI)
+ */
+export function useRealtimeSubmissions(gameId: string) {
+  const [submissions, setSubmissions] = useState<Submission[]>([])
+  const [isLoading, setIsLoading] = useState(true)
+
+  const supabase = createClient()
+
+  const fetchSubmissions = useCallback(async () => {
+    try {
+      const { data, error } = await supabase
+        .from('submissions')
+        .select('*')
+        .eq('game_id', gameId)
+        .order('created_at', { ascending: false })
+
+      if (error) throw error
+
+      setSubmissions(data as Submission[])
+    } catch (err) {
+      console.error('Error fetching submissions:', err)
+    } finally {
+      setIsLoading(false)
+    }
+  }, [supabase, gameId])
+
+  useEffect(() => {
+    fetchSubmissions()
+
+    const channel = supabase
+      .channel(`submissions-${gameId}`)
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'submissions',
+          filter: `game_id=eq.${gameId}`,
+        },
+        () => {
+          fetchSubmissions()
+        }
+      )
+      .subscribe()
+
+    return () => {
+      supabase.removeChannel(channel)
+    }
+  }, [supabase, gameId, fetchSubmissions])
+
+  return { submissions, isLoading, refetch: fetchSubmissions }
+}

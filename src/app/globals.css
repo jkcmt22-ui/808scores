@@ -1,0 +1,417 @@
+@import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&family=Orbitron:wght@400;500;600;700;800;900&display=swap');
+@import "tailwindcss";
+
+:root {
+  /* 80s Neon Theme */
+  --background: #0a0a12;
+  --background-secondary: #12121f;
+  --background-tertiary: #1a1a2e;
+  --foreground: #ffffff;
+  --foreground-muted: #a0a0b0;
+  --foreground-subtle: #606070;
+
+  --border: #2a2a3e;
+  --border-hover: #3a3a5e;
+
+  /* Neon Colors */
+  --neon-pink: #ff2a6d;
+  --neon-blue: #05d9e8;
+  --neon-yellow: #f9f002;
+  --neon-purple: #d300c5;
+  --neon-green: #39ff14;
+  --neon-orange: #ff6b35;
+
+  /* Accent - Hot Pink */
+  --accent: #ff2a6d;
+  --accent-hover: #ff5a8d;
+  --accent-muted: #cc2057;
+
+  /* Score colors */
+  --score-red: #ff2a6d;
+  --score-amber: #f9f002;
+  --score-green: #39ff14;
+
+  --success: #39ff14;
+  --success-muted: #1a8f1a;
+
+  --warning: #f9f002;
+  --warning-muted: #8f8f00;
+
+  --destructive: #ff2a6d;
+  --destructive-muted: #8f1a3a;
+
+  --live: #ff2a6d;
+
+  /* Fonts */
+  --font-retro: 'Press Start 2P', monospace;
+  --font-display: 'Orbitron', sans-serif;
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-background-secondary: var(--background-secondary);
+  --color-background-tertiary: var(--background-tertiary);
+  --color-foreground: var(--foreground);
+  --color-foreground-muted: var(--foreground-muted);
+  --color-foreground-subtle: var(--foreground-subtle);
+  --color-border: var(--border);
+  --color-border-hover: var(--border-hover);
+  --color-accent: var(--accent);
+  --color-accent-hover: var(--accent-hover);
+  --color-success: var(--success);
+  --color-warning: var(--warning);
+  --color-destructive: var(--destructive);
+  --color-live: var(--live);
+  --color-score-red: var(--score-red);
+  --color-score-amber: var(--score-amber);
+  --color-score-green: var(--score-green);
+  --color-neon-pink: var(--neon-pink);
+  --color-neon-blue: var(--neon-blue);
+  --color-neon-yellow: var(--neon-yellow);
+  --color-neon-purple: var(--neon-purple);
+  --color-neon-green: var(--neon-green);
+  --color-neon-orange: var(--neon-orange);
+  --font-sans: var(--font-geist-sans);
+  --font-mono: var(--font-geist-mono);
+  --font-retro: var(--font-retro);
+  --font-display: var(--font-display);
+}
+
+* {
+  border-color: var(--border);
+}
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+  font-family: var(--font-display), system-ui, -apple-system, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Scanline effect overlay */
+.scanlines::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: repeating-linear-gradient(
+    0deg,
+    rgba(0, 0, 0, 0.1) 0px,
+    rgba(0, 0, 0, 0.1) 1px,
+    transparent 1px,
+    transparent 2px
+  );
+  pointer-events: none;
+}
+
+/* Neon text glow */
+.neon-text-pink {
+  color: var(--neon-pink);
+  text-shadow:
+    0 0 5px var(--neon-pink),
+    0 0 10px var(--neon-pink),
+    0 0 20px var(--neon-pink),
+    0 0 40px var(--neon-pink);
+}
+
+.neon-text-blue {
+  color: var(--neon-blue);
+  text-shadow:
+    0 0 5px var(--neon-blue),
+    0 0 10px var(--neon-blue),
+    0 0 20px var(--neon-blue),
+    0 0 40px var(--neon-blue);
+}
+
+.neon-text-yellow {
+  color: var(--neon-yellow);
+  text-shadow:
+    0 0 5px var(--neon-yellow),
+    0 0 10px var(--neon-yellow),
+    0 0 20px var(--neon-yellow);
+}
+
+.neon-text-green {
+  color: var(--neon-green);
+  text-shadow:
+    0 0 5px var(--neon-green),
+    0 0 10px var(--neon-green),
+    0 0 20px var(--neon-green);
+}
+
+/* LED/Scoreboard Number Style - 80s Version */
+.score-display {
+  font-family: var(--font-display), monospace;
+  font-weight: 900;
+  letter-spacing: 0.05em;
+  text-shadow: 0 0 10px currentColor, 0 0 20px currentColor, 0 0 40px currentColor;
+}
+
+.score-led {
+  background: linear-gradient(180deg, #1a0a1a 0%, #0a0510 100%);
+  border: 3px solid #3a1a3a;
+  border-radius: 0;
+  padding: 0.25rem 0.75rem;
+  font-family: var(--font-display), monospace;
+  font-weight: 900;
+  color: var(--neon-pink);
+  text-shadow: 0 0 10px var(--neon-pink), 0 0 20px var(--neon-pink), 0 0 40px var(--neon-pink);
+}
+
+.score-led-amber {
+  color: var(--neon-yellow);
+  text-shadow: 0 0 10px var(--neon-yellow), 0 0 20px var(--neon-yellow);
+  background: linear-gradient(180deg, #1a1a0a 0%, #0a0a05 100%);
+  border-color: #3a3a1a;
+}
+
+.score-led-green {
+  color: var(--neon-green);
+  text-shadow: 0 0 10px var(--neon-green), 0 0 20px var(--neon-green), 0 0 40px var(--neon-green);
+  background: linear-gradient(180deg, #0a1a0a 0%, #050a05 100%);
+  border-color: #1a3a1a;
+}
+
+/* 80s Scoreboard panel */
+.scoreboard-panel {
+  background: linear-gradient(180deg, #1a1a2e 0%, #0f0f1a 100%);
+  border: 3px solid #2a2a4e;
+  border-radius: 0;
+  box-shadow:
+    inset 0 2px 4px rgba(0,0,0,0.5),
+    0 0 20px rgba(255, 42, 109, 0.1),
+    0 4px 8px rgba(0,0,0,0.5);
+  position: relative;
+  overflow: hidden;
+}
+
+.scoreboard-panel::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, var(--neon-blue), transparent);
+  opacity: 0.5;
+}
+
+/* Neon border glow */
+.neon-border-pink {
+  border: 2px solid var(--neon-pink);
+  box-shadow:
+    0 0 5px var(--neon-pink),
+    0 0 10px var(--neon-pink),
+    inset 0 0 5px rgba(255, 42, 109, 0.1);
+}
+
+.neon-border-blue {
+  border: 2px solid var(--neon-blue);
+  box-shadow:
+    0 0 5px var(--neon-blue),
+    0 0 10px var(--neon-blue),
+    inset 0 0 5px rgba(5, 217, 232, 0.1);
+}
+
+/* Hide scrollbar for cleaner look */
+.hide-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+.hide-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+
+/* Custom scrollbar - 80s style */
+.custom-scrollbar::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-track {
+  background: var(--background-secondary);
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  background: linear-gradient(180deg, var(--neon-pink), var(--neon-purple));
+  border-radius: 0;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: linear-gradient(180deg, var(--neon-blue), var(--neon-pink));
+}
+
+/* Safe area padding for iOS */
+.safe-bottom {
+  padding-bottom: env(safe-area-inset-bottom);
+}
+
+.safe-top {
+  padding-top: env(safe-area-inset-top);
+}
+
+/* Live pulse - 80s neon style */
+@keyframes live-pulse {
+  0%, 100% {
+    opacity: 1;
+    text-shadow: 0 0 10px var(--neon-pink), 0 0 20px var(--neon-pink), 0 0 40px var(--neon-pink);
+  }
+  50% {
+    opacity: 0.7;
+    text-shadow: 0 0 5px var(--neon-pink), 0 0 10px var(--neon-pink);
+  }
+}
+
+.animate-live-pulse {
+  animation: live-pulse 1s ease-in-out infinite;
+}
+
+/* LED blink */
+@keyframes led-blink {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.5; }
+}
+
+.animate-led-blink {
+  animation: led-blink 0.8s ease-in-out infinite;
+}
+
+/* Neon flicker */
+@keyframes neon-flicker {
+  0%, 19%, 21%, 23%, 25%, 54%, 56%, 100% {
+    text-shadow:
+      0 0 5px var(--neon-pink),
+      0 0 10px var(--neon-pink),
+      0 0 20px var(--neon-pink),
+      0 0 40px var(--neon-pink);
+  }
+  20%, 24%, 55% {
+    text-shadow: none;
+  }
+}
+
+.animate-neon-flicker {
+  animation: neon-flicker 3s infinite;
+}
+
+/* Subtle fade in */
+@keyframes fade-in {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-fade-in {
+  animation: fade-in 0.2s ease-out;
+}
+
+/* Skeleton loading shimmer - 80s gradient */
+@keyframes shimmer {
+  0% {
+    background-position: -200% 0;
+  }
+  100% {
+    background-position: 200% 0;
+  }
+}
+
+.animate-shimmer {
+  background: linear-gradient(
+    90deg,
+    var(--background-secondary) 25%,
+    var(--background-tertiary) 50%,
+    var(--background-secondary) 75%
+  );
+  background-size: 200% 100%;
+  animation: shimmer 1.5s infinite;
+}
+
+/* Focus ring - neon style */
+.focus-ring {
+  outline: none;
+}
+
+.focus-ring:focus-visible {
+  box-shadow: 0 0 0 2px var(--background), 0 0 0 4px var(--neon-blue), 0 0 10px var(--neon-blue);
+}
+
+/* Touch-friendly tap highlight */
+@media (hover: none) {
+  button, a, [role="button"] {
+    -webkit-tap-highlight-color: transparent;
+  }
+}
+
+/* 80s Retro button style */
+.btn-retro {
+  background: linear-gradient(180deg, #3a3a5e 0%, #1a1a2e 100%);
+  border: 3px solid;
+  border-top-color: #5a5a7e;
+  border-left-color: #5a5a7e;
+  border-bottom-color: #0a0a1e;
+  border-right-color: #0a0a1e;
+  box-shadow: 0 4px 0 #000;
+  text-transform: uppercase;
+  letter-spacing: 0.15em;
+  font-weight: 700;
+  font-family: var(--font-display);
+}
+
+.btn-retro:hover {
+  background: linear-gradient(180deg, #4a4a6e 0%, #2a2a3e 100%);
+}
+
+.btn-retro:active {
+  transform: translateY(4px);
+  box-shadow: none;
+}
+
+/* Neon button */
+.btn-neon {
+  background: transparent;
+  border: 2px solid var(--neon-pink);
+  color: var(--neon-pink);
+  text-shadow: 0 0 5px var(--neon-pink);
+  box-shadow:
+    0 0 5px var(--neon-pink),
+    0 0 10px var(--neon-pink),
+    inset 0 0 5px rgba(255, 42, 109, 0.2);
+  transition: all 0.2s ease;
+}
+
+.btn-neon:hover {
+  background: var(--neon-pink);
+  color: #000;
+  text-shadow: none;
+  box-shadow:
+    0 0 10px var(--neon-pink),
+    0 0 20px var(--neon-pink),
+    0 0 40px var(--neon-pink);
+}
+
+/* Grid background effect */
+.grid-bg {
+  background-image:
+    linear-gradient(rgba(5, 217, 232, 0.03) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(5, 217, 232, 0.03) 1px, transparent 1px);
+  background-size: 50px 50px;
+}
+
+/* Retro pixel font class */
+.font-pixel {
+  font-family: 'Press Start 2P', monospace;
+}
+
+/* Display font class */
+.font-display {
+  font-family: 'Orbitron', sans-serif;
+}
