@@ -6,6 +6,7 @@ export function formatGameTime(date: string | Date): string {
     hour: 'numeric',
     minute: '2-digit',
     hour12: true,
+    timeZone: 'Pacific/Honolulu',
   })
 }
 
@@ -15,6 +16,7 @@ export function formatGameDate(date: string | Date): string {
     weekday: 'short',
     month: 'short',
     day: 'numeric',
+    timeZone: 'Pacific/Honolulu',
   })
 }
 
@@ -25,17 +27,17 @@ export function formatFullDate(date: string | Date): string {
     month: 'long',
     day: 'numeric',
     year: 'numeric',
+    timeZone: 'Pacific/Honolulu',
   })
 }
 
 export function isToday(date: string | Date): boolean {
   const d = new Date(date)
   const today = new Date()
-  return (
-    d.getDate() === today.getDate() &&
-    d.getMonth() === today.getMonth() &&
-    d.getFullYear() === today.getFullYear()
-  )
+  // Compare dates in Hawaii timezone
+  const dateStr = d.toLocaleDateString('en-US', { timeZone: 'Pacific/Honolulu' })
+  const todayStr = today.toLocaleDateString('en-US', { timeZone: 'Pacific/Honolulu' })
+  return dateStr === todayStr
 }
 
 export function isGameLive(status: string): boolean {
