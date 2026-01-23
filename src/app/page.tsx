@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useMemo } from 'react'
-import { Header, Footer } from '@/components/layout'
+import { Header } from '@/components/layout'
 import { GameCard, SportFilter } from '@/components/game'
 import { GameCardSkeleton } from '@/components/ui'
 import { FavoritesModal } from '@/components/onboarding'
@@ -385,8 +385,6 @@ export default function HomePage() {
           </section>
         )}
 
-        {/* Footer */}
-        <Footer />
       </main>
     </>
   )
