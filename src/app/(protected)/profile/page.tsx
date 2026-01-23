@@ -222,7 +222,9 @@ export default function ProfilePage() {
               <p className="mb-4 text-sm text-foreground-muted">
                 Get instant score publishing, 2x points multiplier, and exclusive badge.
               </p>
-              <Button className="w-full bg-neon-purple hover:bg-neon-purple/80">Apply Now</Button>
+              <Link href="/apply-trusted-reporter">
+                <Button className="w-full bg-neon-purple hover:bg-neon-purple/80">Apply Now</Button>
+              </Link>
             </div>
           </Card>
         )}

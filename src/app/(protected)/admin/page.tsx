@@ -13,6 +13,9 @@ import {
   Clock,
   Search,
   RefreshCw,
+  Shield,
+  UserCheck,
+  UserX,
 } from 'lucide-react'
 import { Button, Badge, Input, Card } from '@/components/ui'
 import { useAuth } from '@/hooks'
@@ -20,7 +23,27 @@ import { createClient } from '@/lib/supabase/client'
 import { cn, formatGameTime, isGameLive, isGameFinal } from '@/lib/utils'
 import type { GameWithTeams, Sport, School, GameStatus, GameType } from '@/types/database'
 
-type TabType = 'games' | 'create'
+type TabType = 'games' | 'create' | 'applications'
+
+interface TrustedReporterApplication {
+  id: string
+  user_id: string
+  full_name: string
+  role: string
+  school_affiliation: string | null
+  reason: string | null
+  status: 'pending' | 'approved' | 'rejected'
+  created_at: string
+  reviewed_at: string | null
+  user?: {
+    display_name: string | null
+    email: string | null
+    phone: string | null
+    reputation_score: number
+    submission_count: number
+    verified_count: number
+  }
+}
 
 interface GameFormData {
   sport_id: string
@@ -70,6 +93,8 @@ export default function AdminPage() {
   const [formData, setFormData] = useState<GameFormData>(initialFormData)
   const [isSaving, setIsSaving] = useState(false)
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null)
+  const [applications, setApplications] = useState<TrustedReporterApplication[]>([])
+  const [applicationFilter, setApplicationFilter] = useState<'pending' | 'all'>('pending')
 
   // Check if user has admin access (trusted reporter or elite)
   const hasAdminAccess = profile?.is_trusted_reporter || profile?.tier === 'elite' || profile?.tier === 'trusted'
@@ -109,6 +134,17 @@ export default function AdminPage() {
         .order('name')
 
       if (schoolsData) setSchools(schoolsData as School[])
+
+      // Fetch trusted reporter applications
+      const { data: applicationsData } = await supabase
+        .from('trusted_reporter_applications')
+        .select(`
+          *,
+          user:users(display_name, email, phone, reputation_score, submission_count, verified_count)
+        `)
+        .order('created_at', { ascending: false })
+
+      if (applicationsData) setApplications(applicationsData as TrustedReporterApplication[])
 
       setIsLoading(false)
     }
@@ -270,6 +306,91 @@ export default function AdminPage() {
     }
   }
 
+  // Approve application
+  const handleApproveApplication = async (application: TrustedReporterApplication) => {
+    if (!confirm(`Approve ${application.full_name} as a Trusted Reporter?`)) return
+
+    try {
+      // Update application status
+      const { error: appError } = await supabase
+        .from('trusted_reporter_applications')
+        .update({
+          status: 'approved',
+          reviewed_at: new Date().toISOString(),
+          reviewed_by: profile?.id,
+        } as never)
+        .eq('id', application.id)
+
+      if (appError) throw appError
+
+      // Update user's trusted reporter status
+      const { error: userError } = await supabase
+        .from('users')
+        .update({
+          is_trusted_reporter: true,
+          trusted_reporter_approved_at: new Date().toISOString(),
+          tier: 'trusted',
+        } as never)
+        .eq('id', application.user_id)
+
+      if (userError) throw userError
+
+      // Update local state
+      setApplications((prev) =>
+        prev.map((app) =>
+          app.id === application.id
+            ? { ...app, status: 'approved', reviewed_at: new Date().toISOString() }
+            : app
+        )
+      )
+
+      setMessage({ type: 'success', text: `${application.full_name} is now a Trusted Reporter!` })
+    } catch (err) {
+      console.error('Error approving application:', err)
+      setMessage({ type: 'error', text: 'Failed to approve application' })
+    }
+  }
+
+  // Reject application
+  const handleRejectApplication = async (application: TrustedReporterApplication) => {
+    if (!confirm(`Reject ${application.full_name}'s application?`)) return
+
+    try {
+      const { error } = await supabase
+        .from('trusted_reporter_applications')
+        .update({
+          status: 'rejected',
+          reviewed_at: new Date().toISOString(),
+          reviewed_by: profile?.id,
+        } as never)
+        .eq('id', application.id)
+
+      if (error) throw error
+
+      // Update local state
+      setApplications((prev) =>
+        prev.map((app) =>
+          app.id === application.id
+            ? { ...app, status: 'rejected', reviewed_at: new Date().toISOString() }
+            : app
+        )
+      )
+
+      setMessage({ type: 'success', text: 'Application rejected' })
+    } catch (err) {
+      console.error('Error rejecting application:', err)
+      setMessage({ type: 'error', text: 'Failed to reject application' })
+    }
+  }
+
+  // Filter applications
+  const filteredApplications = useMemo(() => {
+    if (applicationFilter === 'pending') {
+      return applications.filter((app) => app.status === 'pending')
+    }
+    return applications
+  }, [applications, applicationFilter])
+
   // Start editing a game
   const startEditing = (game: GameWithTeams) => {
     setEditingGame(game)
@@ -371,6 +492,19 @@ export default function AdminPage() {
           >
             <Plus className="mr-2 h-4 w-4" />
             Create Game
+          </Button>
+          <Button
+            variant={activeTab === 'applications' ? 'default' : 'outline'}
+            onClick={() => setActiveTab('applications')}
+            className="relative"
+          >
+            <Shield className="mr-2 h-4 w-4" />
+            Applications
+            {applications.filter((a) => a.status === 'pending').length > 0 && (
+              <span className="absolute -top-1 -right-1 h-5 w-5 rounded-full bg-neon-pink text-[10px] font-bold flex items-center justify-center">
+                {applications.filter((a) => a.status === 'pending').length}
+              </span>
+            )}
           </Button>
         </div>
 
@@ -487,6 +621,51 @@ export default function AdminPage() {
             </Button>
           </Card>
         )}
+
+        {/* Applications Tab */}
+        {activeTab === 'applications' && (
+          <div>
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="font-display font-bold text-lg neon-text-purple">
+                Trusted Reporter Applications
+              </h2>
+              <select
+                value={applicationFilter}
+                onChange={(e) => setApplicationFilter(e.target.value as 'pending' | 'all')}
+                className="h-10 px-3 border-2 border-border bg-background text-foreground font-display text-sm"
+              >
+                <option value="pending">Pending Only</option>
+                <option value="all">All Applications</option>
+              </select>
+            </div>
+
+            {isLoading ? (
+              <div className="flex justify-center py-12">
+                <Loader2 className="h-8 w-8 animate-spin text-neon-purple" />
+              </div>
+            ) : filteredApplications.length === 0 ? (
+              <Card className="p-8 text-center">
+                <Shield className="mx-auto mb-4 h-12 w-12 text-foreground-muted" />
+                <p className="text-foreground-muted font-display">
+                  {applicationFilter === 'pending'
+                    ? 'No pending applications'
+                    : 'No applications found'}
+                </p>
+              </Card>
+            ) : (
+              <div className="space-y-4">
+                {filteredApplications.map((application) => (
+                  <ApplicationCard
+                    key={application.id}
+                    application={application}
+                    onApprove={() => handleApproveApplication(application)}
+                    onReject={() => handleRejectApplication(application)}
+                  />
+                ))}
+              </div>
+            )}
+          </div>
+        )}
       </main>
     </div>
   )
@@ -572,6 +751,134 @@ function GameRow({
         </div>
       </div>
     </div>
+  )
+}
+
+// Application Card Component
+function ApplicationCard({
+  application,
+  onApprove,
+  onReject,
+}: {
+  application: TrustedReporterApplication
+  onApprove: () => void
+  onReject: () => void
+}) {
+  const isPending = application.status === 'pending'
+  const isApproved = application.status === 'approved'
+  const isRejected = application.status === 'rejected'
+
+  const roleLabels: Record<string, string> = {
+    coach: 'Coach',
+    athletic_director: 'Athletic Director',
+    school_staff: 'School Staff',
+    parent: 'Parent/Guardian',
+    student: 'Student',
+    media: 'Media/Press',
+    official: 'Game Official',
+    fan: 'Dedicated Fan',
+    other: 'Other',
+  }
+
+  return (
+    <Card className={cn(
+      'border-2 p-4',
+      isPending && 'border-neon-yellow/30',
+      isApproved && 'border-neon-green/30 bg-neon-green/5',
+      isRejected && 'border-neon-pink/30 bg-neon-pink/5'
+    )}>
+      <div className="flex items-start justify-between gap-4">
+        <div className="flex-1 min-w-0">
+          {/* Header */}
+          <div className="flex items-center gap-2 mb-2">
+            <h3 className="font-display font-bold text-foreground">{application.full_name}</h3>
+            {isPending && (
+              <Badge variant="warning" className="text-[10px]">
+                <Clock className="mr-1 h-3 w-3" />
+                Pending
+              </Badge>
+            )}
+            {isApproved && (
+              <Badge variant="success" className="text-[10px]">
+                <CheckCircle className="mr-1 h-3 w-3" />
+                Approved
+              </Badge>
+            )}
+            {isRejected && (
+              <Badge variant="destructive" className="text-[10px]">
+                <AlertCircle className="mr-1 h-3 w-3" />
+                Rejected
+              </Badge>
+            )}
+          </div>
+
+          {/* Details */}
+          <div className="space-y-1 text-sm">
+            <p className="text-foreground-muted">
+              <span className="text-foreground-subtle">Role:</span>{' '}
+              {roleLabels[application.role] || application.role}
+            </p>
+            {application.school_affiliation && (
+              <p className="text-foreground-muted">
+                <span className="text-foreground-subtle">School:</span>{' '}
+                {application.school_affiliation}
+              </p>
+            )}
+            {application.reason && (
+              <p className="text-foreground-muted">
+                <span className="text-foreground-subtle">Reason:</span>{' '}
+                {application.reason}
+              </p>
+            )}
+          </div>
+
+          {/* User stats */}
+          {application.user && (
+            <div className="flex items-center gap-4 mt-3 text-xs text-foreground-subtle">
+              <span>
+                Rep: <span className="text-neon-blue font-bold">{application.user.reputation_score}</span>
+              </span>
+              <span>
+                Submissions: <span className="text-foreground">{application.user.submission_count}</span>
+              </span>
+              <span>
+                Verified: <span className="text-neon-green">{application.user.verified_count}</span>
+              </span>
+            </div>
+          )}
+
+          {/* Timestamps */}
+          <p className="text-xs text-foreground-subtle mt-2">
+            Applied: {new Date(application.created_at).toLocaleDateString()}
+            {application.reviewed_at && (
+              <> &middot; Reviewed: {new Date(application.reviewed_at).toLocaleDateString()}</>
+            )}
+          </p>
+        </div>
+
+        {/* Actions */}
+        {isPending && (
+          <div className="flex flex-col gap-2">
+            <Button
+              size="sm"
+              onClick={onApprove}
+              className="bg-neon-green hover:bg-neon-green/80 text-background"
+            >
+              <UserCheck className="mr-1 h-4 w-4" />
+              Approve
+            </Button>
+            <Button
+              size="sm"
+              variant="destructive"
+              onClick={onReject}
+            >
+              <UserX className="mr-1 h-4 w-4" />
+              Reject
+            </Button>
+          </div>
+        )}
+      </div>
+    </Card>
   )
 }
 
