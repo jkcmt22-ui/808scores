@@ -158,15 +158,18 @@ export function isScoreOverdue(
   const gameDate = new Date(scheduledAt)
   const now = new Date()
 
+  // Get the game date in Hawaii timezone (YYYY-MM-DD format)
+  const gameDateHST = gameDate.toLocaleDateString('en-CA', { timeZone: 'Pacific/Honolulu' })
+
+  // Parse to get year, month, day
+  const [year, month, day] = gameDateHST.split('-').map(Number)
+
   // Calculate 5AM HST the day after the game
-  // Hawaii is UTC-10 (no DST)
-  const nextDay5amHST = new Date(gameDate)
-  nextDay5amHST.setDate(nextDay5amHST.getDate() + 1)
-  // Set to 5AM HST = 15:00 UTC (5AM + 10 hours)
-  nextDay5amHST.setUTCHours(15, 0, 0, 0)
+  // 5AM HST = 15:00 UTC (HST is UTC-10)
+  const deadlineUTC = new Date(Date.UTC(year, month - 1, day + 1, 15, 0, 0, 0))
 
   // If we're past the deadline
-  if (now > nextDay5amHST) {
+  if (now > deadlineUTC) {
     // Game is scheduled but time has passed - score was never submitted
     if (status === 'scheduled') {
       return true
@@ -189,8 +192,13 @@ export function isScoreOverdue(
  */
 export function getScoreDeadline(scheduledAt: string | Date): Date {
   const gameDate = new Date(scheduledAt)
-  const deadline = new Date(gameDate)
-  deadline.setDate(deadline.getDate() + 1)
-  deadline.setUTCHours(15, 0, 0, 0) // 5AM HST = 15:00 UTC
-  return deadline
+
+  // Get the game date in Hawaii timezone (YYYY-MM-DD format)
+  const gameDateHST = gameDate.toLocaleDateString('en-CA', { timeZone: 'Pacific/Honolulu' })
+
+  // Parse to get year, month, day
+  const [year, month, day] = gameDateHST.split('-').map(Number)
+
+  // 5AM HST the next day = 15:00 UTC (HST is UTC-10)
+  return new Date(Date.UTC(year, month - 1, day + 1, 15, 0, 0, 0))
 }
