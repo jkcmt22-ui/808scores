@@ -5,7 +5,7 @@ import { Header } from '@/components/layout'
 import { GameCard, SportFilter } from '@/components/game'
 import { GameCardSkeleton } from '@/components/ui'
 import { FavoritesModal } from '@/components/onboarding'
-import { QuickAccess, TournamentBanner } from '@/components/home'
+import { QuickAccess, TournamentBanner, ComingSoon } from '@/components/home'
 import { GlobalSearch } from '@/components/search/global-search'
 import { useGames, useAuth, useFavoriteTeams, useFavoriteSports } from '@/hooks'
 import { formatFullDate } from '@/lib/utils'
@@ -248,6 +248,9 @@ export default function HomePage() {
 
         {/* Tournament Banner (only when active tournaments exist) */}
         <TournamentBanner />
+
+        {/* Coming Soon - Next 24 hours */}
+        <ComingSoon maxGames={5} />
 
         {/* Loading State */}
         {isLoading && (

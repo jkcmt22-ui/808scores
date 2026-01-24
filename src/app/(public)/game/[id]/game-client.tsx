@@ -25,6 +25,7 @@ import {
 import { Button, Badge, Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui'
 import { Breadcrumbs } from '@/components/layout'
 import { GameChat } from '@/components/chat'
+import { ShareButtons } from '@/components/game'
 import { useGame } from '@/hooks'
 import { createClient } from '@/lib/supabase/client'
 import { cn, formatGameTime, isGameLive, isGameFinal } from '@/lib/utils'
@@ -379,6 +380,24 @@ export function GameClient({ params }: GamePageProps) {
               <span className="uppercase tracking-wider">Verified Score</span>
             </div>
           )}
+        </div>
+
+        {/* Share Section */}
+        <div className="mb-6 flex items-center justify-between p-4 border-2 border-border bg-background-secondary">
+          <div className="text-sm text-foreground-muted font-display">
+            Share this {isLive ? 'live game' : isFinal ? 'final score' : 'matchup'}
+          </div>
+          <ShareButtons
+            title={`${game.away_team.short_name} vs ${game.home_team.short_name}`}
+            text={
+              isLive
+                ? `LIVE: ${game.away_team.short_name} ${game.away_score} - ${game.home_team.short_name} ${game.home_score} | ${sportName}`
+                : isFinal
+                ? `Final: ${game.away_team.short_name} ${game.away_score} - ${game.home_team.short_name} ${game.home_score} | ${sportName}`
+                : `${game.away_team.short_name} vs ${game.home_team.short_name} | ${sportName}`
+            }
+            url={`/game/${id}`}
+          />
         </div>
 
         {/* Tabs for Chat/Updates/Report */}
