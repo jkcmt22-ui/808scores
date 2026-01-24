@@ -144,11 +144,20 @@ export function useGames(options: UseGamesOptions = {}) {
         (payload) => {
           if (payload.eventType === 'UPDATE') {
             setGames((current) =>
-              current.map((game) =>
-                game.id === payload.new.id
-                  ? { ...game, ...payload.new }
-                  : game
-              )
+              current.map((game) => {
+                if (game.id !== payload.new.id) return game
+                // Preserve the joined relation objects (home_team, away_team, sport)
+                // since payload.new only contains raw game fields
+                const updatedFields = payload.new as Record<string, unknown>
+                return {
+                  ...game,
+                  ...updatedFields,
+                  // Always preserve the relation objects from current state
+                  home_team: game.home_team,
+                  away_team: game.away_team,
+                  sport: game.sport,
+                }
+              })
             )
           } else if (payload.eventType === 'INSERT') {
             // Refetch to get full game with relations
@@ -273,9 +282,20 @@ export function useGame(gameId: string) {
           filter: `id=eq.${gameId}`,
         },
         (payload) => {
-          setGame((current) =>
-            current ? { ...current, ...payload.new } : null
-          )
+          setGame((current) => {
+            if (!current) return null
+            // Preserve the joined relation objects (home_team, away_team, sport)
+            // since payload.new only contains raw game fields
+            const updatedFields = payload.new as Record<string, unknown>
+            return {
+              ...current,
+              ...updatedFields,
+              // Always preserve the relation objects from current state
+              home_team: current.home_team,
+              away_team: current.away_team,
+              sport: current.sport,
+            }
+          })
         }
       )
       .subscribe()
