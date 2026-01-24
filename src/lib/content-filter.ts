@@ -18,9 +18,9 @@ const PROFANITY_WORDS = [
   'dick', 'dicks', 'd1ck',
   'cock', 'cocks', 'c0ck',
   'pussy', 'pussies', 'pu55y',
-  'cunt', 'cunts', 'c*nt',
+  'cunt', 'cunts',
   'whore', 'whores', 'wh0re',
-  'slut', 'sluts', 'sl*t',
+  'slut', 'sluts',
   'piss', 'pissed', 'pissing',
   'douche', 'douchebag',
   'twat',
@@ -72,6 +72,11 @@ const LEET_MAP: Record<string, string[]> = {
   'z': ['2'],
 }
 
+// Escape special regex characters
+function escapeRegexChar(char: string): string {
+  return char.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+}
+
 // Build regex pattern that matches l33t speak variations
 function buildProfanityRegex(word: string): RegExp {
   let pattern = ''
@@ -79,9 +84,12 @@ function buildProfanityRegex(word: string): RegExp {
     const alternatives = LEET_MAP[char]
     if (alternatives) {
       // Match the character or any of its l33t alternatives
-      pattern += `[${char}${alternatives.join('')}]`
+      // Escape special characters in the character class
+      const escapedAlts = alternatives.map(a => escapeRegexChar(a)).join('')
+      pattern += `[${escapeRegexChar(char)}${escapedAlts}]`
     } else {
-      pattern += char
+      // Escape the character if it's a special regex char
+      pattern += escapeRegexChar(char)
     }
     // Allow optional spaces, dots, dashes between characters (to catch "f u c k")
     pattern += '[\\s._-]*'
