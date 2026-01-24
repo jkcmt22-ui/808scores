@@ -9,6 +9,7 @@ import {
   User,
   Plus,
   BarChart3,
+  Building2,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
@@ -16,7 +17,7 @@ const navItems = [
   { href: '/', label: 'Today', icon: Calendar },
   { href: '/live', label: 'Live', icon: Radio },
   { href: '/submit', label: 'Submit', icon: Plus, isAction: true },
-  { href: '/tournaments', label: 'Playoffs', icon: Trophy },
+  { href: '/schools', label: 'Schools', icon: Building2 },
   { href: '/standings', label: 'Standings', icon: BarChart3 },
   { href: '/profile', label: 'Profile', icon: User },
 ]
