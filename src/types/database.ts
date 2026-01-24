@@ -19,6 +19,11 @@ export type PrizeType = 'gift_card' | 'merchandise' | 'cash' | 'experience'
 export type RaffleType = 'monthly' | 'season_end' | 'special'
 export type RaffleStatus = 'upcoming' | 'open' | 'closed' | 'drawing' | 'completed' | 'canceled'
 
+// Tournament types
+export type TournamentFormat = 'single_elimination' | 'double_elimination' | 'round_robin' | 'pool_play' | 'custom'
+export type TournamentStatus = 'upcoming' | 'in_progress' | 'completed' | 'canceled'
+export type TournamentRound = 'play_in' | 'round_of_32' | 'round_of_16' | 'quarterfinal' | 'semifinal' | 'third_place' | 'final' | 'pool_a' | 'pool_b' | 'pool_c' | 'pool_d'
+
 // Periods configuration for different sport types
 export interface PeriodsConfig {
   count: number
@@ -105,10 +110,16 @@ export interface Database {
           golden_game: boolean
           game_type: GameType
           overtime_count: number
+          // Tournament fields
+          tournament_id: string | null
+          tournament_round: TournamentRound | null
+          bracket_position: number | null
+          winner_advances_to: string | null
+          loser_drops_to: string | null
           created_at: string
           updated_at: string
         }
-        Insert: Omit<Database['public']['Tables']['games']['Row'], 'id' | 'created_at' | 'updated_at' | 'home_score' | 'away_score' | 'is_overtime' | 'is_verified' | 'golden_game' | 'game_type' | 'overtime_count'>
+        Insert: Omit<Database['public']['Tables']['games']['Row'], 'id' | 'created_at' | 'updated_at' | 'home_score' | 'away_score' | 'is_overtime' | 'is_verified' | 'golden_game' | 'game_type' | 'overtime_count' | 'tournament_id' | 'tournament_round' | 'bracket_position' | 'winner_advances_to' | 'loser_drops_to'>
         Update: Partial<Database['public']['Tables']['games']['Insert']>
       }
       game_scores: {
@@ -511,6 +522,49 @@ export interface Database {
         Insert: Omit<Database['public']['Tables']['trusted_reporter_codes']['Row'], 'id' | 'created_at' | 'use_count' | 'active'>
         Update: Partial<Database['public']['Tables']['trusted_reporter_codes']['Insert']>
       }
+      tournaments: {
+        Row: {
+          id: string
+          name: string
+          sport_id: string
+          format: TournamentFormat
+          status: TournamentStatus
+          description: string | null
+          start_date: string
+          end_date: string | null
+          venue: string | null
+          island: string | null
+          num_teams: number | null
+          current_round: TournamentRound | null
+          season: string | null
+          league: string | null
+          division: string | null
+          external_id: string | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: Omit<Database['public']['Tables']['tournaments']['Row'], 'id' | 'created_at' | 'updated_at' | 'status'> & { status?: TournamentStatus }
+        Update: Partial<Database['public']['Tables']['tournaments']['Insert']>
+      }
+      tournament_teams: {
+        Row: {
+          id: string
+          tournament_id: string
+          school_id: string
+          seed: number | null
+          pool: string | null
+          eliminated: boolean
+          eliminated_round: TournamentRound | null
+          final_placement: number | null
+          wins: number
+          losses: number
+          points_for: number
+          points_against: number
+          created_at: string
+        }
+        Insert: Omit<Database['public']['Tables']['tournament_teams']['Row'], 'id' | 'created_at' | 'eliminated' | 'wins' | 'losses' | 'points_for' | 'points_against'>
+        Update: Partial<Database['public']['Tables']['tournament_teams']['Insert']>
+      }
     }
   }
 }
@@ -540,6 +594,8 @@ export type RaffleEntry = Database['public']['Tables']['raffle_entries']['Row']
 export type RaffleWinner = Database['public']['Tables']['raffle_winners']['Row']
 export type SportFollow = Database['public']['Tables']['sport_follows']['Row']
 export type TrustedReporterCode = Database['public']['Tables']['trusted_reporter_codes']['Row']
+export type Tournament = Database['public']['Tables']['tournaments']['Row']
+export type TournamentTeam = Database['public']['Tables']['tournament_teams']['Row']
 
 // Extended types with relations
 export interface GameWithTeams extends Game {
@@ -547,6 +603,7 @@ export interface GameWithTeams extends Game {
   away_team: School
   sport: Sport
   scores?: GameScore[]
+  tournament?: Tournament | null
 }
 
 export interface SubmissionWithUser extends Submission {
@@ -615,4 +672,51 @@ export interface BanStatus {
   reason?: string
   expiresAt?: string
   isPermanent?: boolean
+}
+
+// Tournament extended types
+export interface TournamentWithSport extends Tournament {
+  sport: Sport
+}
+
+export interface TournamentTeamWithSchool extends TournamentTeam {
+  school: School
+}
+
+export interface TournamentWithDetails extends Tournament {
+  sport: Sport
+  teams: TournamentTeamWithSchool[]
+  games?: GameWithTeams[]
+}
+
+export interface GameWithTournament extends GameWithTeams {
+  tournament?: Tournament | null
+}
+
+// Bracket visualization types
+export interface BracketGame {
+  id: string
+  round: TournamentRound
+  position: number
+  homeTeam: School | null
+  awayTeam: School | null
+  homeScore: number | null
+  awayScore: number | null
+  homeSeed: number | null
+  awaySeed: number | null
+  status: GameStatus
+  scheduledAt: string
+  winnerAdvancesTo: string | null
+  loserDropsTo: string | null
+}
+
+export interface BracketRound {
+  round: TournamentRound
+  label: string
+  games: BracketGame[]
+}
+
+export interface TournamentBracket {
+  tournament: TournamentWithDetails
+  rounds: BracketRound[]
 }

@@ -7,3 +7,10 @@ export { usePushNotifications } from './use-push-notifications'
 export { useSchools } from './use-schools'
 export { useFavoriteTeams } from './use-favorite-teams'
 export { useFavoriteSports } from './use-favorite-sports'
+export {
+  useTournaments,
+  useTournament,
+  useTournamentBracket,
+  useActiveTournaments,
+  useUpcomingTournaments,
+} from './use-tournaments'

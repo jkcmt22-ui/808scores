@@ -561,6 +561,10 @@ export default function AdminPage() {
 
         {/* Quick Links */}
         <div className="flex flex-wrap gap-2 mb-4">
+          <Button variant="outline" size="sm" onClick={() => router.push('/admin/tournaments')}>
+            <Trophy className="mr-2 h-4 w-4" />
+            Tournaments
+          </Button>
           <Button variant="outline" size="sm" onClick={() => router.push('/admin/moderation')}>
             <ShieldAlert className="mr-2 h-4 w-4" />
             Moderation
@@ -574,7 +578,7 @@ export default function AdminPage() {
             Raffles
           </Button>
           <Button variant="outline" size="sm" onClick={() => router.push('/admin/prizes')}>
-            <Trophy className="mr-2 h-4 w-4" />
+            <Gift className="mr-2 h-4 w-4" />
             Prizes
           </Button>
         </div>
