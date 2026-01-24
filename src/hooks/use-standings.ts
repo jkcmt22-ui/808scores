@@ -3,7 +3,7 @@
 import { useState, useEffect, useMemo, useCallback } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import type { GameWithTeams, School, Sport } from '@/types/database'
-import { calculateStandings, type LeagueStandings } from '@/lib/standings-calculator'
+import { calculateStandings, type LeagueStandings, type TeamStanding } from '@/lib/standings-calculator'
 
 interface UseStandingsOptions {
   sportCode?: string
@@ -17,6 +17,22 @@ interface UseStandingsReturn {
   isLoading: boolean
   error: string | null
   refetch: () => void
+}
+
+interface SeasonStandingRow {
+  id: string
+  school_id: string
+  sport_id: string
+  season_year: number
+  league: string
+  league_wins: number
+  league_losses: number
+  league_ties: number
+  overall_wins: number
+  overall_losses: number
+  overall_ties: number
+  points: number | null
+  school: School
 }
 
 export function useStandings(options: UseStandingsOptions = {}): UseStandingsReturn {
@@ -47,6 +63,7 @@ export function useStandings(options: UseStandingsOptions = {}): UseStandingsRet
 
       // Fetch sport by code if specified
       let sportId: string | null = null
+      let currentSport: Sport | null = null
       if (sportCode) {
         const { data: sportData, error: sportError } = await supabase
           .from('sports')
@@ -55,12 +72,101 @@ export function useStandings(options: UseStandingsOptions = {}): UseStandingsRet
           .single()
 
         if (sportError) throw sportError
-        const sport = sportData as Sport
-        setSport(sport)
-        sportId = sport.id
+        currentSport = sportData as Sport
+        setSport(currentSport)
+        sportId = currentSport.id
       }
 
-      // Build games query
+      // First, try to fetch from season_standings table
+      let standingsQuery = supabase
+        .from('season_standings')
+        .select(`
+          *,
+          school:schools(*)
+        `)
+        .eq('season_year', parseInt(targetSeason))
+
+      if (sportId) {
+        standingsQuery = standingsQuery.eq('sport_id', sportId)
+      }
+
+      if (league) {
+        standingsQuery = standingsQuery.eq('league', league)
+      }
+
+      const { data: standingsData, error: standingsError } = await standingsQuery
+
+      if (standingsError) throw standingsError
+
+      const seasonStandings = standingsData as SeasonStandingRow[]
+
+      // If we have pre-computed standings, use them
+      if (seasonStandings && seasonStandings.length > 0) {
+        // Group by league
+        const groupedByLeague = new Map<string, TeamStanding[]>()
+
+        for (const row of seasonStandings) {
+          if (!row.school) continue
+
+          const leagueKey = row.league
+          if (!groupedByLeague.has(leagueKey)) {
+            groupedByLeague.set(leagueKey, [])
+          }
+
+          const gamesPlayed = row.overall_wins + row.overall_losses + row.overall_ties
+          const winPct = gamesPlayed > 0
+            ? (row.overall_wins + row.overall_ties * 0.5) / gamesPlayed
+            : 0
+
+          groupedByLeague.get(leagueKey)!.push({
+            school: row.school,
+            wins: row.overall_wins,
+            losses: row.overall_losses,
+            ties: row.overall_ties,
+            winPct,
+            pointsFor: 0,
+            pointsAgainst: 0,
+            pointDiff: 0,
+            streak: '-',
+            gamesPlayed,
+            leagueWins: row.league_wins,
+            leagueLosses: row.league_losses,
+            leagueTies: row.league_ties
+          })
+        }
+
+        // Convert to LeagueStandings array
+        const result: LeagueStandings[] = []
+        for (const [leagueName, teams] of groupedByLeague) {
+          // Sort by league wins, then win pct
+          teams.sort((a, b) => {
+            if (b.leagueWins !== a.leagueWins) return b.leagueWins - a.leagueWins
+            if (b.winPct !== a.winPct) return b.winPct - a.winPct
+            return b.wins - a.wins
+          })
+
+          result.push({
+            league: leagueName,
+            division: null,
+            region: null,
+            displayName: leagueName,
+            teams
+          })
+        }
+
+        // Sort leagues
+        const leagueOrder = ['OIA East', 'OIA West', 'ILH', 'BIIF', 'MIL', 'KIF', 'Other']
+        result.sort((a, b) => {
+          const aIdx = leagueOrder.indexOf(a.league)
+          const bIdx = leagueOrder.indexOf(b.league)
+          return (aIdx === -1 ? 999 : aIdx) - (bIdx === -1 ? 999 : bIdx)
+        })
+
+        setStandings(result)
+        return
+      }
+
+      // Fallback: Calculate from games if no pre-computed standings
       let gamesQuery = supabase
         .from('games')
         .select(`
