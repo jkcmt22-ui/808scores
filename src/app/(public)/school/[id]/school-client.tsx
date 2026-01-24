@@ -14,8 +14,11 @@ import {
   Loader2,
   ListOrdered,
   Users,
+  BarChart3,
+  ChevronRight,
 } from 'lucide-react'
 import { Button, Badge, Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui'
+import { Breadcrumbs } from '@/components/layout'
 import { useFavoriteTeams } from '@/hooks/use-favorite-teams'
 import { useAuth } from '@/hooks/use-auth'
 import { useSchoolSchedule, type ScheduleGame, type SportSchedule } from '@/hooks/use-school-schedule'
@@ -208,6 +211,15 @@ export function SchoolClient({ params }: SchoolPageProps) {
             Team
           </span>
         </div>
+        {/* Breadcrumbs */}
+        <div className="px-4 border-t border-border bg-background-secondary">
+          <Breadcrumbs
+            items={[
+              { label: 'Schools', href: '/schools' },
+              { label: school.name },
+            ]}
+          />
+        </div>
       </div>
 
       {/* School Info Card */}
@@ -298,6 +310,23 @@ export function SchoolClient({ params }: SchoolPageProps) {
               </Button>
             )}
           </div>
+
+          {/* League Standings Link */}
+          {school.league && (
+            <Link
+              href={`/standings?league=${encodeURIComponent(school.league)}`}
+              className="mt-4 flex items-center justify-between p-3 border-2 border-border bg-background-secondary hover:border-neon-yellow transition-colors rounded-lg"
+            >
+              <div className="flex items-center gap-3">
+                <BarChart3 className="h-4 w-4 text-neon-yellow" />
+                <div>
+                  <p className="font-display font-bold text-sm">League Standings</p>
+                  <p className="text-xs text-foreground-muted">{school.league}</p>
+                </div>
+              </div>
+              <ChevronRight className="h-4 w-4 text-foreground-muted" />
+            </Link>
+          )}
         </div>
       </div>
 

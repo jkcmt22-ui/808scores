@@ -1,10 +1,12 @@
 'use client'
 
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useCallback } from 'react'
 import { Header } from '@/components/layout'
 import { GameCard, SportFilter } from '@/components/game'
 import { GameCardSkeleton } from '@/components/ui'
 import { FavoritesModal } from '@/components/onboarding'
+import { QuickAccess, TournamentBanner } from '@/components/home'
+import { GlobalSearch } from '@/components/search/global-search'
 import { useGames, useAuth, useFavoriteTeams, useFavoriteSports } from '@/hooks'
 import { formatFullDate } from '@/lib/utils'
 import { Calendar, ChevronDown, ChevronUp, ChevronLeft, ChevronRight, Star } from 'lucide-react'
@@ -79,6 +81,10 @@ export default function HomePage() {
   const [otherGamesExpanded, setOtherGamesExpanded] = useState(false)
   const [selectedDate, setSelectedDate] = useState(() => new Date())
   const [showOnboarding, setShowOnboarding] = useState(false)
+  const [searchOpen, setSearchOpen] = useState(false)
+
+  const openSearch = useCallback(() => setSearchOpen(true), [])
+  const closeSearch = useCallback(() => setSearchOpen(false), [])
 
   // Auth and favorites
   const { user, profile, isAuthenticated, refreshProfile } = useAuth()
@@ -236,6 +242,12 @@ export default function HomePage() {
             {selectedDate.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric', timeZone: 'Pacific/Honolulu' })}
           </p>
         )}
+
+        {/* Quick Access Section */}
+        <QuickAccess onSearchClick={openSearch} />
+
+        {/* Tournament Banner (only when active tournaments exist) */}
+        <TournamentBanner />
 
         {/* Loading State */}
         {isLoading && (
@@ -400,6 +412,9 @@ export default function HomePage() {
         )}
 
       </main>
+
+      {/* Global Search Modal */}
+      <GlobalSearch isOpen={searchOpen} onClose={closeSearch} />
     </>
   )
 }

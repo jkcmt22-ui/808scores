@@ -5,11 +5,9 @@ import { usePathname } from 'next/navigation'
 import {
   Calendar,
   Radio,
-  Trophy,
   User,
   Plus,
-  BarChart3,
-  Building2,
+  Compass,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
@@ -17,8 +15,7 @@ const navItems = [
   { href: '/', label: 'Today', icon: Calendar },
   { href: '/live', label: 'Live', icon: Radio },
   { href: '/submit', label: 'Submit', icon: Plus, isAction: true },
-  { href: '/schools', label: 'Schools', icon: Building2 },
-  { href: '/standings', label: 'Standings', icon: BarChart3 },
+  { href: '/explore', label: 'Explore', icon: Compass },
   { href: '/profile', label: 'Profile', icon: User },
 ]
 

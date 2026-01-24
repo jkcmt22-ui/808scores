@@ -18,8 +18,12 @@ import {
   User,
   Check,
   Copy,
+  Building2,
+  BarChart3,
+  ChevronRight,
 } from 'lucide-react'
 import { Button, Badge, Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui'
+import { Breadcrumbs } from '@/components/layout'
 import { GameChat } from '@/components/chat'
 import { useGame } from '@/hooks'
 import { createClient } from '@/lib/supabase/client'
@@ -237,6 +241,15 @@ export function GameClient({ params }: GamePageProps) {
               <Bell className="h-5 w-5" />
             </Button>
           </div>
+        </div>
+        {/* Breadcrumbs */}
+        <div className="px-4 border-t border-border bg-background-secondary">
+          <Breadcrumbs
+            items={[
+              { label: sportName, href: `/standings?sport=${game.sport.code}` },
+              { label: `${game.away_team.short_name} vs ${game.home_team.short_name}` },
+            ]}
+          />
         </div>
       </header>
 
@@ -480,6 +493,76 @@ export function GameClient({ params }: GamePageProps) {
             </div>
           </TabsContent>
         </Tabs>
+
+        {/* Related Section */}
+        <div className="scoreboard-panel p-4">
+          <h3 className="mb-4 font-display font-bold text-foreground-muted uppercase tracking-wider text-sm">
+            Related
+          </h3>
+          <div className="space-y-2">
+            {/* Away Team School */}
+            <Link
+              href={`/school/${game.away_team.id}`}
+              className="flex items-center justify-between p-3 border-2 border-border bg-background-secondary hover:border-neon-blue transition-colors"
+            >
+              <div className="flex items-center gap-3">
+                <Building2 className="h-4 w-4 text-neon-blue" />
+                <div>
+                  <p className="font-display font-bold text-sm">{game.away_team.name}</p>
+                  <p className="text-xs text-foreground-muted">{game.away_team.league}</p>
+                </div>
+              </div>
+              <ChevronRight className="h-4 w-4 text-foreground-muted" />
+            </Link>
+
+            {/* Home Team School */}
+            <Link
+              href={`/school/${game.home_team.id}`}
+              className="flex items-center justify-between p-3 border-2 border-border bg-background-secondary hover:border-neon-pink transition-colors"
+            >
+              <div className="flex items-center gap-3">
+                <Building2 className="h-4 w-4 text-neon-pink" />
+                <div>
+                  <p className="font-display font-bold text-sm">{game.home_team.name}</p>
+                  <p className="text-xs text-foreground-muted">{game.home_team.league}</p>
+                </div>
+              </div>
+              <ChevronRight className="h-4 w-4 text-foreground-muted" />
+            </Link>
+
+            {/* Sport Standings */}
+            <Link
+              href={`/standings?sport=${game.sport.code}`}
+              className="flex items-center justify-between p-3 border-2 border-border bg-background-secondary hover:border-neon-yellow transition-colors"
+            >
+              <div className="flex items-center gap-3">
+                <BarChart3 className="h-4 w-4 text-neon-yellow" />
+                <div>
+                  <p className="font-display font-bold text-sm">{sportName} Standings</p>
+                  <p className="text-xs text-foreground-muted">League standings</p>
+                </div>
+              </div>
+              <ChevronRight className="h-4 w-4 text-foreground-muted" />
+            </Link>
+
+            {/* Tournament (if applicable) */}
+            {game.tournament_id && (
+              <Link
+                href={`/tournaments/${game.tournament_id}`}
+                className="flex items-center justify-between p-3 border-2 border-border bg-background-secondary hover:border-neon-green transition-colors"
+              >
+                <div className="flex items-center gap-3">
+                  <Trophy className="h-4 w-4 text-neon-green" />
+                  <div>
+                    <p className="font-display font-bold text-sm">View Tournament</p>
+                    <p className="text-xs text-foreground-muted">Bracket & schedule</p>
+                  </div>
+                </div>
+                <ChevronRight className="h-4 w-4 text-foreground-muted" />
+              </Link>
+            )}
+          </div>
+        </div>
       </main>
     </div>
   )

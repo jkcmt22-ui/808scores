@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import { useParams, useRouter } from 'next/navigation'
-import { Header } from '@/components/layout'
+import { Header, Breadcrumbs } from '@/components/layout'
 import { Bracket, CompactBracket } from '@/components/tournament'
 import { GameCard } from '@/components/game'
 import { useTournamentBracket } from '@/hooks'
@@ -122,6 +122,16 @@ export default function TournamentPage() {
             <ChevronLeft className="mr-1 h-4 w-4" />
             All Tournaments
           </Button>
+        </div>
+
+        {/* Breadcrumbs */}
+        <div className="px-4 border-b border-border bg-background-secondary">
+          <Breadcrumbs
+            items={[
+              { label: 'Tournaments', href: '/tournaments' },
+              { label: tournament.name },
+            ]}
+          />
         </div>
 
         {/* Tournament Header */}
