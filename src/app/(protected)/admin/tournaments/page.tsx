@@ -112,7 +112,7 @@ export default function TournamentsAdminPage() {
   const [teamSeed, setTeamSeed] = useState<number | ''>('')
   const [teamPool, setTeamPool] = useState('')
 
-  const hasAdminAccess = profile?.is_admin === true
+  const hasAdminAccess = profile?.is_admin === true || profile?.is_super_admin === true
 
   // Fetch data
   useEffect(() => {

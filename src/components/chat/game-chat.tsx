@@ -7,21 +7,9 @@ import { ChatMessageSkeleton } from '@/components/ui/skeleton'
 import { createClient } from '@/lib/supabase/client'
 import { useAuth } from '@/hooks'
 import { formatRelativeTime } from '@/lib/utils'
+import { validateMessage, recordMessage } from '@/lib/content-filter'
 import Link from 'next/link'
 import type { ChatMessage as ChatMessageDB } from '@/types/database'
-
-// Profanity filter - basic word list (expand as needed)
-const PROFANITY_LIST = [
-  'fuck', 'shit', 'ass', 'bitch', 'damn', 'crap', 'hell',
-]
-
-function containsProfanity(text: string): boolean {
-  const lowerText = text.toLowerCase()
-  return PROFANITY_LIST.some(word => {
-    const regex = new RegExp(`\\b${word}\\b`, 'i')
-    return regex.test(lowerText)
-  })
-}
 
 interface ChatMessageWithUser extends ChatMessageDB {
   user?: {
@@ -133,22 +121,17 @@ export function GameChat({ gameId }: GameChatProps) {
     e.preventDefault()
     if (!newMessage.trim() || !user || isSending) return
 
-    // Rate limiting - 5 seconds between messages
+    // Comprehensive validation (profanity, spam, rate limiting, length)
+    const validation = validateMessage(newMessage, user.id)
+    if (!validation.valid) {
+      setError(validation.error || 'Message not allowed')
+      return
+    }
+
+    // Additional rate limit - 3 seconds between messages
     const now = Date.now()
-    if (now - lastMessageTime < 5000) {
-      setError('Please wait a few seconds before sending another message')
-      return
-    }
-
-    // Profanity check
-    if (containsProfanity(newMessage)) {
-      setError('Please keep the chat respectful')
-      return
-    }
-
-    // Character limit
-    if (newMessage.length > 280) {
-      setError('Message too long (max 280 characters)')
+    if (now - lastMessageTime < 3000) {
+      setError('Please wait a moment before sending another message')
       return
     }
 
@@ -170,6 +153,8 @@ export function GameChat({ gameId }: GameChatProps) {
     } else {
       setNewMessage('')
       setLastMessageTime(now)
+      // Record for rate limiting
+      recordMessage(user.id)
     }
 
     setIsSending(false)

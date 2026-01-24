@@ -62,7 +62,7 @@ export default function SchoolsAdminPage() {
   const [isSaving, setIsSaving] = useState(false)
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null)
 
-  const hasAdminAccess = profile?.is_admin === true
+  const hasAdminAccess = profile?.is_admin === true || profile?.is_super_admin === true
 
   // Fetch schools
   useEffect(() => {

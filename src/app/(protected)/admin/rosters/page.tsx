@@ -101,7 +101,7 @@ export default function AdminRostersPage() {
 
   // Check authorization
   useEffect(() => {
-    if (!authLoading && (!user || !profile?.is_admin)) {
+    if (!authLoading && (!user || (!profile?.is_admin && !profile?.is_super_admin))) {
       router.push('/')
     }
   }, [authLoading, user, profile, router])
@@ -244,7 +244,7 @@ export default function AdminRostersPage() {
     )
   }
 
-  if (!user || !profile?.is_admin) {
+  if (!user || (!profile?.is_admin && !profile?.is_super_admin)) {
     return null
   }
 
