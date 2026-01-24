@@ -11,7 +11,7 @@ import {
 } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import { useAuth } from '@/hooks'
-import { executeRaffleDrawing, getRaffleEntries, type DrawingResult } from '@/lib/raffle/drawing'
+import { executeRaffleDrawing, type DrawingResult } from '@/lib/raffle/drawing'
 import { cn } from '@/lib/utils'
 import type { RaffleWithPrize, RaffleEntryWithUser, RaffleWinnerWithDetails } from '@/types/database'
 

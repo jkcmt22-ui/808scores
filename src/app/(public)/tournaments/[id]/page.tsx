@@ -4,7 +4,7 @@ import { useState } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import { Header, Breadcrumbs } from '@/components/layout'
 import { Bracket, CompactBracket } from '@/components/tournament'
-import { GameCard } from '@/components/game'
+// GameCard import removed - using inline game display
 import { useTournamentBracket } from '@/hooks'
 import {
   Trophy,

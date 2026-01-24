@@ -48,16 +48,28 @@ export async function updateSession(request: NextRequest) {
     return NextResponse.redirect(url)
   }
 
-  // Admin routes - require admin role (check user metadata or separate admin table)
+  // Admin routes - require admin role
   const adminPaths = ['/admin']
   const isAdminPath = adminPaths.some((path) =>
     request.nextUrl.pathname.startsWith(path)
   )
 
   if (isAdminPath && user) {
-    // TODO: Check if user is admin
-    // For now, allow all authenticated users to access admin
-    // In production, check user.user_metadata.role === 'admin'
+    // Fetch user profile to check admin status
+    const { data: profile } = await supabase
+      .from('users')
+      .select('is_admin, is_super_admin')
+      .eq('id', user.id)
+      .single()
+
+    const isAdmin = profile?.is_admin === true || profile?.is_super_admin === true
+
+    if (!isAdmin) {
+      // Not an admin - redirect to home
+      const url = request.nextUrl.clone()
+      url.pathname = '/'
+      return NextResponse.redirect(url)
+    }
   }
 
   return supabaseResponse

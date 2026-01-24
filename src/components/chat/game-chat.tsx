@@ -8,7 +8,7 @@ import { ChatMessageComponent } from './chat-message'
 import { MentionInput } from './mention-input'
 import { createClient } from '@/lib/supabase/client'
 import { useAuth, useChatLikes } from '@/hooks'
-import { formatRelativeTime } from '@/lib/utils'
+// formatRelativeTime moved to ChatMessage component
 import { validateMessage, recordMessage } from '@/lib/content-filter'
 import { awardChatPoints } from '@/lib/points/chat-points'
 import Link from 'next/link'

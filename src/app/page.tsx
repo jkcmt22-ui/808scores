@@ -9,7 +9,7 @@ import { QuickAccess, TournamentBanner, ComingSoon } from '@/components/home'
 import { GlobalSearch } from '@/components/search/global-search'
 import { useGames, useAuth, useFavoriteTeams, useFavoriteSports } from '@/hooks'
 import { formatFullDate, isScoreOverdue } from '@/lib/utils'
-import { Calendar, ChevronDown, ChevronUp, ChevronLeft, ChevronRight, Star, Filter } from 'lucide-react'
+import { Calendar, ChevronDown, ChevronUp, ChevronLeft, ChevronRight, Star } from 'lucide-react'
 import type { GameType, GameWithTeams } from '@/types/database'
 
 // Main competitive game types shown in the main feed

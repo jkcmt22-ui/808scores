@@ -5,7 +5,7 @@ import { Header } from '@/components/layout'
 import { TournamentCard } from '@/components/tournament'
 import { useTournaments, useSports } from '@/hooks'
 import { Trophy, Loader2, Search, Filter } from 'lucide-react'
-import { Input, Badge } from '@/components/ui'
+import { Input } from '@/components/ui'
 import { cn } from '@/lib/utils'
 import type { TournamentStatus } from '@/types/database'
 

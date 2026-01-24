@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useCallback } from 'react'
-import { Bell, BellOff, BellRing, Loader2, Check } from 'lucide-react'
+import { Bell, BellRing, Loader2, Check } from 'lucide-react'
 import { useGameReminders } from '@/hooks/use-game-reminders'
 import { cn } from '@/lib/utils'
 

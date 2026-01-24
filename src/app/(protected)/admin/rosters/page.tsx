@@ -16,15 +16,15 @@ import {
   X,
   Save,
 } from 'lucide-react'
-import { Button, Badge, Input, Card } from '@/components/ui'
+import { Button, Input } from '@/components/ui'
 import { useAuth } from '@/hooks'
 import { useSchools } from '@/hooks/use-schools'
 import { useSports } from '@/hooks/use-sports'
 import { useRoster, useRosterMutations, type RosterPlayer } from '@/hooks/use-roster'
-import { createClient } from '@/lib/supabase/client'
+// createClient removed - not directly needed in this component
 import { cn } from '@/lib/utils'
 import { getSportEmoji } from '@/lib/sport-utils'
-import type { Player, PlayerSeason, Sport, School } from '@/types/database'
+import type { Player } from '@/types/database'
 
 interface PlayerFormData {
   first_name: string
@@ -56,7 +56,7 @@ export default function AdminRostersPage() {
   const { user, profile, isLoading: authLoading } = useAuth()
   const { schools, isLoading: schoolsLoading } = useSchools()
   const { sports, isLoading: sportsLoading } = useSports()
-  const supabase = useMemo(() => createClient()!, [])
+  // Supabase client handled by hooks
 
   // Selection state
   const [selectedSchoolId, setSelectedSchoolId] = useState<string | null>(null)
@@ -88,7 +88,7 @@ export default function AdminRostersPage() {
   })
 
   // Hooks
-  const { rosters, allPlayers, isLoading: rosterLoading, refetch: refetchRoster } = useRoster({
+  const { allPlayers, isLoading: rosterLoading, refetch: refetchRoster } = useRoster({
     schoolId: selectedSchoolId,
     sportId: selectedSportId || undefined,
     seasonYear,

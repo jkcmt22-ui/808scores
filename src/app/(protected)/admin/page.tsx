@@ -24,7 +24,6 @@ import {
   Check,
   Users,
   Image,
-  Instagram,
 } from 'lucide-react'
 import { Button, Badge, Input, Card } from '@/components/ui'
 import { useAuth } from '@/hooks'

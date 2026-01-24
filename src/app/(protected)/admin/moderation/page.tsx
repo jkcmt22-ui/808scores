@@ -18,7 +18,7 @@ import {
 import { Button, Badge, Input, Card } from '@/components/ui'
 import { useAuth } from '@/hooks'
 import { createClient } from '@/lib/supabase/client'
-import { cn, formatGameTime } from '@/lib/utils'
+import { cn } from '@/lib/utils'
 import type { ChatMessage, User, Game, School, Sport } from '@/types/database'
 
 interface MessageWithDetails extends ChatMessage {

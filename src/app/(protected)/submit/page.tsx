@@ -3,7 +3,7 @@
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { ArrowLeft, Search, Loader2, Radio } from 'lucide-react'
-import { Header } from '@/components/layout'
+// Header not used - using GameSelectPage component instead
 import { GameCardCompact } from '@/components/game'
 import { Input } from '@/components/ui'
 import { useGames } from '@/hooks'
