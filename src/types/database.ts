@@ -147,6 +147,7 @@ export interface Database {
           avatar_url: string | null
           reputation_score: number
           tier: UserTier
+          is_super_admin: boolean
           is_admin: boolean
           is_trusted_reporter: boolean
           trusted_reporter_approved_at: string | null

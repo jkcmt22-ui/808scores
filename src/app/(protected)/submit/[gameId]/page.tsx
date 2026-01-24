@@ -69,6 +69,7 @@ export default function SubmitPage({ params }: SubmitPageProps) {
   const [step, setStep] = useState<'type' | 'score' | 'extras' | 'confirm' | 'success'>('type')
   const [submissionType, setSubmissionType] = useState<SubmissionType | null>(null)
   const [period, setPeriod] = useState<string>('')
+  const [inningHalf, setInningHalf] = useState<'top' | 'bottom'>('top')
   const [homeScore, setHomeScore] = useState<string>('')
   const [awayScore, setAwayScore] = useState<string>('')
   const [timeRemaining, setTimeRemaining] = useState<string>('')
@@ -117,6 +118,15 @@ export default function SubmitPage({ params }: SubmitPageProps) {
   const overtimePeriods = periodsConfig.overtime ? getOvertimePeriods(periodsConfig) : []
   const periods = showOvertimePeriods ? [...regularPeriods, ...overtimePeriods] : regularPeriods
   const hasOvertimeOption = periodsConfig.overtime !== null && periodsConfig.overtime !== undefined
+  const isInningsBased = periodsConfig.type === 'innings'
+
+  // Get the full period string including inning half
+  const getFullPeriod = () => {
+    if (isInningsBased && period) {
+      return `${inningHalf === 'top' ? 'Top' : 'Bot'} ${period}`
+    }
+    return period
+  }
 
   const calculatePoints = () => {
     let points = 0
@@ -142,11 +152,12 @@ export default function SubmitPage({ params }: SubmitPageProps) {
 
     try {
       // Create the submission
+      const fullPeriod = getFullPeriod()
       const submissionData = {
         game_id: gameId,
         user_id: user.id,
         submission_type: submissionType as DBSubmissionType,
-        period: submissionType === 'final_score' ? null : period,
+        period: submissionType === 'final_score' ? null : fullPeriod,
         home_score: parseInt(homeScore),
         away_score: parseInt(awayScore),
         time_remaining: timeRemaining || null,
@@ -192,7 +203,7 @@ export default function SubmitPage({ params }: SubmitPageProps) {
           status: 'in_progress' as const,
           home_score: parseInt(homeScore),
           away_score: parseInt(awayScore),
-          current_period: period,
+          current_period: fullPeriod,
           time_remaining: timeRemaining || null,
           is_overtime: isOT,
           overtime_count: otCount,
@@ -286,7 +297,9 @@ export default function SubmitPage({ params }: SubmitPageProps) {
             {submissionType !== 'final_score' && (
               <div>
                 <div className="mb-2 flex items-center justify-between">
-                  <label className="block text-sm font-medium text-foreground">Period</label>
+                  <label className="block text-sm font-medium text-foreground">
+                    {isInningsBased ? 'Inning' : 'Period'}
+                  </label>
                   {hasOvertimeOption && (
                     <button
                       onClick={() => setShowOvertimePeriods(!showOvertimePeriods)}
@@ -298,10 +311,39 @@ export default function SubmitPage({ params }: SubmitPageProps) {
                       )}
                     >
                       <Clock className="h-3 w-3" />
-                      {showOvertimePeriods ? 'Hide OT' : 'Show OT'}
+                      {showOvertimePeriods ? 'Hide Extra' : 'Show Extra'}
                     </button>
                   )}
                 </div>
+
+                {/* Top/Bottom selector for innings */}
+                {isInningsBased && (
+                  <div className="flex gap-2 mb-3">
+                    <button
+                      onClick={() => setInningHalf('top')}
+                      className={cn(
+                        'flex-1 px-4 py-2 text-sm font-medium font-display transition-colors border-2',
+                        inningHalf === 'top'
+                          ? 'bg-neon-blue text-black border-neon-blue'
+                          : 'bg-background-tertiary text-foreground-muted border-border hover:border-neon-blue'
+                      )}
+                    >
+                      Top (Away Batting)
+                    </button>
+                    <button
+                      onClick={() => setInningHalf('bottom')}
+                      className={cn(
+                        'flex-1 px-4 py-2 text-sm font-medium font-display transition-colors border-2',
+                        inningHalf === 'bottom'
+                          ? 'bg-neon-pink text-white border-neon-pink'
+                          : 'bg-background-tertiary text-foreground-muted border-border hover:border-neon-pink'
+                      )}
+                    >
+                      Bottom (Home Batting)
+                    </button>
+                  </div>
+                )}
+
                 <div className="flex flex-wrap gap-2">
                   {periods.map((p) => {
                     const isOvertimePeriod = overtimePeriods.includes(p)
@@ -320,7 +362,7 @@ export default function SubmitPage({ params }: SubmitPageProps) {
                               : 'bg-background-tertiary text-foreground-muted border-border hover:border-neon-blue'
                         )}
                       >
-                        {p}
+                        {isInningsBased ? `${p}${p === '1' ? 'st' : p === '2' ? 'nd' : p === '3' ? 'rd' : 'th'}` : p}
                       </button>
                     )
                   })}
@@ -467,7 +509,7 @@ export default function SubmitPage({ params }: SubmitPageProps) {
 
                 {/* Type/Period */}
                 <div className="text-center text-sm text-foreground-muted">
-                  {submissionType === 'final_score' ? 'Final Score' : `${period} Score`}
+                  {submissionType === 'final_score' ? 'Final Score' : `${getFullPeriod()} ${isInningsBased ? '' : 'Score'}`}
                   {timeRemaining && ` • ${timeRemaining} remaining`}
                 </div>
 

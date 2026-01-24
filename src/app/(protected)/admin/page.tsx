@@ -32,7 +32,19 @@ import { createClient } from '@/lib/supabase/client'
 import { cn, formatGameTime, isGameLive, isGameFinal } from '@/lib/utils'
 import type { GameWithTeams, Sport, School, GameStatus, GameType, TrustedReporterCode } from '@/types/database'
 
-type TabType = 'games' | 'create' | 'applications' | 'codes'
+type TabType = 'games' | 'create' | 'applications' | 'codes' | 'users'
+
+interface AdminUser {
+  id: string
+  display_name: string | null
+  email: string | null
+  phone: string | null
+  is_super_admin: boolean
+  is_admin: boolean
+  is_trusted_reporter: boolean
+  tier: string
+  created_at: string
+}
 
 interface TrustedReporterApplication {
   id: string
@@ -112,9 +124,12 @@ export default function AdminPage() {
   const [newCodeNote, setNewCodeNote] = useState('')
   const [isGeneratingCode, setIsGeneratingCode] = useState(false)
   const [copiedCode, setCopiedCode] = useState<string | null>(null)
+  const [adminUsers, setAdminUsers] = useState<AdminUser[]>([])
+  const [userSearchTerm, setUserSearchTerm] = useState('')
 
-  // Check if user has admin access (must be an admin)
-  const hasAdminAccess = profile?.is_admin === true
+  // Check if user has admin access (must be an admin or super admin)
+  const isSuperAdmin = profile?.is_super_admin === true
+  const hasAdminAccess = profile?.is_admin === true || isSuperAdmin
 
   // Fetch data
   useEffect(() => {
@@ -170,6 +185,15 @@ export default function AdminPage() {
         .order('created_at', { ascending: false })
 
       if (codesData) setCodes(codesData as TrustedReporterCode[])
+
+      // Fetch admin users (for super admin only)
+      const { data: usersData } = await supabase
+        .from('users')
+        .select('id, display_name, email, phone, is_super_admin, is_admin, is_trusted_reporter, tier, created_at')
+        .or('is_admin.eq.true,is_super_admin.eq.true,is_trusted_reporter.eq.true')
+        .order('created_at', { ascending: false })
+
+      if (usersData) setAdminUsers(usersData as AdminUser[])
 
       setIsLoading(false)
     }
@@ -648,6 +672,15 @@ export default function AdminPage() {
             <Key className="mr-2 h-4 w-4" />
             Invite Codes
           </Button>
+          {isSuperAdmin && (
+            <Button
+              variant={activeTab === 'users' ? 'default' : 'outline'}
+              onClick={() => setActiveTab('users')}
+            >
+              <Shield className="mr-2 h-4 w-4" />
+              Manage Users
+            </Button>
+          )}
         </div>
 
         {/* Edit Game Modal */}
@@ -926,8 +959,166 @@ export default function AdminPage() {
             )}
           </div>
         )}
+
+        {/* Users Tab (Super Admin Only) */}
+        {activeTab === 'users' && isSuperAdmin && (
+          <div>
+            <div className="flex items-center gap-4 mb-4">
+              <div className="relative flex-1">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-foreground-muted" />
+                <Input
+                  placeholder="Search users by name, email, or phone..."
+                  value={userSearchTerm}
+                  onChange={(e) => setUserSearchTerm(e.target.value)}
+                  className="pl-10"
+                />
+              </div>
+            </div>
+
+            <div className="mb-4 p-4 bg-background-secondary border-2 border-border">
+              <h3 className="font-display font-bold text-sm mb-2 text-foreground">Role Hierarchy</h3>
+              <div className="space-y-1 text-sm text-foreground-muted">
+                <p><span className="text-neon-pink font-bold">Super Admin:</span> Full access, can manage all users and admins</p>
+                <p><span className="text-neon-blue font-bold">Admin:</span> Backend access to manage content (games, schools, etc.)</p>
+                <p><span className="text-neon-green font-bold">Trusted Reporter:</span> Auto-verified scores, badge on comments</p>
+              </div>
+            </div>
+
+            {isLoading ? (
+              <div className="flex justify-center py-12">
+                <Loader2 className="h-8 w-8 animate-spin text-neon-yellow" />
+              </div>
+            ) : (
+              <div className="space-y-2">
+                {adminUsers
+                  .filter((u) => {
+                    if (!userSearchTerm) return true
+                    const term = userSearchTerm.toLowerCase()
+                    return (
+                      u.display_name?.toLowerCase().includes(term) ||
+                      u.email?.toLowerCase().includes(term) ||
+                      u.phone?.includes(term)
+                    )
+                  })
+                  .map((adminUser) => (
+                    <UserRow
+                      key={adminUser.id}
+                      adminUser={adminUser}
+                      onToggleAdmin={async () => {
+                        const newValue = !adminUser.is_admin
+                        const { error } = await supabase
+                          .from('users')
+                          .update({ is_admin: newValue } as never)
+                          .eq('id', adminUser.id)
+                        if (!error) {
+                          setAdminUsers((prev) =>
+                            prev.map((u) =>
+                              u.id === adminUser.id ? { ...u, is_admin: newValue } : u
+                            )
+                          )
+                          setMessage({
+                            type: 'success',
+                            text: `User ${newValue ? 'promoted to' : 'removed from'} admin`,
+                          })
+                        }
+                      }}
+                      onToggleTrusted={async () => {
+                        const newValue = !adminUser.is_trusted_reporter
+                        const { error } = await supabase
+                          .from('users')
+                          .update({
+                            is_trusted_reporter: newValue,
+                            tier: newValue ? 'trusted' : 'basic',
+                          } as never)
+                          .eq('id', adminUser.id)
+                        if (!error) {
+                          setAdminUsers((prev) =>
+                            prev.map((u) =>
+                              u.id === adminUser.id
+                                ? { ...u, is_trusted_reporter: newValue, tier: newValue ? 'trusted' : 'basic' }
+                                : u
+                            )
+                          )
+                          setMessage({
+                            type: 'success',
+                            text: `User ${newValue ? 'made' : 'removed as'} trusted reporter`,
+                          })
+                        }
+                      }}
+                      currentUserId={user?.id || ''}
+                    />
+                  ))}
+              </div>
+            )}
+          </div>
+        )}
       </main>
     </div>
+  )
+}
+
+// User Row Component for Super Admin
+function UserRow({
+  adminUser,
+  onToggleAdmin,
+  onToggleTrusted,
+  currentUserId,
+}: {
+  adminUser: AdminUser
+  onToggleAdmin: () => void
+  onToggleTrusted: () => void
+  currentUserId: string
+}) {
+  const isSelf = adminUser.id === currentUserId
+
+  return (
+    <Card className="border-2 p-4">
+      <div className="flex items-center justify-between gap-4">
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center gap-2 mb-1 flex-wrap">
+            <span className="font-display font-bold text-foreground">
+              {adminUser.display_name || 'No name'}
+            </span>
+            {adminUser.is_super_admin && (
+              <Badge variant="destructive" className="text-[10px]">Super Admin</Badge>
+            )}
+            {adminUser.is_admin && !adminUser.is_super_admin && (
+              <Badge variant="default" className="text-[10px]">Admin</Badge>
+            )}
+            {adminUser.is_trusted_reporter && (
+              <Badge variant="success" className="text-[10px]">Trusted</Badge>
+            )}
+          </div>
+          <div className="text-xs text-foreground-muted space-x-3">
+            {adminUser.email && <span>{adminUser.email}</span>}
+            {adminUser.phone && <span>{adminUser.phone}</span>}
+          </div>
+        </div>
+
+        {!adminUser.is_super_admin && !isSelf && (
+          <div className="flex gap-2">
+            <Button
+              variant={adminUser.is_admin ? 'destructive' : 'outline'}
+              size="sm"
+              onClick={onToggleAdmin}
+            >
+              {adminUser.is_admin ? 'Remove Admin' : 'Make Admin'}
+            </Button>
+            <Button
+              variant={adminUser.is_trusted_reporter ? 'secondary' : 'outline'}
+              size="sm"
+              onClick={onToggleTrusted}
+            >
+              {adminUser.is_trusted_reporter ? 'Remove Trusted' : 'Make Trusted'}
+            </Button>
+          </div>
+        )}
+
+        {isSelf && (
+          <Badge variant="secondary" className="text-[10px]">You</Badge>
+        )}
+      </div>
+    </Card>
   )
 }
 
