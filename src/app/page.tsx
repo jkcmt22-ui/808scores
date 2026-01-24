@@ -9,7 +9,7 @@ import { QuickAccess, TournamentBanner, ComingSoon } from '@/components/home'
 import { GlobalSearch } from '@/components/search/global-search'
 import { useGames, useAuth, useFavoriteTeams, useFavoriteSports } from '@/hooks'
 import { formatFullDate } from '@/lib/utils'
-import { Calendar, ChevronDown, ChevronUp, ChevronLeft, ChevronRight, Star } from 'lucide-react'
+import { Calendar, ChevronDown, ChevronUp, ChevronLeft, ChevronRight, Star, Filter } from 'lucide-react'
 import type { GameType, GameWithTeams } from '@/types/database'
 
 // Main competitive game types shown in the main feed
@@ -82,9 +82,11 @@ export default function HomePage() {
   const [selectedDate, setSelectedDate] = useState(() => new Date())
   const [showOnboarding, setShowOnboarding] = useState(false)
   const [searchOpen, setSearchOpen] = useState(false)
+  const [showFavoritesOnly, setShowFavoritesOnly] = useState(false)
 
   const openSearch = useCallback(() => setSearchOpen(true), [])
   const closeSearch = useCallback(() => setSearchOpen(false), [])
+  const toggleFavoritesOnly = useCallback(() => setShowFavoritesOnly(prev => !prev), [])
 
   // Auth and favorites
   const { user, profile, isAuthenticated, refreshProfile } = useAuth()
@@ -144,13 +146,22 @@ export default function HomePage() {
     gameTypes: OTHER_GAME_TYPES,
   })
 
-  // Categorize games by status
-  const liveGames = games.filter((g) => g.status === 'in_progress')
-  const scheduledGames = games.filter((g) => g.status === 'scheduled')
-  const finalGames = games.filter((g) => g.status === 'final')
-
-  // Sort each category with favorites first
+  // Filter for favorites only if enabled
   const hasFavorites = favoriteTeamIds.length > 0 || favoriteSportIds.length > 0
+
+  const filteredGames = useMemo(() => {
+    if (!showFavoritesOnly || !hasFavorites) return games
+    return games.filter((game) =>
+      favoriteTeamIds.includes(game.home_team.id) ||
+      favoriteTeamIds.includes(game.away_team.id) ||
+      favoriteSportIds.includes(game.sport.id)
+    )
+  }, [games, showFavoritesOnly, hasFavorites, favoriteTeamIds, favoriteSportIds])
+
+  // Categorize games by status
+  const liveGames = filteredGames.filter((g) => g.status === 'in_progress')
+  const scheduledGames = filteredGames.filter((g) => g.status === 'scheduled')
+  const finalGames = filteredGames.filter((g) => g.status === 'final')
 
   const sortedLive = useMemo(
     () => sortByFavorites(liveGames, favoriteTeamIds, favoriteSportIds),
@@ -245,6 +256,30 @@ export default function HomePage() {
 
         {/* Quick Access Section */}
         <QuickAccess onSearchClick={openSearch} />
+
+        {/* Favorites Filter Toggle */}
+        {hasFavorites && (
+          <div className="mb-4">
+            <button
+              onClick={toggleFavoritesOnly}
+              className={`flex items-center gap-2 px-4 py-2 border-2 transition-all ${
+                showFavoritesOnly
+                  ? 'border-neon-yellow bg-neon-yellow/10 text-neon-yellow'
+                  : 'border-border bg-background-secondary text-foreground-muted hover:border-neon-yellow hover:text-neon-yellow'
+              }`}
+            >
+              <Star className={`h-4 w-4 ${showFavoritesOnly ? 'fill-neon-yellow' : ''}`} />
+              <span className="font-display text-xs font-bold uppercase tracking-wider">
+                {showFavoritesOnly ? 'Showing Favorites' : 'Show My Favorites Only'}
+              </span>
+              {showFavoritesOnly && (
+                <span className="text-xs bg-neon-yellow/20 px-2 py-0.5 rounded">
+                  {filteredGames.length}
+                </span>
+              )}
+            </button>
+          </div>
+        )}
 
         {/* Tournament Banner (only when active tournaments exist) */}
         <TournamentBanner />

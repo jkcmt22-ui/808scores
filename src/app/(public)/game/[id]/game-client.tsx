@@ -25,7 +25,7 @@ import {
 import { Button, Badge, Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui'
 import { Breadcrumbs } from '@/components/layout'
 import { GameChat } from '@/components/chat'
-import { ShareButtons } from '@/components/game'
+import { ShareButtons, RemindMeButton } from '@/components/game'
 import { useGame } from '@/hooks'
 import { createClient } from '@/lib/supabase/client'
 import { cn, formatGameTime, isGameLive, isGameFinal } from '@/lib/utils'
@@ -382,10 +382,21 @@ export function GameClient({ params }: GamePageProps) {
           )}
         </div>
 
-        {/* Share Section */}
-        <div className="mb-6 flex items-center justify-between p-4 border-2 border-border bg-background-secondary">
-          <div className="text-sm text-foreground-muted font-display">
-            Share this {isLive ? 'live game' : isFinal ? 'final score' : 'matchup'}
+        {/* Share & Remind Section */}
+        <div className="mb-6 flex items-center justify-between gap-3 p-4 border-2 border-border bg-background-secondary">
+          <div className="flex items-center gap-3">
+            {isScheduled && (
+              <RemindMeButton
+                gameId={id}
+                scheduledAt={game.scheduled_at}
+                homeTeam={game.home_team.short_name}
+                awayTeam={game.away_team.short_name}
+                sport={sportName}
+              />
+            )}
+            <div className="text-sm text-foreground-muted font-display">
+              {isScheduled ? 'Get notified before this game' : `Share this ${isLive ? 'live game' : 'final score'}`}
+            </div>
           </div>
           <ShareButtons
             title={`${game.away_team.short_name} vs ${game.home_team.short_name}`}
