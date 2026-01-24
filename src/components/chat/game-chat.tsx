@@ -1,23 +1,23 @@
 'use client'
 
 import { useState, useEffect, useRef, useCallback } from 'react'
-import { Send, Flag, AlertCircle } from 'lucide-react'
-import { Button, Input, Avatar, Badge } from '@/components/ui'
+import { Send, X, AlertCircle } from 'lucide-react'
+import { Button, Badge } from '@/components/ui'
 import { ChatMessageSkeleton } from '@/components/ui/skeleton'
+import { ChatMessageComponent } from './chat-message'
+import { MentionInput } from './mention-input'
 import { createClient } from '@/lib/supabase/client'
-import { useAuth } from '@/hooks'
+import { useAuth, useChatLikes } from '@/hooks'
 import { formatRelativeTime } from '@/lib/utils'
 import { validateMessage, recordMessage } from '@/lib/content-filter'
+import { awardChatPoints } from '@/lib/points/chat-points'
 import Link from 'next/link'
-import type { ChatMessage as ChatMessageDB } from '@/types/database'
+import type { ChatMessageWithUser } from '@/types/database'
 
-interface ChatMessageWithUser extends ChatMessageDB {
-  user?: {
-    display_name: string | null
-    avatar_url: string | null
-    tier: string
-    is_trusted_reporter: boolean
-  }
+interface MentionUser {
+  id: string
+  display_name: string | null
+  avatar_url: string | null
 }
 
 interface GameChatProps {
@@ -27,13 +27,22 @@ interface GameChatProps {
 export function GameChat({ gameId }: GameChatProps) {
   const { user, isAuthenticated } = useAuth()
   const [messages, setMessages] = useState<ChatMessageWithUser[]>([])
+  const [chatUsers, setChatUsers] = useState<MentionUser[]>([])
   const [newMessage, setNewMessage] = useState('')
+  const [mentions, setMentions] = useState<string[]>([])
+  const [replyingTo, setReplyingTo] = useState<ChatMessageWithUser | null>(null)
   const [isLoading, setIsLoading] = useState(true)
   const [isSending, setIsSending] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [lastMessageTime, setLastMessageTime] = useState<number>(0)
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const supabase = createClient()!
+
+  // Chat likes hook
+  const { likedMessageIds, toggleLike } = useChatLikes({
+    gameId,
+    userId: user?.id,
+  })
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
@@ -44,7 +53,12 @@ export function GameChat({ gameId }: GameChatProps) {
       .from('chat_messages')
       .select(`
         *,
-        user:users(display_name, avatar_url, tier, is_trusted_reporter)
+        user:users(id, display_name, avatar_url, tier, is_trusted_reporter),
+        reply_to:chat_messages!reply_to_id(
+          id,
+          content,
+          user:users(display_name)
+        )
       `)
       .eq('game_id', gameId)
       .eq('is_hidden', false)
@@ -56,9 +70,33 @@ export function GameChat({ gameId }: GameChatProps) {
       return
     }
 
-    setMessages((data || []) as ChatMessageWithUser[])
+    // Process messages to add user_has_liked flag
+    const rawMessages = data || []
+    const processedMessages = rawMessages.map((msg) => {
+      const message = msg as unknown as ChatMessageWithUser
+      return {
+        ...message,
+        user_has_liked: likedMessageIds.has(message.id),
+      }
+    })
+
+    setMessages(processedMessages)
+
+    // Extract unique users for @mention suggestions
+    const users = new Map<string, MentionUser>()
+    for (const msg of processedMessages) {
+      if (msg.user && !users.has(msg.user.id)) {
+        users.set(msg.user.id, {
+          id: msg.user.id,
+          display_name: msg.user.display_name,
+          avatar_url: msg.user.avatar_url,
+        })
+      }
+    }
+    setChatUsers(Array.from(users.values()))
+
     setIsLoading(false)
-  }, [supabase, gameId])
+  }, [supabase, gameId, likedMessageIds])
 
   useEffect(() => {
     fetchMessages()
@@ -80,14 +118,31 @@ export function GameChat({ gameId }: GameChatProps) {
             .from('chat_messages')
             .select(`
               *,
-              user:users(display_name, avatar_url, tier, is_trusted_reporter)
+              user:users(id, display_name, avatar_url, tier, is_trusted_reporter),
+              reply_to:chat_messages!reply_to_id(
+                id,
+                content,
+                user:users(display_name)
+              )
             `)
             .eq('id', payload.new.id)
             .single()
 
           const msg = data as ChatMessageWithUser | null
           if (msg && !msg.is_hidden) {
-            setMessages(prev => [...prev, msg])
+            setMessages((prev) => [...prev, { ...msg, user_has_liked: false }])
+
+            // Add user to chat users if not already present
+            if (msg.user) {
+              setChatUsers((prev) => {
+                if (prev.find((u) => u.id === msg.user!.id)) return prev
+                return [...prev, {
+                  id: msg.user!.id,
+                  display_name: msg.user!.display_name,
+                  avatar_url: msg.user!.avatar_url,
+                }]
+              })
+            }
           }
         }
       )
@@ -100,9 +155,17 @@ export function GameChat({ gameId }: GameChatProps) {
           filter: `game_id=eq.${gameId}`,
         },
         (payload) => {
+          const updated = payload.new as { id: string; is_hidden: boolean; like_count: number }
           // Hide message if it was flagged
-          if ((payload.new as ChatMessageDB).is_hidden) {
-            setMessages(prev => prev.filter(m => m.id !== payload.new.id))
+          if (updated.is_hidden) {
+            setMessages((prev) => prev.filter((m) => m.id !== updated.id))
+          } else {
+            // Update like count
+            setMessages((prev) =>
+              prev.map((m) =>
+                m.id === updated.id ? { ...m, like_count: updated.like_count } : m
+              )
+            )
           }
         }
       )
@@ -113,12 +176,26 @@ export function GameChat({ gameId }: GameChatProps) {
     }
   }, [supabase, gameId, fetchMessages])
 
+  // Update user_has_liked when likedMessageIds changes
+  useEffect(() => {
+    setMessages((prev) =>
+      prev.map((msg) => ({
+        ...msg,
+        user_has_liked: likedMessageIds.has(msg.id),
+      }))
+    )
+  }, [likedMessageIds])
+
   useEffect(() => {
     scrollToBottom()
   }, [messages])
 
-  const handleSendMessage = async (e: React.FormEvent) => {
-    e.preventDefault()
+  const handleInputChange = (value: string, newMentions: string[]) => {
+    setNewMessage(value)
+    setMentions(newMentions)
+  }
+
+  const handleSendMessage = async () => {
     if (!newMessage.trim() || !user || isSending) return
 
     // Comprehensive validation (profanity, spam, rate limiting, length)
@@ -139,22 +216,38 @@ export function GameChat({ gameId }: GameChatProps) {
     setError(null)
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const { error: sendError } = await (supabase as any)
+    const { data, error: sendError } = await (supabase as any)
       .from('chat_messages')
       .insert({
         game_id: gameId,
         user_id: user.id,
         content: newMessage.trim(),
+        reply_to_id: replyingTo?.id || null,
+        mentions: mentions,
       })
+      .select()
+      .single()
 
     if (sendError) {
       console.error('Error sending message:', sendError)
       setError('Failed to send message')
     } else {
       setNewMessage('')
+      setMentions([])
+      setReplyingTo(null)
       setLastMessageTime(now)
       // Record for rate limiting
       recordMessage(user.id)
+
+      // Award points for sending a comment
+      await awardChatPoints(user.id, 'comment', data?.id)
+
+      // Award points for mentioned users
+      for (const mentionedUserId of mentions) {
+        if (mentionedUserId !== user.id) {
+          await awardChatPoints(mentionedUserId, 'mention_received', data?.id)
+        }
+      }
     }
 
     setIsSending(false)
@@ -180,12 +273,39 @@ export function GameChat({ gameId }: GameChatProps) {
     }
   }
 
+  const handleToggleLike = async (messageId: string) => {
+    if (!user) return
+
+    const wasLiked = likedMessageIds.has(messageId)
+    await toggleLike(messageId)
+
+    // Award points if it's a new like (not unlinking)
+    if (!wasLiked) {
+      const message = messages.find((m) => m.id === messageId)
+      if (message && message.user_id !== user.id) {
+        await awardChatPoints(message.user_id, 'like_received', messageId)
+      }
+    }
+  }
+
+  const handleReply = (message: ChatMessageWithUser) => {
+    setReplyingTo(message)
+  }
+
+  const cancelReply = () => {
+    setReplyingTo(null)
+  }
+
   return (
     <div className="flex flex-col h-[400px] scoreboard-panel overflow-hidden">
       {/* Header */}
       <div className="flex items-center justify-between border-b-2 border-border px-4 py-3">
-        <h3 className="font-mono text-sm font-bold text-score-amber uppercase tracking-wider">Game Chat</h3>
-        <Badge variant="secondary" className="font-mono">{messages.length}</Badge>
+        <h3 className="font-mono text-sm font-bold text-score-amber uppercase tracking-wider">
+          Game Chat
+        </h3>
+        <Badge variant="secondary" className="font-mono">
+          {messages.length}
+        </Badge>
       </div>
 
       {/* Messages */}
@@ -203,38 +323,15 @@ export function GameChat({ gameId }: GameChatProps) {
           </div>
         ) : (
           messages.map((msg) => (
-            <div key={msg.id} className="flex gap-3 group animate-fade-in">
-              <Avatar
-                fallback={msg.user?.display_name || 'U'}
-                src={msg.user?.avatar_url}
-                size="sm"
-              />
-              <div className="flex-1 min-w-0">
-                <div className="flex items-center gap-2">
-                  <span className="font-medium text-sm text-foreground truncate">
-                    {msg.user?.display_name || 'User'}
-                  </span>
-                  {msg.user?.is_trusted_reporter && (
-                    <Badge variant="default" className="text-[10px] px-1.5 py-0">Trusted</Badge>
-                  )}
-                  <span className="text-xs text-foreground-subtle">
-                    {formatRelativeTime(msg.created_at)}
-                  </span>
-                </div>
-                <p className="text-sm text-foreground-muted mt-0.5 break-words">
-                  {msg.content}
-                </p>
-              </div>
-              {isAuthenticated && msg.user_id !== user?.id && (
-                <button
-                  onClick={() => handleReport(msg.id)}
-                  className="opacity-0 group-hover:opacity-100 transition-opacity p-1 text-foreground-subtle hover:text-destructive"
-                  title="Report message"
-                >
-                  <Flag className="h-3 w-3" />
-                </button>
-              )}
-            </div>
+            <ChatMessageComponent
+              key={msg.id}
+              message={msg}
+              currentUserId={user?.id}
+              isAuthenticated={isAuthenticated}
+              onReply={handleReply}
+              onReport={handleReport}
+              onToggleLike={handleToggleLike}
+            />
           ))
         )}
         <div ref={messagesEndRef} />
@@ -251,17 +348,40 @@ export function GameChat({ gameId }: GameChatProps) {
         </div>
       )}
 
+      {/* Reply Preview */}
+      {replyingTo && (
+        <div className="px-4 py-2 bg-background-tertiary border-t-2 border-border flex items-center gap-2">
+          <span className="text-xs text-foreground-muted flex-1 truncate">
+            Replying to <span className="text-neon-blue">@{replyingTo.user?.display_name || 'User'}</span>
+            : {replyingTo.content.substring(0, 40)}...
+          </span>
+          <button
+            onClick={cancelReply}
+            className="p-1 hover:bg-background-secondary rounded"
+          >
+            <X className="h-3 w-3" />
+          </button>
+        </div>
+      )}
+
       {/* Input */}
       {isAuthenticated ? (
-        <form onSubmit={handleSendMessage} className="border-t-2 border-border p-3 bg-background-tertiary">
+        <form
+          onSubmit={(e) => {
+            e.preventDefault()
+            handleSendMessage()
+          }}
+          className="border-t-2 border-border p-3 bg-background-tertiary"
+        >
           <div className="flex gap-2">
-            <Input
+            <MentionInput
               value={newMessage}
-              onChange={(e) => setNewMessage(e.target.value)}
-              placeholder="Type a message..."
+              onChange={handleInputChange}
+              users={chatUsers.filter((u) => u.id !== user?.id)}
+              placeholder={replyingTo ? 'Write your reply...' : 'Type a message...'}
               maxLength={280}
               disabled={isSending}
-              className="flex-1 font-mono text-sm"
+              onSubmit={handleSendMessage}
             />
             <Button
               type="submit"
@@ -273,12 +393,14 @@ export function GameChat({ gameId }: GameChatProps) {
             </Button>
           </div>
           <p className="font-mono text-[10px] text-foreground-subtle mt-1.5">
-            {newMessage.length}/280
+            {newMessage.length}/280 {mentions.length > 0 && `| ${mentions.length} mention${mentions.length > 1 ? 's' : ''}`}
           </p>
         </form>
       ) : (
         <div className="border-t-2 border-border p-4 text-center bg-background-tertiary">
-          <p className="font-mono text-sm text-foreground-muted mb-2">Sign in to join the chat</p>
+          <p className="font-mono text-sm text-foreground-muted mb-2">
+            Sign in to join the chat
+          </p>
           <Link href="/login">
             <Button size="sm">Sign In</Button>
           </Link>

@@ -132,3 +132,66 @@ export function formatRelativeTime(date: string | Date): string {
     return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
   }
 }
+
+/**
+ * Check if a game should show "Score Not Submitted" warning
+ * Rules:
+ * - Game scheduled time + 1 day at 5AM HST has passed
+ * - Game is still marked as 'scheduled' OR has no verified score
+ * - This indicates the game likely happened but no one submitted the score
+ */
+export function isScoreOverdue(
+  scheduledAt: string | Date,
+  status: string,
+  isVerified: boolean
+): boolean {
+  // If game is final and verified, it's not overdue
+  if (status === 'final' && isVerified) {
+    return false
+  }
+
+  // If game is live, it's not overdue
+  if (status === 'in_progress') {
+    return false
+  }
+
+  // If game is canceled or postponed, it's not overdue
+  if (status === 'canceled' || status === 'postponed') {
+    return false
+  }
+
+  const gameDate = new Date(scheduledAt)
+  const now = new Date()
+
+  // Calculate 5AM HST the day after the game
+  // Hawaii is UTC-10 (no DST)
+  const nextDay5amHST = new Date(gameDate)
+  nextDay5amHST.setDate(nextDay5amHST.getDate() + 1)
+  // Set to 5AM HST = 15:00 UTC (5AM + 10 hours)
+  nextDay5amHST.setUTCHours(15, 0, 0, 0)
+
+  // If we're past the deadline and game is still scheduled or not verified
+  if (now > nextDay5amHST) {
+    // Game is scheduled but time has passed - score was never submitted
+    if (status === 'scheduled') {
+      return true
+    }
+    // Game is final but not verified - needs verification
+    if (status === 'final' && !isVerified) {
+      return true
+    }
+  }
+
+  return false
+}
+
+/**
+ * Get the deadline for score submission (5AM HST next day)
+ */
+export function getScoreDeadline(scheduledAt: string | Date): Date {
+  const gameDate = new Date(scheduledAt)
+  const deadline = new Date(gameDate)
+  deadline.setDate(deadline.getDate() + 1)
+  deadline.setUTCHours(15, 0, 0, 0) // 5AM HST = 15:00 UTC
+  return deadline
+}

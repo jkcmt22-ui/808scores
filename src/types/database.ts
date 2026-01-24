@@ -18,6 +18,7 @@ export type ImportStatus = 'pending' | 'processing' | 'completed' | 'failed'
 export type PrizeType = 'gift_card' | 'merchandise' | 'cash' | 'experience'
 export type RaffleType = 'monthly' | 'season_end' | 'special'
 export type RaffleStatus = 'upcoming' | 'open' | 'closed' | 'drawing' | 'completed' | 'canceled'
+export type ChatPointAction = 'comment' | 'like_received' | 'mention_received'
 
 // Tournament types
 export type TournamentFormat = 'single_elimination' | 'double_elimination' | 'round_robin' | 'pool_play' | 'custom'
@@ -160,9 +161,11 @@ export interface Database {
           is_banned: boolean
           ban_expires_at: string | null
           onboarding_completed: boolean
+          accepted_raffle_terms: boolean
+          raffle_terms_accepted_at: string | null
           created_at: string
         }
-        Insert: Omit<Database['public']['Tables']['users']['Row'], 'id' | 'created_at' | 'reputation_score' | 'tier' | 'is_trusted_reporter' | 'total_points' | 'season_points' | 'submission_count' | 'verified_count' | 'strike_count' | 'is_banned' | 'onboarding_completed'>
+        Insert: Omit<Database['public']['Tables']['users']['Row'], 'id' | 'created_at' | 'reputation_score' | 'tier' | 'is_trusted_reporter' | 'total_points' | 'season_points' | 'submission_count' | 'verified_count' | 'strike_count' | 'is_banned' | 'onboarding_completed' | 'accepted_raffle_terms'>
         Update: Partial<Database['public']['Tables']['users']['Insert']>
       }
       submissions: {
@@ -322,10 +325,35 @@ export interface Database {
           content: string
           is_hidden: boolean
           report_count: number
+          reply_to_id: string | null
+          mentions: string[]
+          like_count: number
           created_at: string
         }
-        Insert: Omit<Database['public']['Tables']['chat_messages']['Row'], 'id' | 'created_at' | 'is_hidden' | 'report_count'>
+        Insert: Omit<Database['public']['Tables']['chat_messages']['Row'], 'id' | 'created_at' | 'is_hidden' | 'report_count' | 'like_count'> & { reply_to_id?: string | null; mentions?: string[] }
         Update: Partial<Database['public']['Tables']['chat_messages']['Insert']>
+      }
+      chat_likes: {
+        Row: {
+          id: string
+          message_id: string
+          user_id: string
+          created_at: string
+        }
+        Insert: Omit<Database['public']['Tables']['chat_likes']['Row'], 'id' | 'created_at'>
+        Update: Partial<Database['public']['Tables']['chat_likes']['Insert']>
+      }
+      chat_point_logs: {
+        Row: {
+          id: string
+          user_id: string
+          action_type: ChatPointAction
+          points_earned: number
+          source_id: string | null
+          created_at: string
+        }
+        Insert: Omit<Database['public']['Tables']['chat_point_logs']['Row'], 'id' | 'created_at'>
+        Update: Partial<Database['public']['Tables']['chat_point_logs']['Insert']>
       }
       chat_reports: {
         Row: {
@@ -475,11 +503,25 @@ export interface Database {
           max_entries_per_user: number | null
           status: RaffleStatus
           legal_disclaimer: string | null
+          season: string | null
+          month: string | null
+          is_active: boolean
           created_at: string
           updated_at: string
         }
-        Insert: Omit<Database['public']['Tables']['raffles']['Row'], 'id' | 'created_at' | 'updated_at' | 'status' | 'winner_count' | 'min_points_to_enter' | 'points_per_entry'>
+        Insert: Omit<Database['public']['Tables']['raffles']['Row'], 'id' | 'created_at' | 'updated_at' | 'status' | 'winner_count' | 'min_points_to_enter' | 'points_per_entry' | 'is_active'>
         Update: Partial<Database['public']['Tables']['raffles']['Insert']>
+      }
+      raffle_prizes: {
+        Row: {
+          id: string
+          raffle_id: string
+          prize_id: string | null
+          position: number
+          created_at: string
+        }
+        Insert: Omit<Database['public']['Tables']['raffle_prizes']['Row'], 'id' | 'created_at'>
+        Update: Partial<Database['public']['Tables']['raffle_prizes']['Insert']>
       }
       raffle_entries: {
         Row: {
@@ -586,6 +628,8 @@ export type Badge = Database['public']['Tables']['badges']['Row']
 export type Notification = Database['public']['Tables']['notifications']['Row']
 export type ChatMessage = Database['public']['Tables']['chat_messages']['Row']
 export type ChatReport = Database['public']['Tables']['chat_reports']['Row']
+export type ChatLike = Database['public']['Tables']['chat_likes']['Row']
+export type ChatPointLog = Database['public']['Tables']['chat_point_logs']['Row']
 export type Player = Database['public']['Tables']['players']['Row']
 export type PlayerSeason = Database['public']['Tables']['player_seasons']['Row']
 export type GameRoster = Database['public']['Tables']['game_rosters']['Row']
@@ -597,6 +641,7 @@ export type Prize = Database['public']['Tables']['prizes']['Row']
 export type Raffle = Database['public']['Tables']['raffles']['Row']
 export type RaffleEntry = Database['public']['Tables']['raffle_entries']['Row']
 export type RaffleWinner = Database['public']['Tables']['raffle_winners']['Row']
+export type RafflePrize = Database['public']['Tables']['raffle_prizes']['Row']
 export type SportFollow = Database['public']['Tables']['sport_follows']['Row']
 export type TrustedReporterCode = Database['public']['Tables']['trusted_reporter_codes']['Row']
 export type Tournament = Database['public']['Tables']['tournaments']['Row']
@@ -668,6 +713,34 @@ export interface RaffleWinnerWithDetails extends RaffleWinner {
   user: Pick<User, 'id' | 'display_name' | 'avatar_url'>
   prize: Prize | null
   raffle?: Raffle
+}
+
+export interface RafflePrizeWithDetails extends RafflePrize {
+  prize: Prize | null
+}
+
+export interface RaffleWithPrizes extends Raffle {
+  prize: Prize | null
+  raffle_prizes: RafflePrizeWithDetails[]
+}
+
+// Chat extended types
+export interface ChatMessageWithUser extends ChatMessage {
+  user?: {
+    id: string
+    display_name: string | null
+    avatar_url: string | null
+    tier: string
+    is_trusted_reporter: boolean
+  }
+  reply_to?: {
+    id: string
+    content: string
+    user?: {
+      display_name: string | null
+    }
+  }
+  user_has_liked?: boolean
 }
 
 // Ban status for checking user access

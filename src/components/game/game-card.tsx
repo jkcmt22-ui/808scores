@@ -1,9 +1,9 @@
 'use client'
 
 import Link from 'next/link'
-import { MapPin, Clock, Star, MessageCircle, Trophy, Swords } from 'lucide-react'
+import { MapPin, Clock, Star, MessageCircle, Trophy, Swords, AlertTriangle } from 'lucide-react'
 import { Badge } from '@/components/ui'
-import { cn, formatGameTime, isGameLive, isGameFinal } from '@/lib/utils'
+import { cn, formatGameTime, isGameLive, isGameFinal, isScoreOverdue } from '@/lib/utils'
 import { getSportEmoji } from '@/lib/sport-utils'
 import type { GameWithTeams, GameType } from '@/types/database'
 
@@ -43,14 +43,32 @@ export function GameCard({ game, showSport = false }: GameCardProps) {
   const gameTypeBadge = getGameTypeBadge(game.game_type)
   const overtimeDisplay = getOvertimeDisplay(game.overtime_count)
 
+  // Check if game is overdue for score submission
+  const scoreOverdue = isScoreOverdue(game.scheduled_at, game.status, game.is_verified)
+
   return (
     <Link href={`/game/${game.id}`}>
       <div className={cn(
         'scoreboard-panel p-4 transition-all hover:border-neon-blue/50',
-        isLive && 'border-neon-pink/50'
+        isLive && 'border-neon-pink/50',
+        scoreOverdue && 'border-neon-yellow/50'
       )}
-      style={isLive ? { boxShadow: '0 0 20px rgba(255, 42, 109, 0.2)' } : undefined}
+      style={
+        isLive ? { boxShadow: '0 0 20px rgba(255, 42, 109, 0.2)' } :
+        scoreOverdue ? { boxShadow: '0 0 15px rgba(250, 204, 21, 0.15)' } :
+        undefined
+      }
       >
+        {/* Score Not Submitted Warning */}
+        {scoreOverdue && (
+          <div className="flex items-center gap-2 mb-3 p-2 bg-neon-yellow/10 rounded-md border border-neon-yellow/30">
+            <AlertTriangle className="h-4 w-4 text-neon-yellow flex-shrink-0" />
+            <span className="text-xs text-neon-yellow font-display">
+              Score not submitted — tap to add the final score
+            </span>
+          </div>
+        )}
+
         {/* Header Row */}
         <div className="flex items-center justify-between mb-3">
           <div className="flex items-center gap-2">
@@ -60,12 +78,17 @@ export function GameCard({ game, showSport = false }: GameCardProps) {
                 Live
               </span>
             )}
-            {isFinal && (
+            {isFinal && !scoreOverdue && (
               <span className="text-foreground-muted text-xs font-display font-bold uppercase tracking-widest">
                 Final{overtimeDisplay && ` (${overtimeDisplay})`}
               </span>
             )}
-            {isScheduled && (
+            {scoreOverdue && (
+              <span className="text-neon-yellow text-xs font-display font-bold uppercase tracking-widest">
+                Needs Score
+              </span>
+            )}
+            {isScheduled && !scoreOverdue && (
               <span className="neon-text-yellow text-xs font-display font-bold">
                 {formatGameTime(game.scheduled_at)}
               </span>

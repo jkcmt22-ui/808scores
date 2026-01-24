@@ -3,15 +3,17 @@
 import { useState } from 'react'
 import { Header } from '@/components/layout'
 import { Badge } from '@/components/ui'
-import { Trophy, Medal, TrendingUp, Star, Loader2 } from 'lucide-react'
+import { CurrentRaffles, PastWinners } from '@/components/rewards'
+import { Trophy, Medal, TrendingUp, Star, Loader2, Ticket } from 'lucide-react'
 import { cn, getTierColor, getTierLabel } from '@/lib/utils'
-import { useLeaderboard } from '@/hooks'
+import { useLeaderboard, useAuth } from '@/hooks'
 
 type TimeFrame = 'season' | 'month' | 'week' | 'all'
 
 export default function LeaderboardPage() {
   const [timeFrame, setTimeFrame] = useState<TimeFrame>('season')
   const { leaders, userRank, userPoints, isLoading, error } = useLeaderboard({ timeFrame, limit: 50 })
+  const { isAuthenticated, profile } = useAuth()
 
   const getRankIcon = (rank: number) => {
     switch (rank) {
@@ -85,6 +87,27 @@ export default function LeaderboardPage() {
             </span>
           </div>
         </div>
+
+        {/* Active Raffles Section */}
+        <div className="mb-4">
+          <CurrentRaffles />
+        </div>
+
+        {/* Your Points & Entries (if logged in) */}
+        {isAuthenticated && profile && (
+          <div className="mb-4 scoreboard-panel p-4 border-neon-blue/50" style={{ boxShadow: '0 0 15px rgba(5, 217, 232, 0.15)' }}>
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Ticket className="h-5 w-5 text-neon-blue" />
+                <span className="font-display font-bold text-foreground">Your Season Points</span>
+              </div>
+              <span className="score-led text-2xl">{profile.season_points?.toLocaleString() || 0}</span>
+            </div>
+            <p className="text-xs text-foreground-muted mt-2">
+              Use your points to enter raffles and win prizes!
+            </p>
+          </div>
+        )}
 
         {/* Loading state */}
         {isLoading && (
@@ -172,6 +195,11 @@ export default function LeaderboardPage() {
             </div>
           </div>
         )}
+
+        {/* Past Winners */}
+        <div className="mt-6">
+          <PastWinners limit={6} />
+        </div>
       </main>
     </>
   )
