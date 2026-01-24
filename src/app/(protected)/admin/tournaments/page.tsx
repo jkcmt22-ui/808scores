@@ -112,7 +112,7 @@ export default function TournamentsAdminPage() {
   const [teamSeed, setTeamSeed] = useState<number | ''>('')
   const [teamPool, setTeamPool] = useState('')
 
-  const hasAdminAccess = profile?.is_trusted_reporter || profile?.tier === 'elite' || profile?.tier === 'trusted'
+  const hasAdminAccess = profile?.is_admin === true
 
   // Fetch data
   useEffect(() => {
@@ -417,7 +417,7 @@ export default function TournamentsAdminPage() {
         <AlertCircle className="mb-4 h-12 w-12 text-neon-pink" />
         <h1 className="mb-2 font-display text-xl font-bold text-foreground uppercase">Access Denied</h1>
         <p className="mb-4 text-foreground-muted text-sm text-center">
-          You need to be a trusted reporter to access tournament management.
+          You need admin privileges to access this area.
         </p>
         <Button onClick={() => router.push('/')}>Go Home</Button>
       </div>

@@ -116,6 +116,9 @@ export interface Database {
           bracket_position: number | null
           winner_advances_to: string | null
           loser_drops_to: string | null
+          // Media fields
+          photos_url: string | null
+          instagram_url: string | null
           created_at: string
           updated_at: string
         }
@@ -144,6 +147,7 @@ export interface Database {
           avatar_url: string | null
           reputation_score: number
           tier: UserTier
+          is_admin: boolean
           is_trusted_reporter: boolean
           trusted_reporter_approved_at: string | null
           total_points: number

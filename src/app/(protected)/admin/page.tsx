@@ -22,6 +22,9 @@ import {
   Key,
   Copy,
   Check,
+  Users,
+  Image,
+  Instagram,
 } from 'lucide-react'
 import { Button, Badge, Input, Card } from '@/components/ui'
 import { useAuth } from '@/hooks'
@@ -65,6 +68,8 @@ interface GameFormData {
   time_remaining: string
   is_verified: boolean
   golden_game: boolean
+  photos_url: string
+  instagram_url: string
 }
 
 const initialFormData: GameFormData = {
@@ -81,6 +86,8 @@ const initialFormData: GameFormData = {
   time_remaining: '',
   is_verified: false,
   golden_game: false,
+  photos_url: '',
+  instagram_url: '',
 }
 
 export default function AdminPage() {
@@ -106,8 +113,8 @@ export default function AdminPage() {
   const [isGeneratingCode, setIsGeneratingCode] = useState(false)
   const [copiedCode, setCopiedCode] = useState<string | null>(null)
 
-  // Check if user has admin access (trusted reporter or elite)
-  const hasAdminAccess = profile?.is_trusted_reporter || profile?.tier === 'elite' || profile?.tier === 'trusted'
+  // Check if user has admin access (must be an admin)
+  const hasAdminAccess = profile?.is_admin === true
 
   // Fetch data
   useEffect(() => {
@@ -218,6 +225,8 @@ export default function AdminPage() {
         time_remaining: formData.time_remaining || null,
         is_verified: formData.is_verified,
         golden_game: formData.golden_game,
+        photos_url: formData.photos_url || null,
+        instagram_url: formData.instagram_url || null,
       }
 
       const { error } = await supabase
@@ -269,6 +278,8 @@ export default function AdminPage() {
         is_verified: formData.is_verified,
         golden_game: formData.golden_game,
         venue: formData.venue || null,
+        photos_url: formData.photos_url || null,
+        instagram_url: formData.instagram_url || null,
       }
 
       const { error } = await supabase
@@ -482,6 +493,8 @@ export default function AdminPage() {
   // Start editing a game
   const startEditing = (game: GameWithTeams) => {
     setEditingGame(game)
+    // Cast to access the media fields
+    const gameWithMedia = game as GameWithTeams & { photos_url?: string | null; instagram_url?: string | null }
     setFormData({
       sport_id: game.sport_id,
       home_team_id: game.home_team_id,
@@ -496,6 +509,8 @@ export default function AdminPage() {
       time_remaining: game.time_remaining || '',
       is_verified: game.is_verified,
       golden_game: game.golden_game,
+      photos_url: gameWithMedia.photos_url || '',
+      instagram_url: gameWithMedia.instagram_url || '',
     })
   }
 
@@ -522,7 +537,7 @@ export default function AdminPage() {
         <AlertCircle className="mb-4 h-12 w-12 text-neon-pink" />
         <h1 className="mb-2 font-display text-xl font-bold text-foreground uppercase">Access Denied</h1>
         <p className="mb-4 text-foreground-muted text-sm text-center">
-          You need to be a trusted reporter to access the admin panel.
+          You need admin privileges to access this area.
         </p>
         <Button onClick={() => router.push('/')}>Go Home</Button>
       </div>
@@ -564,6 +579,14 @@ export default function AdminPage() {
           <Button variant="outline" size="sm" onClick={() => router.push('/admin/tournaments')}>
             <Trophy className="mr-2 h-4 w-4" />
             Tournaments
+          </Button>
+          <Button variant="outline" size="sm" onClick={() => router.push('/admin/schools')}>
+            <Users className="mr-2 h-4 w-4" />
+            Schools
+          </Button>
+          <Button variant="outline" size="sm" onClick={() => router.push('/admin/rosters')}>
+            <Users className="mr-2 h-4 w-4" />
+            Rosters
           </Button>
           <Button variant="outline" size="sm" onClick={() => router.push('/admin/moderation')}>
             <ShieldAlert className="mr-2 h-4 w-4" />
@@ -1305,6 +1328,32 @@ function GameForm({
           />
           <span className="text-sm text-foreground">Golden Game (3x pts)</span>
         </label>
+      </div>
+
+      {/* Media Links */}
+      <div className="border-t border-border pt-4 mt-4">
+        <h4 className="font-display font-bold text-sm mb-3 text-foreground-muted uppercase tracking-wider flex items-center gap-2">
+          <Image className="h-4 w-4" />
+          Game Media
+        </h4>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div>
+            <label className="block text-sm font-medium text-foreground mb-1">Photos URL</label>
+            <Input
+              placeholder="Link to game photos (e.g., Google Drive, Flickr)"
+              value={formData.photos_url}
+              onChange={(e) => onChange('photos_url', e.target.value)}
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-foreground mb-1">Instagram Post URL</label>
+            <Input
+              placeholder="https://instagram.com/p/..."
+              value={formData.instagram_url}
+              onChange={(e) => onChange('instagram_url', e.target.value)}
+            />
+          </div>
+        </div>
       </div>
     </div>
   )
