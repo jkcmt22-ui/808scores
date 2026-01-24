@@ -93,7 +93,7 @@ export function GameCard({ game, showSport = false }: GameCardProps) {
                 {formatGameTime(game.scheduled_at)}
               </span>
             )}
-            {gameTypeBadge && (
+            {gameTypeBadge && !isFinal && (
               <Badge variant={gameTypeBadge.variant} className="gap-1 text-[10px] font-display">
                 {gameTypeBadge.icon}
                 {gameTypeBadge.label}

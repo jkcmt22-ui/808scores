@@ -150,11 +150,6 @@ export function isScoreOverdue(
     return false
   }
 
-  // If game is live, it's not overdue
-  if (status === 'in_progress') {
-    return false
-  }
-
   // If game is canceled or postponed, it's not overdue
   if (status === 'canceled' || status === 'postponed') {
     return false
@@ -170,10 +165,14 @@ export function isScoreOverdue(
   // Set to 5AM HST = 15:00 UTC (5AM + 10 hours)
   nextDay5amHST.setUTCHours(15, 0, 0, 0)
 
-  // If we're past the deadline and game is still scheduled or not verified
+  // If we're past the deadline
   if (now > nextDay5amHST) {
     // Game is scheduled but time has passed - score was never submitted
     if (status === 'scheduled') {
+      return true
+    }
+    // Game is still "in_progress" way past game time - clearly needs score
+    if (status === 'in_progress') {
       return true
     }
     // Game is final but not verified - needs verification
