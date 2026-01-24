@@ -289,7 +289,7 @@ export function GameClient({ params }: GamePageProps) {
           <div className="space-y-4">
             {/* Away Team */}
             <div className="flex items-center justify-between">
-              <div className="flex items-center gap-4 flex-1 min-w-0">
+              <Link href={`/school/${game.away_team.id}`} className="flex items-center gap-4 flex-1 min-w-0 hover:opacity-80 transition-opacity">
                 <div className="flex h-14 w-14 items-center justify-center bg-background-tertiary text-lg font-display font-black text-neon-blue border-2 border-neon-blue/30">
                   {game.away_team.short_name.slice(0, 2).toUpperCase()}
                 </div>
@@ -301,7 +301,7 @@ export function GameClient({ params }: GamePageProps) {
                     {game.away_team.league} &bull; {game.away_team.island}
                   </p>
                 </div>
-              </div>
+              </Link>
               <div className={cn(
                 'score-led score-led-white text-4xl tabular-nums min-w-[100px] text-center',
                 isLive && 'animate-led-blink'
@@ -312,7 +312,7 @@ export function GameClient({ params }: GamePageProps) {
 
             {/* Home Team */}
             <div className="flex items-center justify-between">
-              <div className="flex items-center gap-4 flex-1 min-w-0">
+              <Link href={`/school/${game.home_team.id}`} className="flex items-center gap-4 flex-1 min-w-0 hover:opacity-80 transition-opacity">
                 <div className="flex h-14 w-14 items-center justify-center bg-background-tertiary text-lg font-display font-black text-neon-pink border-2 border-neon-pink/30">
                   {game.home_team.short_name.slice(0, 2).toUpperCase()}
                 </div>
@@ -324,7 +324,7 @@ export function GameClient({ params }: GamePageProps) {
                     {game.home_team.league} &bull; {game.home_team.island}
                   </p>
                 </div>
-              </div>
+              </Link>
               <div className={cn(
                 'score-led score-led-white text-4xl tabular-nums min-w-[100px] text-center',
                 isLive && 'animate-led-blink'
