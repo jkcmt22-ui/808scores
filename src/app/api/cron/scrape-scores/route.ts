@@ -90,6 +90,69 @@ async function findExistingGame(
   return data.id
 }
 
+// Map round name to tournament_round enum
+function mapRoundToEnum(roundName: string | null): string | null {
+  if (!roundName) return null
+
+  const roundMap: Record<string, string> = {
+    'Final': 'final',
+    'Championship': 'final',
+    'Semifinal': 'semifinal',
+    'Semi-final': 'semifinal',
+    'Quarterfinal': 'quarterfinal',
+    'Quarter-final': 'quarterfinal',
+    'First Round': 'round_of_16',
+    'Second Round': 'quarterfinal',
+    'Third Place': 'third_place',
+    'Consolation': 'third_place',
+  }
+
+  return roundMap[roundName] || null
+}
+
+// Find matching tournament for a game
+async function findMatchingTournament(
+  supabase: SupabaseClient,
+  sportId: string,
+  league: string | null,
+  gameDate: Date,
+  gameType: string
+): Promise<string | null> {
+  if (gameType === 'regular_season') return null
+
+  // Look for tournaments that match sport, league, and date range
+  let query = supabase
+    .from('tournaments')
+    .select('id, name, league, start_date, end_date')
+    .eq('sport_id', sportId)
+    .lte('start_date', gameDate.toISOString().split('T')[0])
+
+  // Filter by league if available
+  if (league) {
+    query = query.eq('league', league)
+  }
+
+  const { data: tournaments } = await query
+
+  if (!tournaments || tournaments.length === 0) return null
+
+  // Find the best match - tournament where game date falls within range
+  const gameDateStr = gameDate.toISOString().split('T')[0]
+
+  for (const tournament of tournaments) {
+    const startDate = tournament.start_date
+    const endDate = tournament.end_date || tournament.start_date
+
+    if (gameDateStr >= startDate && gameDateStr <= endDate) {
+      console.log(`Matched game to tournament: ${tournament.name}`)
+      return tournament.id
+    }
+  }
+
+  // If no exact date match, return first matching tournament (closest by start date)
+  return tournaments[0]?.id || null
+}
+
 // Upsert game in database
 async function upsertGame(
   supabase: SupabaseClient,
@@ -103,6 +166,18 @@ async function upsertGame(
     console.warn(`Skipping game - missing team: ${game.awayTeam} @ ${game.homeTeam}`)
     return { action: 'skipped' }
   }
+
+  // Find matching tournament for playoff/championship games
+  const tournamentId = await findMatchingTournament(
+    supabase,
+    game.sportId,
+    game.league,
+    game.scheduledAt,
+    game.gameType
+  )
+
+  // Map round name to enum
+  const tournamentRound = mapRoundToEnum(game.roundName)
 
   // Check if game exists
   const existingGameId = await findExistingGame(
@@ -129,6 +204,9 @@ async function upsertGame(
         updated_at: new Date().toISOString(),
         external_id: game.externalId,
         source: 'scoringlive',
+        game_type: game.gameType,
+        tournament_id: tournamentId,
+        tournament_round: tournamentRound,
       })
       .eq('id', existingGameId)
 
@@ -153,9 +231,11 @@ async function upsertGame(
         away_score: game.awayScore ?? 0,
         is_verified: game.status === 'final',
         verification_method: game.status === 'final' ? 'trusted' : null,
-        game_type: 'regular_season',
+        game_type: game.gameType,
         external_id: game.externalId,
         source: 'scoringlive',
+        tournament_id: tournamentId,
+        tournament_round: tournamentRound,
       })
       .select('id')
       .single()

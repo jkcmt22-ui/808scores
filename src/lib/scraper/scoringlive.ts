@@ -16,6 +16,10 @@ export interface ScrapedGame {
   status: 'scheduled' | 'in_progress' | 'final'
   externalId: string | null
   league: string | null
+  // Tournament/playoff info
+  gameType: 'regular_season' | 'playoff' | 'championship' | 'tournament'
+  tournamentName: string | null
+  roundName: string | null // e.g., "Quarterfinal", "Semifinal", "Final"
 }
 
 // Fetch HTML from ScoringLive
@@ -322,8 +326,72 @@ export function parseSchedulePage(html: string, sportUrlPath: string): ScrapedGa
     const leagueCell = table.find('small small').first()
     if (leagueCell.length) {
       const leagueText = leagueCell.text().trim().toUpperCase()
-      if (['OIA', 'ILH', 'BIIF', 'MIL', 'KIF'].includes(leagueText)) {
+      if (['OIA', 'ILH', 'BIIF', 'MIL', 'KIF', 'HHSAA'].includes(leagueText)) {
         league = leagueText
+      }
+    }
+
+    // Detect game type and tournament info from table text
+    const tableText = table.text().toLowerCase()
+    const fullTableText = table.parent().text().toLowerCase()
+
+    let gameType: 'regular_season' | 'playoff' | 'championship' | 'tournament' = 'regular_season'
+    let tournamentName: string | null = null
+    let roundName: string | null = null
+
+    // Check for playoff/tournament indicators
+    const playoffPatterns = [
+      /playoff/i,
+      /postseason/i,
+      /elimination/i,
+      /bracket/i,
+    ]
+
+    const championshipPatterns = [
+      /state\s*championship/i,
+      /hhsaa/i,
+      /championship\s*game/i,
+      /title\s*game/i,
+      /finals?(?:\s|$)/i,
+    ]
+
+    const roundPatterns = [
+      { pattern: /final(?:s)?(?:\s|$)/i, round: 'Final' },
+      { pattern: /championship\s*game/i, round: 'Final' },
+      { pattern: /semifinal/i, round: 'Semifinal' },
+      { pattern: /semi-final/i, round: 'Semifinal' },
+      { pattern: /quarterfinal/i, round: 'Quarterfinal' },
+      { pattern: /quarter-final/i, round: 'Quarterfinal' },
+      { pattern: /first\s*round/i, round: 'First Round' },
+      { pattern: /second\s*round/i, round: 'Second Round' },
+      { pattern: /third\s*place/i, round: 'Third Place' },
+      { pattern: /consolation/i, round: 'Consolation' },
+    ]
+
+    // Check for championship
+    if (championshipPatterns.some(p => p.test(fullTableText))) {
+      gameType = 'championship'
+      if (league === 'HHSAA' || /hhsaa|state/i.test(fullTableText)) {
+        tournamentName = 'HHSAA State Championship'
+      }
+    }
+    // Check for playoffs
+    else if (playoffPatterns.some(p => p.test(fullTableText))) {
+      gameType = 'playoff'
+      if (league) {
+        tournamentName = `${league} Playoffs`
+      }
+    }
+
+    // Detect round
+    for (const { pattern, round } of roundPatterns) {
+      if (pattern.test(fullTableText)) {
+        roundName = round
+        // If we found a round indicator but haven't set game type, it's likely a playoff
+        if (gameType === 'regular_season') {
+          gameType = 'playoff'
+        }
+        break
       }
     }
 
@@ -339,6 +407,9 @@ export function parseSchedulePage(html: string, sportUrlPath: string): ScrapedGa
       status,
       externalId: gameId,
       league,
+      gameType,
+      tournamentName,
+      roundName,
     })
   })
 
