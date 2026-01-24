@@ -8,7 +8,7 @@ import { FavoritesModal } from '@/components/onboarding'
 import { QuickAccess, TournamentBanner, ComingSoon } from '@/components/home'
 import { GlobalSearch } from '@/components/search/global-search'
 import { useGames, useAuth, useFavoriteTeams, useFavoriteSports } from '@/hooks'
-import { formatFullDate } from '@/lib/utils'
+import { formatFullDate, isScoreOverdue } from '@/lib/utils'
 import { Calendar, ChevronDown, ChevronUp, ChevronLeft, ChevronRight, Star, Filter } from 'lucide-react'
 import type { GameType, GameWithTeams } from '@/types/database'
 
@@ -158,11 +158,21 @@ export default function HomePage() {
     )
   }, [games, showFavoritesOnly, hasFavorites, favoriteTeamIds, favoriteSportIds])
 
-  // Categorize games by status
-  const liveGames = filteredGames.filter((g) => g.status === 'in_progress')
-  const scheduledGames = filteredGames.filter((g) => g.status === 'scheduled')
-  const finalGames = filteredGames.filter((g) => g.status === 'final')
+  // Categorize games by status, but check for overdue games first
+  const overdueGames = filteredGames.filter((g) =>
+    isScoreOverdue(g.scheduled_at, g.status, g.is_verified)
+  )
+  const overdueIds = new Set(overdueGames.map(g => g.id))
 
+  // Filter out overdue games from live and scheduled
+  const liveGames = filteredGames.filter((g) => g.status === 'in_progress' && !overdueIds.has(g.id))
+  const scheduledGames = filteredGames.filter((g) => g.status === 'scheduled' && !overdueIds.has(g.id))
+  const finalGames = filteredGames.filter((g) => g.status === 'final' && !overdueIds.has(g.id))
+
+  const sortedOverdue = useMemo(
+    () => sortByFavorites(overdueGames, favoriteTeamIds, favoriteSportIds),
+    [overdueGames, favoriteTeamIds, favoriteSportIds]
+  )
   const sortedLive = useMemo(
     () => sortByFavorites(liveGames, favoriteTeamIds, favoriteSportIds),
     [liveGames, favoriteTeamIds, favoriteSportIds]
@@ -294,6 +304,38 @@ export default function HomePage() {
             <GameCardSkeleton />
             <GameCardSkeleton />
           </div>
+        )}
+
+        {/* Needs Score Section (Overdue games) */}
+        {!isLoading && overdueGames.length > 0 && (
+          <section className="mb-6 animate-fade-in">
+            <div className="mb-3 flex items-center gap-2">
+              <span className="h-3 w-3 rounded-full bg-neon-yellow" style={{ boxShadow: '0 0 10px var(--neon-yellow)' }} />
+              <h3 className="font-display text-sm font-black neon-text-yellow uppercase tracking-widest">Needs Score</h3>
+              <span className="font-display text-xs text-foreground-muted">({overdueGames.length})</span>
+            </div>
+            <div className="space-y-3">
+              {/* Favorite overdue games */}
+              {hasFavorites && sortedOverdue.favorites.length > 0 && (
+                <>
+                  <div className="flex items-center gap-2 text-xs text-neon-yellow">
+                    <Star className="h-3 w-3 fill-current" />
+                    <span className="font-display uppercase tracking-wider">Your Teams</span>
+                  </div>
+                  {sortedOverdue.favorites.map((game) => (
+                    <GameCard key={game.id} game={game} showSport />
+                  ))}
+                  {sortedOverdue.others.length > 0 && (
+                    <div className="border-t border-border/50 pt-3 mt-3" />
+                  )}
+                </>
+              )}
+              {/* Other overdue games */}
+              {(hasFavorites ? sortedOverdue.others : overdueGames).map((game) => (
+                <GameCard key={game.id} game={game} showSport />
+              ))}
+            </div>
+          </section>
         )}
 
         {/* Live Games Section */}
