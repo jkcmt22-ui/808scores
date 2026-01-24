@@ -153,18 +153,70 @@ async function findMatchingTournament(
   return tournaments[0]?.id || null
 }
 
+// Send playoff notification
+async function sendPlayoffNotification(
+  gameId: string,
+  homeTeamId: string,
+  awayTeamId: string,
+  homeTeam: string,
+  awayTeam: string,
+  homeScore: number,
+  awayScore: number,
+  status: string,
+  gameType: string,
+  sportName?: string
+) {
+  try {
+    const webhookSecret = process.env.WEBHOOK_SECRET
+    const baseUrl = process.env.VERCEL_URL
+      ? `https://${process.env.VERCEL_URL}`
+      : 'http://localhost:3000'
+
+    await fetch(`${baseUrl}/api/notifications/send`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        ...(webhookSecret ? { 'Authorization': `Bearer ${webhookSecret}` } : {})
+      },
+      body: JSON.stringify({
+        gameId,
+        homeTeam,
+        awayTeam,
+        homeTeamId,
+        awayTeamId,
+        homeScore,
+        awayScore,
+        status,
+        gameType,
+        notificationType: 'playoff_alert',
+        sportName
+      })
+    })
+    console.log(`Sent playoff notification for game ${gameId}`)
+  } catch (error) {
+    console.error('Failed to send playoff notification:', error)
+  }
+}
+
 // Upsert game in database
 async function upsertGame(
   supabase: SupabaseClient,
   game: ScrapedGame
-): Promise<{ action: 'inserted' | 'updated' | 'skipped'; id?: string }> {
+): Promise<{
+  action: 'inserted' | 'updated' | 'skipped'
+  id?: string
+  homeTeamId?: string
+  awayTeamId?: string
+  scoreChanged?: boolean
+  previousStatus?: string
+}> {
   // Find team IDs
   const homeTeamId = await findSchoolId(supabase, game.homeTeam)
   const awayTeamId = await findSchoolId(supabase, game.awayTeam)
 
   if (!homeTeamId || !awayTeamId) {
     console.warn(`Skipping game - missing team: ${game.awayTeam} @ ${game.homeTeam}`)
-    return { action: 'skipped' }
+    return { action: 'skipped', homeTeamId: undefined, awayTeamId: undefined }
   }
 
   // Find matching tournament for playoff/championship games
@@ -190,6 +242,20 @@ async function upsertGame(
   )
 
   if (existingGameId) {
+    // Fetch existing game to check for score changes
+    const { data: existingGame } = await supabase
+      .from('games')
+      .select('home_score, away_score, status')
+      .eq('id', existingGameId)
+      .single()
+
+    const previousStatus = existingGame?.status
+    const scoreChanged = existingGame
+      ? (existingGame.home_score !== (game.homeScore ?? 0) ||
+         existingGame.away_score !== (game.awayScore ?? 0) ||
+         existingGame.status !== game.status)
+      : false
+
     // Update existing game
     const { error } = await supabase
       .from('games')
@@ -212,10 +278,17 @@ async function upsertGame(
 
     if (error) {
       console.error(`Failed to update game ${existingGameId}:`, error)
-      return { action: 'skipped' }
+      return { action: 'skipped', homeTeamId, awayTeamId }
     }
 
-    return { action: 'updated', id: existingGameId }
+    return {
+      action: 'updated',
+      id: existingGameId,
+      homeTeamId,
+      awayTeamId,
+      scoreChanged,
+      previousStatus
+    }
   } else {
     // Insert new game
     const { data, error } = await supabase
@@ -242,10 +315,16 @@ async function upsertGame(
 
     if (error) {
       console.error(`Failed to insert game:`, error)
-      return { action: 'skipped' }
+      return { action: 'skipped', homeTeamId, awayTeamId }
     }
 
-    return { action: 'inserted', id: data.id }
+    return {
+      action: 'inserted',
+      id: data.id,
+      homeTeamId,
+      awayTeamId,
+      scoreChanged: game.status === 'in_progress' || game.status === 'final'
+    }
   }
 }
 
@@ -284,16 +363,67 @@ export async function GET(request: NextRequest) {
       inserted: 0,
       updated: 0,
       skipped: 0,
+      playoffNotifications: 0,
     }
+
+    // Collect playoff games to send notifications for
+    const playoffGamesToNotify: Array<{
+      gameId: string
+      game: ScrapedGame
+      homeTeamId: string
+      awayTeamId: string
+    }> = []
 
     for (const game of games) {
       const result = await upsertGame(supabase, game)
       stats[result.action]++
+
+      // Check if this is a playoff/championship game with score changes
+      const isPlayoffGame = game.gameType === 'playoff' || game.gameType === 'championship' || game.gameType === 'tournament'
+      const hasScoreActivity = game.status === 'in_progress' || game.status === 'final'
+
+      if (isPlayoffGame && hasScoreActivity && result.scoreChanged && result.id && result.homeTeamId && result.awayTeamId) {
+        playoffGamesToNotify.push({
+          gameId: result.id,
+          game,
+          homeTeamId: result.homeTeamId,
+          awayTeamId: result.awayTeamId
+        })
+      }
+    }
+
+    // Send playoff notifications asynchronously (don't wait)
+    for (const { gameId, game, homeTeamId, awayTeamId } of playoffGamesToNotify) {
+      // Get sport name for notification
+      const { data: sportData } = await supabase
+        .from('sports')
+        .select('display_name, name')
+        .eq('id', game.sportId)
+        .single()
+
+      const sportName = sportData?.display_name || sportData?.name
+
+      await sendPlayoffNotification(
+        gameId,
+        homeTeamId,
+        awayTeamId,
+        game.homeTeam,
+        game.awayTeam,
+        game.homeScore ?? 0,
+        game.awayScore ?? 0,
+        game.status,
+        game.gameType,
+        sportName
+      )
+      stats.playoffNotifications++
     }
 
     const duration = Date.now() - startTime
 
     console.log(`Scrape complete in ${duration}ms:`, stats)
+    if (playoffGamesToNotify.length > 0) {
+      console.log(`Sent ${playoffGamesToNotify.length} playoff notifications`)
+    }
 
     return NextResponse.json({
       success: true,

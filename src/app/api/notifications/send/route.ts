@@ -32,6 +32,98 @@ interface NotificationPayload {
   data?: {
     gameId?: string
     url?: string
+    type?: string
+  }
+}
+
+type NotificationType = 'score_update' | 'game_start' | 'game_final' | 'playoff_alert'
+
+interface SendNotificationBody {
+  gameId: string
+  homeTeam: string
+  awayTeam: string
+  homeTeamId?: string
+  awayTeamId?: string
+  homeScore?: number
+  awayScore?: number
+  status?: string
+  gameType?: 'regular_season' | 'playoff' | 'championship' | 'tournament'
+  notificationType?: NotificationType
+  sportName?: string
+}
+
+// Get game type badge for notification title
+function getGameTypePrefix(gameType: string | undefined): string {
+  switch (gameType) {
+    case 'playoff':
+      return 'PLAYOFF: '
+    case 'championship':
+      return 'CHAMPIONSHIP: '
+    case 'tournament':
+      return 'TOURNEY: '
+    default:
+      return ''
+  }
+}
+
+// Build notification message based on type
+function buildNotificationPayload(body: SendNotificationBody): NotificationPayload {
+  const {
+    gameId,
+    homeTeam,
+    awayTeam,
+    homeScore,
+    awayScore,
+    status,
+    gameType,
+    notificationType,
+    sportName
+  } = body
+
+  const gamePrefix = getGameTypePrefix(gameType)
+  const sportLabel = sportName ? ` (${sportName})` : ''
+
+  let title = `${gamePrefix}${awayTeam} @ ${homeTeam}`
+  let notificationBody = ''
+
+  switch (notificationType) {
+    case 'game_start':
+      title = `${gamePrefix}Game Starting${sportLabel}`
+      notificationBody = `${awayTeam} @ ${homeTeam} is about to begin!`
+      break
+    case 'game_final':
+      title = `${gamePrefix}Final${sportLabel}`
+      notificationBody = `${awayTeam} ${awayScore} - ${homeTeam} ${homeScore}`
+      break
+    case 'playoff_alert':
+      title = `${gamePrefix}${awayTeam} @ ${homeTeam}${sportLabel}`
+      if (status === 'final') {
+        notificationBody = `Final: ${awayTeam} ${awayScore} - ${homeTeam} ${homeScore}`
+      } else if (status === 'in_progress') {
+        notificationBody = `LIVE: ${awayTeam} ${awayScore} - ${homeTeam} ${homeScore}`
+      } else {
+        notificationBody = 'Game starting soon!'
+      }
+      break
+    case 'score_update':
+    default:
+      notificationBody = status === 'final'
+        ? `Final: ${awayTeam} ${awayScore} - ${homeTeam} ${homeScore}`
+        : `Score Update: ${awayTeam} ${awayScore} - ${homeTeam} ${homeScore}`
+      break
+  }
+
+  return {
+    title,
+    body: notificationBody,
+    icon: '/icon-192.png',
+    badge: '/icon-192.png',
+    tag: `game-${gameId}`,
+    data: {
+      gameId,
+      url: `/game/${gameId}`,
+      type: notificationType || 'score_update'
+    }
   }
 }
 
@@ -53,26 +145,11 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    const body = await request.json()
-    const { gameId, homeTeam, awayTeam, homeScore, awayScore, status } = body
+    const body: SendNotificationBody = await request.json()
+    const { gameId, homeTeamId, awayTeamId, gameType, notificationType } = body
 
     if (!gameId) {
       return NextResponse.json({ error: 'gameId is required' }, { status: 400 })
-    }
-
-    // Create notification payload
-    const payload: NotificationPayload = {
-      title: `${awayTeam} @ ${homeTeam}`,
-      body: status === 'final'
-        ? `Final: ${awayTeam} ${awayScore} - ${homeTeam} ${homeScore}`
-        : `Score Update: ${awayTeam} ${awayScore} - ${homeTeam} ${homeScore}`,
-      icon: '/icon-192.png',
-      badge: '/icon-192.png',
-      tag: `game-${gameId}`,
-      data: {
-        gameId,
-        url: `/game/${gameId}`
-      }
     }
 
     // Get all push subscriptions from Supabase
@@ -87,20 +164,63 @@ export async function POST(request: NextRequest) {
 
     const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_KEY)
 
-    const { data: subscriptions, error } = await supabase
-      .from('push_subscriptions')
-      .select('endpoint, p256dh, auth')
+    // Determine if we should filter by team followers
+    const isTargetedNotification = (homeTeamId && awayTeamId) &&
+      (notificationType === 'playoff_alert' || gameType !== 'regular_season')
 
-    if (error) {
-      console.error('Error fetching subscriptions:', error)
-      return NextResponse.json({ error: 'Failed to fetch subscriptions' }, { status: 500 })
+    let subscriptions: Array<{ endpoint: string; p256dh: string; auth: string }> = []
+
+    if (isTargetedNotification) {
+      // Get users who follow either team with notifications enabled
+      const { data: teamFollowers, error: followError } = await supabase
+        .from('team_follows')
+        .select('user_id')
+        .in('school_id', [homeTeamId, awayTeamId])
+        .eq('notify', true)
+
+      if (followError) {
+        console.error('Error fetching team followers:', followError)
+      }
+
+      if (teamFollowers && teamFollowers.length > 0) {
+        // Get unique user IDs
+        const userIds = [...new Set(teamFollowers.map(f => f.user_id))]
+
+        // Get push subscriptions for these users
+        const { data: userSubs, error: subError } = await supabase
+          .from('push_subscriptions')
+          .select('endpoint, p256dh, auth')
+          .in('user_id', userIds)
+
+        if (subError) {
+          console.error('Error fetching user subscriptions:', subError)
+        }
+
+        subscriptions = userSubs || []
+        console.log(`Playoff notification: ${subscriptions.length} subscribers for teams ${homeTeamId}, ${awayTeamId}`)
+      }
+    } else {
+      // Fallback: send to all subscribers
+      const { data, error } = await supabase
+        .from('push_subscriptions')
+        .select('endpoint, p256dh, auth')
+
+      if (error) {
+        console.error('Error fetching subscriptions:', error)
+        return NextResponse.json({ error: 'Failed to fetch subscriptions' }, { status: 500 })
+      }
+
+      subscriptions = data || []
     }
 
-    if (!subscriptions || subscriptions.length === 0) {
+    if (subscriptions.length === 0) {
       return NextResponse.json({ success: true, message: 'No subscribers', sent: 0 })
     }
 
-    // Send notifications to all subscribers
+    // Build notification payload
+    const payload = buildNotificationPayload(body)
+
+    // Send notifications to all relevant subscribers
     const results = await Promise.allSettled(
       subscriptions.map(async (sub) => {
         const pushSubscription = {
@@ -138,7 +258,8 @@ export async function POST(request: NextRequest) {
       success: true,
       sent,
       failed,
-      total: subscriptions.length
+      total: subscriptions.length,
+      targeted: isTargetedNotification
     })
   } catch (error) {
     console.error('Error sending notifications:', error)
