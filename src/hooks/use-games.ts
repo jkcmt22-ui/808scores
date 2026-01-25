@@ -4,6 +4,9 @@ import { useEffect, useState, useCallback, useMemo } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import type { GameWithTeams, SportGender, GameType } from '@/types/database'
 
+// Extended type that includes message count
+export type GameWithTeamsAndCount = GameWithTeams & { message_count: number }
+
 interface UseGamesOptions {
   date?: Date
   sportCode?: string
@@ -14,7 +17,7 @@ interface UseGamesOptions {
 }
 
 export function useGames(options: UseGamesOptions = {}) {
-  const [games, setGames] = useState<GameWithTeams[]>([])
+  const [games, setGames] = useState<GameWithTeamsAndCount[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<Error | null>(null)
 
@@ -117,7 +120,34 @@ export function useGames(options: UseGamesOptions = {}) {
 
       if (queryError) throw queryError
 
-      setGames((data as GameWithTeams[]) || [])
+      const gamesData = (data as GameWithTeams[]) || []
+
+      // Fetch message counts for these games
+      if (gamesData.length > 0) {
+        const gameIds = gamesData.map(g => g.id)
+        const { data: messageCounts } = await supabase
+          .from('chat_messages')
+          .select('game_id')
+          .in('game_id', gameIds)
+
+        // Count messages per game
+        const countMap: Record<string, number> = {}
+        if (messageCounts) {
+          for (const msg of messageCounts as { game_id: string }[]) {
+            countMap[msg.game_id] = (countMap[msg.game_id] || 0) + 1
+          }
+        }
+
+        // Merge counts into games
+        const gamesWithCounts: GameWithTeamsAndCount[] = gamesData.map(game => ({
+          ...game,
+          message_count: countMap[game.id] || 0
+        }))
+
+        setGames(gamesWithCounts)
+      } else {
+        setGames([])
+      }
     } catch (err) {
       console.error('Error fetching games:', err)
       setError(err instanceof Error ? err : new Error('Failed to fetch games'))
@@ -156,6 +186,7 @@ export function useGames(options: UseGamesOptions = {}) {
                   home_team: game.home_team,
                   away_team: game.away_team,
                   sport: game.sport,
+                  message_count: game.message_count,
                 }
               })
             )
@@ -185,7 +216,7 @@ export function useGames(options: UseGamesOptions = {}) {
 }
 
 export function useLiveGames() {
-  const [games, setGames] = useState<GameWithTeams[]>([])
+  const [games, setGames] = useState<GameWithTeamsAndCount[]>([])
   const [isLoading, setIsLoading] = useState(true)
 
   const supabase = useMemo(() => createClient()!, [])
@@ -204,7 +235,30 @@ export function useLiveGames() {
         .order('scheduled_at', { ascending: true })
 
       if (!error && data) {
-        setGames(data as GameWithTeams[])
+        const gamesData = data as GameWithTeams[]
+
+        // Fetch message counts for these games
+        if (gamesData.length > 0) {
+          const gameIds = gamesData.map(g => g.id)
+          const { data: messageCounts } = await supabase
+            .from('chat_messages')
+            .select('game_id')
+            .in('game_id', gameIds)
+
+          const countMap: Record<string, number> = {}
+          if (messageCounts) {
+            for (const msg of messageCounts as { game_id: string }[]) {
+              countMap[msg.game_id] = (countMap[msg.game_id] || 0) + 1
+            }
+          }
+
+          setGames(gamesData.map(game => ({
+            ...game,
+            message_count: countMap[game.id] || 0
+          })))
+        } else {
+          setGames([])
+        }
       }
       setIsLoading(false)
     }
@@ -237,7 +291,7 @@ export function useLiveGames() {
 }
 
 export function useGame(gameId: string) {
-  const [game, setGame] = useState<GameWithTeams | null>(null)
+  const [game, setGame] = useState<GameWithTeamsAndCount | null>(null)
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<Error | null>(null)
 
@@ -261,7 +315,16 @@ export function useGame(gameId: string) {
       if (queryError) {
         setError(queryError)
       } else {
-        setGame(data as GameWithTeams)
+        // Fetch message count for this game
+        const { count } = await supabase
+          .from('chat_messages')
+          .select('*', { count: 'exact', head: true })
+          .eq('game_id', gameId)
+
+        setGame({
+          ...(data as GameWithTeams),
+          message_count: count || 0
+        })
       }
       setIsLoading(false)
     }
@@ -294,6 +357,7 @@ export function useGame(gameId: string) {
               home_team: current.home_team,
               away_team: current.away_team,
               sport: current.sport,
+              message_count: current.message_count,
             }
           })
         }

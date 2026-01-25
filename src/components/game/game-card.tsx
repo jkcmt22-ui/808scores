@@ -7,8 +7,11 @@ import { cn, formatGameTime, isGameLive, isGameFinal, isScoreOverdue } from '@/l
 import { getSportEmoji } from '@/lib/sport-utils'
 import type { GameWithTeams, GameType } from '@/types/database'
 
+// Game with optional message count (from hooks that fetch it)
+type GameWithOptionalCount = GameWithTeams & { message_count?: number }
+
 interface GameCardProps {
-  game: GameWithTeams
+  game: GameWithOptionalCount
   showSport?: boolean
 }
 
@@ -177,7 +180,14 @@ export function GameCard({ game, showSport = false }: GameCardProps) {
                 Verified
               </span>
             )}
-            <MessageCircle className="h-4 w-4 text-neon-blue" />
+            <div className="flex items-center gap-1 text-neon-blue">
+              <MessageCircle className="h-4 w-4" />
+              {game.message_count !== undefined && game.message_count > 0 && (
+                <span className="text-xs font-display font-bold">
+                  {game.message_count}
+                </span>
+              )}
+            </div>
           </div>
         </div>
       </div>
@@ -186,7 +196,7 @@ export function GameCard({ game, showSport = false }: GameCardProps) {
 }
 
 // Compact version for lists
-export function GameCardCompact({ game }: { game: GameWithTeams }) {
+export function GameCardCompact({ game }: { game: GameWithOptionalCount }) {
   const isLive = isGameLive(game.status)
   const isScheduled = game.status === 'scheduled'
 

@@ -1,5 +1,6 @@
 'use client'
 
+import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { Header } from '@/components/layout'
 import { Card, Badge, Button, Avatar } from '@/components/ui'
@@ -16,28 +17,88 @@ import {
   Loader2,
 } from 'lucide-react'
 import { getTierColor, getTierLabel } from '@/lib/utils'
-import { useRequireAuth } from '@/hooks'
+import { useRequireAuth, useUserBadges } from '@/hooks'
+import { createClient } from '@/lib/supabase/client'
 
-// Mock data for badges and submissions (will come from API later)
-const mockBadges = [
-  { code: 'first_score', name: 'First Score', icon: '🎯' },
-  { code: 'night_owl', name: 'Night Owl', icon: '🦉' },
-  { code: 'reliable', name: 'Reliable (90%+)', icon: '✅' },
-]
+// Badge emoji mapping (fallback when no icon_url)
+const BADGE_ICONS: Record<string, string> = {
+  first_score: '🎯',
+  verified_5: '✅',
+  verified_25: '🌟',
+  verified_100: '⭐',
+  accuracy_90: '🎯',
+  night_owl: '🦉',
+  early_bird: '🐦',
+  streak_7: '🔥',
+  multi_sport: '🏆',
+  golden_game: '👑',
+  trusted: '🛡️',
+  chat_active: '💬',
+  liked_10: '❤️',
+}
 
-const mockRecentSubmissions = [
-  { game: 'Kahuku vs Mililani', sport: 'Football', points: 15, status: 'verified' },
-  { game: 'Punahou vs St Louis', sport: 'Basketball', points: 10, status: 'verified' },
-  { game: 'Kapolei vs Campbell', sport: 'Volleyball', points: 5, status: 'pending' },
-]
+interface RecentSubmission {
+  id: string
+  game: {
+    id: string
+    home_team: { short_name: string }
+    away_team: { short_name: string }
+    sport: { name: string }
+  }
+  points_earned: number
+  status: string
+  created_at: string
+}
 
 export default function ProfilePage() {
   const { profile, isLoading, signOut } = useRequireAuth()
+  const { userBadges, isLoading: badgesLoading } = useUserBadges(profile?.id)
+  const [recentSubmissions, setRecentSubmissions] = useState<RecentSubmission[]>([])
+  const [loadingSubmissions, setLoadingSubmissions] = useState(true)
+
+  useEffect(() => {
+    async function fetchRecentSubmissions() {
+      if (!profile?.id) return
+
+      const supabase = createClient()
+      if (!supabase) return
+
+      try {
+        const { data: submissions } = await supabase
+          .from('submissions')
+          .select(`
+            id,
+            points_earned,
+            status,
+            created_at,
+            game:games(
+              id,
+              home_team:schools!games_home_team_id_fkey(short_name),
+              away_team:schools!games_away_team_id_fkey(short_name),
+              sport:sports(name)
+            )
+          `)
+          .eq('user_id', profile.id)
+          .order('created_at', { ascending: false })
+          .limit(5)
+
+        if (submissions) {
+          setRecentSubmissions(submissions as unknown as RecentSubmission[])
+        }
+      } catch (error) {
+        console.error('Error fetching submissions:', error)
+      } finally {
+        setLoadingSubmissions(false)
+      }
+    }
+
+    fetchRecentSubmissions()
+  }, [profile])
 
   if (isLoading) {
     return (
       <div className="flex min-h-screen items-center justify-center">
-        <Loader2 className="h-8 w-8 animate-spin text-blue-600" />
+        <Loader2 className="h-8 w-8 animate-spin text-neon-blue" />
       </div>
     )
   }
@@ -156,19 +217,36 @@ export default function ProfilePage() {
           <div className="p-4">
             <div className="mb-4 flex items-center justify-between">
               <h3 className="font-semibold text-foreground">Badges</h3>
-              <span className="text-sm text-foreground-muted">{mockBadges.length} earned</span>
+              <Link href="/profile/badges" className="text-sm text-neon-blue hover:underline">
+                {userBadges.length} earned &rarr;
+              </Link>
             </div>
-            {mockBadges.length > 0 ? (
+            {badgesLoading ? (
+              <div className="flex justify-center py-4">
+                <Loader2 className="h-5 w-5 animate-spin text-foreground-muted" />
+              </div>
+            ) : userBadges.length > 0 ? (
               <div className="flex flex-wrap gap-2">
-                {mockBadges.map((badge) => (
-                  <div
-                    key={badge.code}
-                    className="flex items-center gap-2 rounded-full bg-background-tertiary border border-border px-3 py-1.5"
+                {userBadges.slice(0, 6).map((ub) => {
+                  const icon = BADGE_ICONS[ub.badge.code] || '🏅'
+                  return (
+                    <div
+                      key={ub.badge_id}
+                      className="flex items-center gap-2 rounded-full bg-neon-yellow/10 border border-neon-yellow/30 px-3 py-1.5"
+                    >
+                      <span>{icon}</span>
+                      <span className="text-sm font-medium text-foreground">{ub.badge.name}</span>
+                    </div>
+                  )
+                })}
+                {userBadges.length > 6 && (
+                  <Link
+                    href="/profile/badges"
+                    className="flex items-center rounded-full bg-background-tertiary border border-border px-3 py-1.5 text-sm text-foreground-muted hover:text-neon-blue transition-colors"
                   >
-                    <span>{badge.icon}</span>
-                    <span className="text-sm font-medium text-foreground">{badge.name}</span>
-                  </div>
-                ))}
+                    +{userBadges.length - 6} more
+                  </Link>
+                )}
               </div>
             ) : (
               <p className="text-sm text-foreground-muted">No badges earned yet. Start reporting scores!</p>
@@ -180,27 +258,34 @@ export default function ProfilePage() {
         <Card className="mb-6 border-2 border-border">
           <div className="p-4">
             <h3 className="mb-4 font-semibold text-foreground">Recent Activity</h3>
-            {mockRecentSubmissions.length > 0 ? (
+            {loadingSubmissions ? (
+              <div className="flex justify-center py-4">
+                <Loader2 className="h-5 w-5 animate-spin text-foreground-muted" />
+              </div>
+            ) : recentSubmissions.length > 0 ? (
               <div className="space-y-3">
-                {mockRecentSubmissions.map((sub, index) => (
-                  <div
-                    key={index}
-                    className="flex items-center justify-between border-b border-border pb-3 last:border-0"
+                {recentSubmissions.map((sub) => (
+                  <Link
+                    key={sub.id}
+                    href={`/game/${sub.game.id}`}
+                    className="flex items-center justify-between border-b border-border pb-3 last:border-0 hover:bg-background-secondary -mx-2 px-2 py-1 rounded transition-colors"
                   >
                     <div>
-                      <p className="font-medium text-foreground">{sub.game}</p>
-                      <p className="text-xs text-foreground-muted">{sub.sport}</p>
+                      <p className="font-medium text-foreground">
+                        {sub.game.away_team.short_name} @ {sub.game.home_team.short_name}
+                      </p>
+                      <p className="text-xs text-foreground-muted">{sub.game.sport.name}</p>
                     </div>
                     <div className="text-right">
-                      <p className="font-semibold text-neon-blue">+{sub.points} pts</p>
+                      <p className="font-semibold text-neon-blue">+{sub.points_earned} pts</p>
                       <Badge
-                        variant={sub.status === 'verified' ? 'success' : 'secondary'}
+                        variant={sub.status === 'verified' ? 'success' : sub.status === 'rejected' ? 'destructive' : 'secondary'}
                         className="text-xs"
                       >
                         {sub.status}
                       </Badge>
                     </div>
-                  </div>
+                  </Link>
                 ))}
               </div>
             ) : (
@@ -242,13 +327,16 @@ export default function ProfilePage() {
               </div>
               <ChevronRight className="h-5 w-5 text-foreground-muted" />
             </Link>
-            <button className="flex w-full items-center justify-between p-4 hover:bg-background-secondary transition-colors">
+            <Link
+              href="/profile/badges"
+              className="flex w-full items-center justify-between p-4 hover:bg-background-secondary transition-colors"
+            >
               <div className="flex items-center gap-3">
                 <Award className="h-5 w-5 text-foreground-muted" />
                 <span>All Badges</span>
               </div>
               <ChevronRight className="h-5 w-5 text-foreground-muted" />
-            </button>
+            </Link>
             <button
               onClick={handleSignOut}
               className="flex w-full items-center justify-between p-4 text-neon-pink hover:bg-neon-pink/10 transition-colors"

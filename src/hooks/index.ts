@@ -1,6 +1,6 @@
 export { useAuth, useRequireAuth } from './use-auth'
 export { useRealtimeGame, useRealtimeLiveGames, useRealtimeSubmissions } from './use-realtime'
-export { useGames, useLiveGames, useGame } from './use-games'
+export { useGames, useLiveGames, useGame, type GameWithTeamsAndCount } from './use-games'
 export { useSports } from './use-sports'
 export { useLeaderboard } from './use-leaderboard'
 export { usePushNotifications } from './use-push-notifications'
@@ -23,3 +23,5 @@ export {
   useEnterRaffle,
 } from './use-raffles'
 export { useSecurity, useTrustScore } from './use-security'
+export { useNotifications, type Notification } from './use-notifications'
+export { useBadges, useUserBadges, type Badge, type UserBadge } from './use-badges'

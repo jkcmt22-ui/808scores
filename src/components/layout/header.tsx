@@ -5,7 +5,7 @@ import Link from 'next/link'
 import { Bell, Search, User, LogIn, LogOut, Settings, ChevronDown, Command } from 'lucide-react'
 import { Button, Avatar } from '@/components/ui'
 import { GlobalSearch } from '@/components/search/global-search'
-import { useAuth } from '@/hooks'
+import { useAuth, useNotifications } from '@/hooks'
 import { cn } from '@/lib/utils'
 
 interface HeaderProps {
@@ -21,6 +21,7 @@ export function Header({
   showNotifications = true,
 }: HeaderProps) {
   const { isAuthenticated, isLoading, profile, signOut } = useAuth()
+  const { unreadCount } = useNotifications(profile?.id)
   const [showUserMenu, setShowUserMenu] = useState(false)
   const [searchOpen, setSearchOpen] = useState(false)
 
@@ -86,8 +87,13 @@ export function Header({
 
             {showNotifications && isAuthenticated && (
               <Link href="/notifications">
-                <Button variant="ghost" size="icon" className="relative">
+                <Button variant="ghost" size="icon" className="relative" aria-label="Notifications">
                   <Bell className="h-5 w-5" />
+                  {unreadCount > 0 && (
+                    <span className="absolute -top-0.5 -right-0.5 flex h-4 w-4 items-center justify-center rounded-full bg-neon-pink text-[10px] font-bold text-white" style={{ boxShadow: '0 0 6px var(--neon-pink)' }}>
+                      {unreadCount > 9 ? '9+' : unreadCount}
+                    </span>
+                  )}
                 </Button>
               </Link>
             )}
