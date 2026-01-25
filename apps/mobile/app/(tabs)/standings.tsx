@@ -52,16 +52,16 @@ function SportPicker({
   const selectedSportObj = sports.find(s => s.code === selectedSport);
   const displayText = selectedSportObj
     ? `${getSportEmoji(selectedSportObj.code)} ${(selectedSportObj.display_name || selectedSportObj.name).toUpperCase()}`
-    : 'ALL SPORTS';
+    : 'SELECT SPORT';
 
   return (
     <View style={styles.pickerContainer}>
       <Text style={styles.pickerLabel}>SELECT SPORT</Text>
       <TouchableOpacity
-        style={[styles.pickerButton, selectedSport && styles.pickerButtonActive]}
+        style={[styles.pickerButton, styles.pickerButtonActive]}
         onPress={() => setModalVisible(true)}
       >
-        <Text style={[styles.pickerButtonText, selectedSport && styles.pickerButtonTextActive]}>
+        <Text style={[styles.pickerButtonText, styles.pickerButtonTextActive]}>
           {displayText}
         </Text>
         <Text style={styles.pickerArrow}>▼</Text>
@@ -83,19 +83,6 @@ function SportPicker({
             </View>
 
             <ScrollView style={styles.modalScroll}>
-              {/* All Sports option */}
-              <TouchableOpacity
-                style={[styles.modalOption, !selectedSport && styles.modalOptionActive]}
-                onPress={() => {
-                  onSelect(null);
-                  setModalVisible(false);
-                }}
-              >
-                <Text style={[styles.modalOptionText, !selectedSport && styles.modalOptionTextActive]}>
-                  ALL SPORTS
-                </Text>
-              </TouchableOpacity>
-
               {/* Grouped by season */}
               {SEASON_ORDER.map(season => {
                 const seasonSports = sportsBySeason.get(season) || [];
@@ -175,8 +162,22 @@ export default function StandingsScreen() {
   const [refreshing, setRefreshing] = useState(false);
 
   const { sports, isLoading: sportsLoading } = useStandingsSports();
+
+  // Get unique sports list (deduplicated by code)
+  const uniqueSports = useMemo(() => {
+    const seen = new Set<string>();
+    return sports.filter(s => {
+      if (seen.has(s.code)) return false;
+      seen.add(s.code);
+      return true;
+    });
+  }, [sports]);
+
+  // Default to first sport if none selected
+  const effectiveSportCode = selectedSport || uniqueSports[0]?.code || null;
+
   const { standings, isLoading, error, refetch } = useStandings({
-    sportCode: selectedSport || undefined,
+    sportCode: effectiveSportCode || undefined,
   });
 
   const onRefresh = useCallback(async () => {
@@ -202,10 +203,10 @@ export default function StandingsScreen() {
       </View>
 
       {/* Sport Picker */}
-      {sports.length > 0 && (
+      {uniqueSports.length > 0 && (
         <SportPicker
-          sports={sports}
-          selectedSport={selectedSport}
+          sports={uniqueSports}
+          selectedSport={effectiveSportCode}
           onSelect={setSelectedSport}
         />
       )}
@@ -225,9 +226,7 @@ export default function StandingsScreen() {
           </View>
           <Text style={styles.emptyText}>NO STANDINGS DATA</Text>
           <Text style={styles.emptySubtext}>
-            {selectedSport
-              ? 'No standings available for this sport'
-              : 'Select a sport to view standings'}
+            Standings will be available once regular season games are completed
           </Text>
         </View>
       ) : (

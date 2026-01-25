@@ -44,15 +44,28 @@ export default function StandingsPage() {
   const [selectedSportCode, setSelectedSportCode] = useState<string | null>(null)
   const [selectedLeague, setSelectedLeague] = useState<string | null>(null)
 
+  // Get unique sports list
+  const uniqueSports = useMemo(() => {
+    const seen = new Set<string>()
+    return sports.filter(s => {
+      if (seen.has(s.code)) return false
+      seen.add(s.code)
+      return true
+    })
+  }, [sports])
+
+  // Default to first sport if none selected
+  const effectiveSportCode = selectedSportCode || uniqueSports[0]?.code || null
+
   // Get the selected sport's season for correct year lookup
   const selectedSport = useMemo(() =>
-    sports.find(s => s.code === selectedSportCode),
-    [sports, selectedSportCode]
+    sports.find(s => s.code === effectiveSportCode),
+    [sports, effectiveSportCode]
   )
   const seasonYear = selectedSport ? getSeasonYear(selectedSport.season) : undefined
 
   const { standings, sport: currentSport, isLoading: standingsLoading, error } = useStandings({
-    sportCode: selectedSportCode || undefined,
+    sportCode: effectiveSportCode || undefined,
     league: selectedLeague || undefined,
     season: seasonYear?.toString()
   })
@@ -96,22 +109,19 @@ export default function StandingsPage() {
           </label>
           <div className="relative">
             <select
-              value={selectedSportCode || ''}
+              value={effectiveSportCode || ''}
               onChange={(e) => setSelectedSportCode(e.target.value || null)}
               className={cn(
                 'w-full md:w-80 appearance-none bg-background-tertiary border-2 px-4 py-3 pr-10',
                 'font-display text-sm font-bold uppercase tracking-wide',
                 'focus:outline-none cursor-pointer',
-                selectedSportCode
-                  ? 'border-neon-blue text-neon-blue'
-                  : 'border-border text-foreground hover:border-neon-pink'
+                'border-neon-blue text-neon-blue'
               )}
-              style={selectedSportCode ? {
+              style={{
                 textShadow: '0 0 10px var(--neon-blue)',
                 boxShadow: '0 0 10px rgba(5, 217, 232, 0.3), inset 0 0 10px rgba(5, 217, 232, 0.1)'
-              } : undefined}
+              }}
             >
-              <option value="">All Sports</option>
               {SEASON_ORDER.map(season => {
                 const seasonSports = sportsByseason.get(season) || []
                 if (seasonSports.length === 0) return null
@@ -253,17 +263,14 @@ export default function StandingsPage() {
             <div className="scoreboard-panel p-8 mb-4">
               <div className="score-led text-5xl mb-4 neon-text-pink">--</div>
               <span className="text-4xl">
-                {selectedSportCode ? getSportEmoji(selectedSportCode) : getCategoryEmoji('Sports')}
+                {effectiveSportCode ? getSportEmoji(effectiveSportCode) : getCategoryEmoji('Sports')}
               </span>
             </div>
             <h3 className="mb-2 font-display text-xl font-black text-foreground uppercase tracking-widest">
               No Standings
             </h3>
             <p className="text-sm text-foreground-muted max-w-xs font-display">
-              {selectedSportCode
-                ? `Standings for ${currentSport?.display_name || currentSport?.name || 'this sport'} will be available once regular season games are completed.`
-                : 'Select a sport to view standings, or check back once games have been played.'
-              }
+              Standings for {currentSport?.display_name || currentSport?.name || 'this sport'} will be available once regular season games are completed.
             </p>
           </div>
         )}
