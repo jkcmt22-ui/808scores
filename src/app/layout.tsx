@@ -1,5 +1,7 @@
 import type { Metadata, Viewport } from "next"
 import { Geist, Geist_Mono } from "next/font/google"
+import { Analytics } from "@vercel/analytics/next"
+import { SpeedInsights } from "@vercel/speed-insights/next"
 import "./globals.css"
 import { BottomNavigation, SubmitFAB } from "@/components/layout"
 import { AuthProvider } from "@/components/providers"
@@ -95,6 +97,8 @@ export default function RootLayout({
           <SubmitFAB />
           <BottomNavigation />
         </AuthProvider>
+        <Analytics />
+        <SpeedInsights />
       </body>
     </html>
   )
