@@ -36,6 +36,7 @@ export function BottomNavigation() {
                 key={item.href}
                 href={item.href}
                 className="flex flex-col items-center justify-center"
+                aria-label={item.label}
               >
                 <div
                   className="flex h-14 w-14 items-center justify-center rounded-full bg-neon-pink text-black font-bold transition-transform active:scale-95"
@@ -43,6 +44,7 @@ export function BottomNavigation() {
                 >
                   <Icon className="h-7 w-7" />
                 </div>
+                <span className="mt-1 font-display text-[10px] font-bold text-neon-pink uppercase tracking-wider">{item.label}</span>
               </Link>
             )
           }
@@ -51,15 +53,17 @@ export function BottomNavigation() {
             <Link
               key={item.href}
               href={item.href}
+              aria-label={item.label}
+              aria-current={isActive ? 'page' : undefined}
               className={cn(
-                'flex flex-col items-center justify-center gap-1 px-3 py-2 transition-all',
+                'flex flex-col items-center justify-center gap-1 px-3 py-2 transition-all min-w-[56px]',
                 isActive
                   ? 'neon-text-blue'
                   : 'text-foreground-muted hover:text-foreground'
               )}
             >
               <Icon className="h-5 w-5" />
-              <span className="font-display text-[9px] font-bold uppercase tracking-widest">{item.label}</span>
+              <span className="font-display text-[10px] font-bold uppercase tracking-wider">{item.label}</span>
             </Link>
           )
         })}
@@ -72,10 +76,12 @@ export function SubmitFAB() {
   return (
     <Link
       href="/submit"
-      className="fixed bottom-20 right-4 z-50 flex h-14 w-14 items-center justify-center rounded-lg bg-score-green border-2 border-green-700 text-black transition-all active:scale-95"
+      aria-label="Submit Score"
+      className="fixed bottom-20 right-4 z-50 flex h-14 w-auto items-center justify-center gap-2 rounded-lg bg-score-green border-2 border-green-700 text-black transition-all active:scale-95 px-4 safe-bottom"
       style={{ boxShadow: '0 0 16px var(--score-green), inset 0 -2px 4px rgba(0,0,0,0.3)' }}
     >
-      <Plus className="h-7 w-7" />
+      <Plus className="h-6 w-6" />
+      <span className="font-display text-xs font-bold uppercase tracking-wider">Report</span>
     </Link>
   )
 }

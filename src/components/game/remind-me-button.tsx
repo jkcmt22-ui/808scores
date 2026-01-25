@@ -100,13 +100,14 @@ export function RemindMeButton({
           onClick={handleToggle}
           disabled={isLoading || isAdding}
           className={cn(
-            'p-2 transition-colors',
+            'p-2 transition-colors min-w-[44px] min-h-[44px] flex items-center justify-center',
             isReminded
               ? 'text-neon-yellow'
               : 'text-foreground-muted hover:text-neon-yellow',
             className
           )}
-          title={isReminded ? 'Remove reminder' : 'Set reminder'}
+          aria-label={isReminded ? 'Remove game reminder' : 'Set game reminder'}
+          aria-pressed={isReminded}
         >
           {isLoading || isAdding ? (
             <Loader2 className="h-5 w-5 animate-spin" />
@@ -149,8 +150,10 @@ export function RemindMeButton({
       <button
         onClick={handleToggle}
         disabled={isLoading || isAdding}
+        aria-label={isReminded ? 'Remove game reminder' : 'Set game reminder'}
+        aria-pressed={isReminded}
         className={cn(
-          'flex items-center gap-2 px-4 py-2 border-2 transition-colors font-display text-sm font-bold uppercase tracking-wider',
+          'flex items-center gap-2 px-4 py-2 border-2 transition-colors font-display text-sm font-bold uppercase tracking-wider min-h-[44px]',
           isReminded
             ? 'border-neon-yellow bg-neon-yellow/10 text-neon-yellow'
             : 'border-border bg-background-secondary hover:border-neon-yellow hover:text-neon-yellow',

@@ -37,10 +37,10 @@ const Button = forwardRef<HTMLButtonElement, ButtonProps>(
               variant === 'destructive',
           },
           {
-            'h-10 px-5 text-xs': size === 'default',
-            'h-8 px-3 text-[10px]': size === 'sm',
+            'h-11 px-5 text-xs': size === 'default',
+            'h-10 px-4 text-xs': size === 'sm',
             'h-12 px-6 text-sm': size === 'lg',
-            'h-10 w-10 p-0': size === 'icon',
+            'h-11 w-11 p-0': size === 'icon',
           },
           className
         )}

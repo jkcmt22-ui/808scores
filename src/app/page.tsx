@@ -83,6 +83,17 @@ export default function HomePage() {
   const [showOnboarding, setShowOnboarding] = useState(false)
   const [searchOpen, setSearchOpen] = useState(false)
   const [showFavoritesOnly, setShowFavoritesOnly] = useState(false)
+  const [expandedSections, setExpandedSections] = useState<Record<string, boolean>>({})
+
+  // Section limits
+  const LIVE_GAMES_LIMIT = 3
+  const UPCOMING_GAMES_LIMIT = 5
+  const FINAL_GAMES_LIMIT = 5
+
+  // Toggle section expansion
+  const toggleSection = useCallback((section: string) => {
+    setExpandedSections(prev => ({ ...prev, [section]: !prev[section] }))
+  }, [])
 
   const openSearch = useCallback(() => setSearchOpen(true), [])
   const closeSearch = useCallback(() => setSearchOpen(false), [])
@@ -341,10 +352,20 @@ export default function HomePage() {
         {/* Live Games Section */}
         {!isLoading && liveGames.length > 0 && (
           <section className="mb-6 animate-fade-in">
-            <div className="mb-3 flex items-center gap-2">
-              <span className="h-3 w-3 animate-live-pulse rounded-full bg-neon-pink" style={{ boxShadow: '0 0 10px var(--neon-pink)' }} />
-              <h3 className="font-display text-sm font-black neon-text-pink uppercase tracking-widest">Live Now</h3>
-              <span className="font-display text-xs text-foreground-muted">({liveGames.length})</span>
+            <div className="mb-3 flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <span className="h-3 w-3 animate-live-pulse rounded-full bg-neon-pink" style={{ boxShadow: '0 0 10px var(--neon-pink)' }} />
+                <h3 className="font-display text-sm font-black neon-text-pink uppercase tracking-widest">Live Now</h3>
+                <span className="font-display text-xs text-foreground-muted">({liveGames.length})</span>
+              </div>
+              {liveGames.length > LIVE_GAMES_LIMIT && !expandedSections.live && (
+                <button
+                  onClick={() => toggleSection('live')}
+                  className="font-display text-xs font-bold text-neon-pink uppercase tracking-wider hover:text-neon-blue transition-colors"
+                >
+                  See All ({liveGames.length})
+                </button>
+              )}
             </div>
             <div className="space-y-3">
               {/* Favorite live games */}
@@ -354,7 +375,7 @@ export default function HomePage() {
                     <Star className="h-3 w-3 fill-current" />
                     <span className="font-display uppercase tracking-wider">Your Teams</span>
                   </div>
-                  {sortedLive.favorites.map((game) => (
+                  {sortedLive.favorites.slice(0, expandedSections.live ? undefined : LIVE_GAMES_LIMIT).map((game) => (
                     <GameCard key={game.id} game={game} showSport />
                   ))}
                   {sortedLive.others.length > 0 && (
@@ -363,9 +384,20 @@ export default function HomePage() {
                 </>
               )}
               {/* Other live games */}
-              {(hasFavorites ? sortedLive.others : liveGames).map((game) => (
-                <GameCard key={game.id} game={game} showSport />
-              ))}
+              {(hasFavorites ? sortedLive.others : liveGames)
+                .slice(0, expandedSections.live ? undefined : Math.max(0, LIVE_GAMES_LIMIT - (hasFavorites ? sortedLive.favorites.length : 0)))
+                .map((game) => (
+                  <GameCard key={game.id} game={game} showSport />
+                ))}
+              {/* Show less button when expanded */}
+              {expandedSections.live && liveGames.length > LIVE_GAMES_LIMIT && (
+                <button
+                  onClick={() => toggleSection('live')}
+                  className="w-full py-2 font-display text-xs font-bold text-foreground-muted uppercase tracking-wider hover:text-neon-blue transition-colors border-t border-border/50 mt-2"
+                >
+                  Show Less
+                </button>
+              )}
             </div>
           </section>
         )}
@@ -373,9 +405,19 @@ export default function HomePage() {
         {/* Scheduled Games Section */}
         {!isLoading && scheduledGames.length > 0 && (
           <section className="mb-6 animate-fade-in">
-            <div className="mb-3 flex items-center gap-2">
-              <h3 className="font-display text-sm font-black neon-text-yellow uppercase tracking-widest">Upcoming</h3>
-              <span className="font-display text-xs text-foreground-muted">({scheduledGames.length})</span>
+            <div className="mb-3 flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <h3 className="font-display text-sm font-black neon-text-yellow uppercase tracking-widest">Upcoming</h3>
+                <span className="font-display text-xs text-foreground-muted">({scheduledGames.length})</span>
+              </div>
+              {scheduledGames.length > UPCOMING_GAMES_LIMIT && !expandedSections.upcoming && (
+                <button
+                  onClick={() => toggleSection('upcoming')}
+                  className="font-display text-xs font-bold text-neon-yellow uppercase tracking-wider hover:text-neon-blue transition-colors"
+                >
+                  See All ({scheduledGames.length})
+                </button>
+              )}
             </div>
             <div className="space-y-3">
               {/* Favorite upcoming games */}
@@ -385,7 +427,7 @@ export default function HomePage() {
                     <Star className="h-3 w-3 fill-current" />
                     <span className="font-display uppercase tracking-wider">Your Teams</span>
                   </div>
-                  {sortedScheduled.favorites.map((game) => (
+                  {sortedScheduled.favorites.slice(0, expandedSections.upcoming ? undefined : UPCOMING_GAMES_LIMIT).map((game) => (
                     <GameCard key={game.id} game={game} showSport />
                   ))}
                   {sortedScheduled.others.length > 0 && (
@@ -394,9 +436,20 @@ export default function HomePage() {
                 </>
               )}
               {/* Other upcoming games */}
-              {(hasFavorites ? sortedScheduled.others : scheduledGames).map((game) => (
-                <GameCard key={game.id} game={game} showSport />
-              ))}
+              {(hasFavorites ? sortedScheduled.others : scheduledGames)
+                .slice(0, expandedSections.upcoming ? undefined : Math.max(0, UPCOMING_GAMES_LIMIT - (hasFavorites ? sortedScheduled.favorites.length : 0)))
+                .map((game) => (
+                  <GameCard key={game.id} game={game} showSport />
+                ))}
+              {/* Show less button when expanded */}
+              {expandedSections.upcoming && scheduledGames.length > UPCOMING_GAMES_LIMIT && (
+                <button
+                  onClick={() => toggleSection('upcoming')}
+                  className="w-full py-2 font-display text-xs font-bold text-foreground-muted uppercase tracking-wider hover:text-neon-blue transition-colors border-t border-border/50 mt-2"
+                >
+                  Show Less
+                </button>
+              )}
             </div>
           </section>
         )}
@@ -404,9 +457,19 @@ export default function HomePage() {
         {/* Final Games Section */}
         {!isLoading && finalGames.length > 0 && (
           <section className="mb-6 animate-fade-in">
-            <div className="mb-3 flex items-center gap-2">
-              <h3 className="font-display text-sm font-black text-foreground-muted uppercase tracking-widest">Final</h3>
-              <span className="font-display text-xs text-foreground-muted">({finalGames.length})</span>
+            <div className="mb-3 flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <h3 className="font-display text-sm font-black text-foreground-muted uppercase tracking-widest">Final</h3>
+                <span className="font-display text-xs text-foreground-muted">({finalGames.length})</span>
+              </div>
+              {finalGames.length > FINAL_GAMES_LIMIT && !expandedSections.final && (
+                <button
+                  onClick={() => toggleSection('final')}
+                  className="font-display text-xs font-bold text-foreground-muted uppercase tracking-wider hover:text-neon-blue transition-colors"
+                >
+                  See All ({finalGames.length})
+                </button>
+              )}
             </div>
             <div className="space-y-3">
               {/* Favorite final games */}
@@ -416,7 +479,7 @@ export default function HomePage() {
                     <Star className="h-3 w-3 fill-current" />
                     <span className="font-display uppercase tracking-wider">Your Teams</span>
                   </div>
-                  {sortedFinal.favorites.map((game) => (
+                  {sortedFinal.favorites.slice(0, expandedSections.final ? undefined : FINAL_GAMES_LIMIT).map((game) => (
                     <GameCard key={game.id} game={game} showSport />
                   ))}
                   {sortedFinal.others.length > 0 && (
@@ -425,9 +488,20 @@ export default function HomePage() {
                 </>
               )}
               {/* Other final games */}
-              {(hasFavorites ? sortedFinal.others : finalGames).map((game) => (
-                <GameCard key={game.id} game={game} showSport />
-              ))}
+              {(hasFavorites ? sortedFinal.others : finalGames)
+                .slice(0, expandedSections.final ? undefined : Math.max(0, FINAL_GAMES_LIMIT - (hasFavorites ? sortedFinal.favorites.length : 0)))
+                .map((game) => (
+                  <GameCard key={game.id} game={game} showSport />
+                ))}
+              {/* Show less button when expanded */}
+              {expandedSections.final && finalGames.length > FINAL_GAMES_LIMIT && (
+                <button
+                  onClick={() => toggleSection('final')}
+                  className="w-full py-2 font-display text-xs font-bold text-foreground-muted uppercase tracking-wider hover:text-neon-blue transition-colors border-t border-border/50 mt-2"
+                >
+                  Show Less
+                </button>
+              )}
             </div>
           </section>
         )}

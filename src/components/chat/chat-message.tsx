@@ -104,7 +104,8 @@ export function ChatMessageComponent({
             {isAuthenticated && (
               <button
                 onClick={() => onReply(message)}
-                className="flex items-center gap-1 text-xs text-foreground-subtle hover:text-neon-blue transition-colors"
+                aria-label={`Reply to ${message.user?.display_name || 'User'}`}
+                className="flex items-center gap-1 text-xs text-foreground-subtle hover:text-neon-blue transition-colors min-h-[44px] px-2"
               >
                 <Reply className="h-3.5 w-3.5" />
                 <span className="font-mono">Reply</span>
@@ -117,13 +118,13 @@ export function ChatMessageComponent({
         {isAuthenticated && !isOwnMessage && (
           <button
             onClick={() => onReport(message.id)}
+            aria-label="Report message"
             className={cn(
-              'p-1 text-foreground-subtle hover:text-destructive transition-opacity',
-              isHovered ? 'opacity-100' : 'opacity-0'
+              'p-2 min-w-[44px] min-h-[44px] flex items-center justify-center text-foreground-subtle hover:text-destructive transition-opacity',
+              isHovered ? 'opacity-100' : 'opacity-0 md:opacity-0'
             )}
-            title="Report message"
           >
-            <Flag className="h-3 w-3" />
+            <Flag className="h-4 w-4" />
           </button>
         )}
       </div>

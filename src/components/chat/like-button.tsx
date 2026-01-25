@@ -40,12 +40,13 @@ export function LikeButton({
     <button
       onClick={handleClick}
       disabled={disabled || isLoading}
+      aria-label={isLiked ? `Unlike message (${likeCount} likes)` : `Like message (${likeCount} likes)`}
+      aria-pressed={isLiked}
       className={cn(
-        'flex items-center gap-1 text-xs transition-all duration-200',
+        'flex items-center gap-1 text-xs transition-all duration-200 min-h-[44px] min-w-[44px] justify-center',
         'hover:text-neon-pink disabled:opacity-50 disabled:cursor-not-allowed',
         isLiked ? 'text-neon-pink' : 'text-foreground-subtle'
       )}
-      title={isLiked ? 'Unlike' : 'Like'}
     >
       <Heart
         className={cn(

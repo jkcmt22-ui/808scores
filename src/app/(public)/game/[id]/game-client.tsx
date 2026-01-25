@@ -24,7 +24,7 @@ import {
   Camera,
   ExternalLink,
 } from 'lucide-react'
-import { Button, Badge, Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui'
+import { Button, Badge, Tabs, TabsList, TabsTrigger, TabsContent, ReportScoreFAB } from '@/components/ui'
 import { Breadcrumbs } from '@/components/layout'
 import { GameChat } from '@/components/chat'
 import { ShareButtons, RemindMeButton } from '@/components/game'
@@ -217,7 +217,8 @@ export function GameClient({ params }: GamePageProps) {
         <div className="flex h-14 items-center justify-between px-4">
           <button
             onClick={() => router.back()}
-            className="flex items-center gap-2 text-foreground-muted hover:text-foreground transition-colors"
+            aria-label="Go back to previous page"
+            className="flex items-center gap-2 text-foreground-muted hover:text-foreground transition-colors min-h-[44px] px-2"
           >
             <ArrowLeft className="h-5 w-5" />
             <span className="font-display text-xs uppercase tracking-wider">Back</span>
@@ -227,6 +228,7 @@ export function GameClient({ params }: GamePageProps) {
               variant="ghost"
               size="icon"
               onClick={handleShare}
+              aria-label={shareStatus === 'copied' ? 'Link copied' : shareStatus === 'shared' ? 'Shared' : 'Share game'}
               className={cn(
                 shareStatus === 'copied' && 'text-neon-green',
                 shareStatus === 'shared' && 'text-neon-green'
@@ -240,7 +242,7 @@ export function GameClient({ params }: GamePageProps) {
                 <Share2 className="h-5 w-5" />
               )}
             </Button>
-            <Button variant="ghost" size="icon">
+            <Button variant="ghost" size="icon" aria-label="Notifications">
               <Bell className="h-5 w-5" />
             </Button>
           </div>
@@ -634,6 +636,9 @@ export function GameClient({ params }: GamePageProps) {
           </div>
         </div>
       </main>
+
+      {/* Floating Action Button for Score Reporting */}
+      <ReportScoreFAB gameId={id} />
     </div>
   )
 }

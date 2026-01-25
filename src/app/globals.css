@@ -422,3 +422,50 @@ body {
 .font-display {
   font-family: 'Orbitron', sans-serif;
 }
+
+/* ===== UI/UX IMPROVEMENTS ===== */
+
+/* Glow utility classes */
+.glow-yellow {
+  box-shadow: 0 0 10px var(--neon-yellow), 0 0 20px var(--neon-yellow);
+}
+
+.glow-pink {
+  box-shadow: 0 0 10px var(--neon-pink), 0 0 20px var(--neon-pink);
+}
+
+.glow-blue {
+  box-shadow: 0 0 10px var(--neon-blue), 0 0 20px var(--neon-blue);
+}
+
+.glow-green {
+  box-shadow: 0 0 10px var(--neon-green), 0 0 20px var(--neon-green);
+}
+
+.glow-subtle-yellow {
+  box-shadow: 0 0 8px var(--neon-yellow);
+}
+
+.glow-subtle-pink {
+  box-shadow: 0 0 8px var(--neon-pink);
+}
+
+.glow-subtle-blue {
+  box-shadow: 0 0 8px var(--neon-blue);
+}
+
+.glow-subtle-green {
+  box-shadow: 0 0 8px var(--neon-green);
+}
+
+/* Minimum touch target size (44x44px) */
+.touch-target {
+  min-width: 44px;
+  min-height: 44px;
+}
+
+/* Improved focus ring visibility */
+.focus-ring-visible:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 2px var(--background), 0 0 0 4px var(--neon-yellow), 0 0 12px var(--neon-yellow);
+}

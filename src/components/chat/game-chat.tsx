@@ -392,7 +392,7 @@ export function GameChat({ gameId }: GameChatProps) {
               {!isSending && <Send className="h-4 w-4" />}
             </Button>
           </div>
-          <p className="font-mono text-[10px] text-foreground-subtle mt-1.5">
+          <p className="font-mono text-xs text-foreground-subtle mt-1.5">
             {newMessage.length}/280 {mentions.length > 0 && `| ${mentions.length} mention${mentions.length > 1 ? 's' : ''}`}
           </p>
         </form>
