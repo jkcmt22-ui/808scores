@@ -127,8 +127,8 @@ function StandingsTable({ leagueStandings }: { leagueStandings: LeagueStandings 
       <View style={styles.tableHeader}>
         <Text style={[styles.headerCell, styles.rankCell]}>#</Text>
         <Text style={[styles.headerCell, styles.teamCell]}>TEAM</Text>
-        <Text style={[styles.headerCell, styles.statCell]}>W</Text>
-        <Text style={[styles.headerCell, styles.statCell]}>L</Text>
+        <Text style={[styles.headerCell, styles.recordCell]}>LG</Text>
+        <Text style={[styles.headerCell, styles.recordCell]}>OVR</Text>
         <Text style={[styles.headerCell, styles.pctCell]}>PCT</Text>
       </View>
 
@@ -146,10 +146,14 @@ function StandingsTable({ leagueStandings }: { leagueStandings: LeagueStandings 
               {team.school.short_name || team.school.name}
             </Text>
           </View>
-          <Text style={[styles.cell, styles.statCell]}>{team.wins}</Text>
-          <Text style={[styles.cell, styles.statCell]}>{team.losses}</Text>
+          <Text style={[styles.cell, styles.recordCell, styles.leagueRecord]}>
+            {team.leagueWins}-{team.leagueLosses}{team.leagueTies > 0 ? `-${team.leagueTies}` : ''}
+          </Text>
+          <Text style={[styles.cell, styles.recordCell]}>
+            {team.wins}-{team.losses}{team.ties > 0 ? `-${team.ties}` : ''}
+          </Text>
           <Text style={[styles.cell, styles.pctCell]}>
-            {team.winPct.toFixed(3).replace('0.', '.')}
+            {team.leagueWinPct.toFixed(3).replace('0.', '.')}
           </Text>
         </View>
       ))}
@@ -463,6 +467,14 @@ const styles = StyleSheet.create({
   statCell: {
     width: 36,
     textAlign: 'center',
+  },
+  recordCell: {
+    width: 48,
+    textAlign: 'center',
+  },
+  leagueRecord: {
+    color: colors.neonGreen,
+    fontWeight: '600',
   },
   pctCell: {
     width: 50,

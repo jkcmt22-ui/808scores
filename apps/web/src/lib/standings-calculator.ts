@@ -14,6 +14,8 @@ export interface TeamStanding {
   leagueWins: number
   leagueLosses: number
   leagueTies: number
+  leagueWinPct: number
+  leagueGamesPlayed: number
 }
 
 export interface LeagueStandings {
@@ -185,6 +187,11 @@ export function calculateStandings(
       ? (stats.wins + stats.ties * 0.5) / gamesPlayed
       : 0
 
+    const leagueGamesPlayed = stats.leagueWins + stats.leagueLosses + stats.leagueTies
+    const leagueWinPct = leagueGamesPlayed > 0
+      ? (stats.leagueWins + stats.leagueTies * 0.5) / leagueGamesPlayed
+      : 0
+
     groupedStandings.get(groupKey)!.push({
       school,
       wins: stats.wins,
@@ -198,7 +205,9 @@ export function calculateStandings(
       gamesPlayed,
       leagueWins: stats.leagueWins,
       leagueLosses: stats.leagueLosses,
-      leagueTies: stats.leagueTies
+      leagueTies: stats.leagueTies,
+      leagueWinPct,
+      leagueGamesPlayed
     })
   }
 
@@ -208,8 +217,10 @@ export function calculateStandings(
   for (const [groupKey, teams] of groupedStandings) {
     const [league, division, region] = groupKey.split('|')
 
-    // Sort teams by: win%, then point differential, then points for
+    // Sort teams by: league win%, then league wins, then overall win%, then point differential
     teams.sort((a, b) => {
+      if (b.leagueWinPct !== a.leagueWinPct) return b.leagueWinPct - a.leagueWinPct
+      if (b.leagueWins !== a.leagueWins) return b.leagueWins - a.leagueWins
       if (b.winPct !== a.winPct) return b.winPct - a.winPct
       if (b.pointDiff !== a.pointDiff) return b.pointDiff - a.pointDiff
       return b.pointsFor - a.pointsFor

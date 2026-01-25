@@ -198,10 +198,9 @@ export default function StandingsPage() {
                     <thead>
                       <tr className="border-b-2 border-border">
                         <th className="pb-2 text-left font-display text-xs font-bold text-foreground-muted uppercase tracking-wider">Team</th>
-                        <th className="pb-2 text-center font-display text-xs font-bold text-foreground-muted uppercase tracking-wider">W</th>
-                        <th className="pb-2 text-center font-display text-xs font-bold text-foreground-muted uppercase tracking-wider">L</th>
-                        <th className="pb-2 text-center font-display text-xs font-bold text-foreground-muted uppercase tracking-wider hidden sm:table-cell">T</th>
-                        <th className="pb-2 text-center font-display text-xs font-bold text-foreground-muted uppercase tracking-wider">PCT</th>
+                        <th className="pb-2 text-center font-display text-xs font-bold text-foreground-muted uppercase tracking-wider" title="League Record">LG</th>
+                        <th className="pb-2 text-center font-display text-xs font-bold text-foreground-muted uppercase tracking-wider hidden sm:table-cell" title="Overall Record">OVR</th>
+                        <th className="pb-2 text-center font-display text-xs font-bold text-foreground-muted uppercase tracking-wider" title="League Win Percentage">PCT</th>
                         <th className="pb-2 text-center font-display text-xs font-bold text-foreground-muted uppercase tracking-wider hidden md:table-cell">PF</th>
                         <th className="pb-2 text-center font-display text-xs font-bold text-foreground-muted uppercase tracking-wider hidden md:table-cell">PA</th>
                         <th className="pb-2 text-center font-display text-xs font-bold text-foreground-muted uppercase tracking-wider hidden lg:table-cell">STRK</th>
@@ -232,10 +231,13 @@ export default function StandingsPage() {
                                 </span>
                               </Link>
                             </td>
-                            <td className="py-3 text-center font-display tabular-nums text-neon-green">{team.wins}</td>
-                            <td className="py-3 text-center font-display tabular-nums text-foreground-muted">{team.losses}</td>
-                            <td className="py-3 text-center font-display tabular-nums text-foreground-muted hidden sm:table-cell">{team.ties}</td>
-                            <td className="py-3 text-center font-display tabular-nums text-foreground">{team.winPct.toFixed(3)}</td>
+                            <td className="py-3 text-center font-display tabular-nums text-neon-green" title="League Record">
+                              {team.leagueWins}-{team.leagueLosses}{team.leagueTies > 0 ? `-${team.leagueTies}` : ''}
+                            </td>
+                            <td className="py-3 text-center font-display tabular-nums text-foreground-muted hidden sm:table-cell" title="Overall Record">
+                              {team.wins}-{team.losses}{team.ties > 0 ? `-${team.ties}` : ''}
+                            </td>
+                            <td className="py-3 text-center font-display tabular-nums text-foreground" title="League Win %">{team.leagueWinPct.toFixed(3)}</td>
                             <td className="py-3 text-center font-display tabular-nums text-foreground-subtle hidden md:table-cell">{team.pointsFor}</td>
                             <td className="py-3 text-center font-display tabular-nums text-foreground-subtle hidden md:table-cell">{team.pointsAgainst}</td>
                             <td className="py-3 text-center font-display tabular-nums hidden lg:table-cell">

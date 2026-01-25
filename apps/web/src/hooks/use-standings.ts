@@ -128,6 +128,11 @@ export function useStandings(options: UseStandingsOptions = {}): UseStandingsRet
             ? (row.overall_wins + row.overall_ties * 0.5) / gamesPlayed
             : 0
 
+          const leagueGamesPlayed = row.league_wins + row.league_losses + row.league_ties
+          const leagueWinPct = leagueGamesPlayed > 0
+            ? (row.league_wins + row.league_ties * 0.5) / leagueGamesPlayed
+            : 0
+
           groupedByLeague.get(leagueKey)!.push({
             school: row.school,
             wins: row.overall_wins,
@@ -141,15 +146,18 @@ export function useStandings(options: UseStandingsOptions = {}): UseStandingsRet
             gamesPlayed,
             leagueWins: row.league_wins,
             leagueLosses: row.league_losses,
-            leagueTies: row.league_ties
+            leagueTies: row.league_ties,
+            leagueWinPct,
+            leagueGamesPlayed
           })
         }
 
         // Convert to LeagueStandings array
         const result: LeagueStandings[] = []
         for (const [leagueName, teams] of groupedByLeague) {
-          // Sort by league wins, then win pct
+          // Sort by league win%, then league wins, then overall win%
           teams.sort((a, b) => {
+            if (b.leagueWinPct !== a.leagueWinPct) return b.leagueWinPct - a.leagueWinPct
             if (b.leagueWins !== a.leagueWins) return b.leagueWins - a.leagueWins
             if (b.winPct !== a.winPct) return b.winPct - a.winPct
             return b.wins - a.wins
