@@ -1,46 +1,131 @@
-import { StyleSheet, View, Text, ScrollView, TouchableOpacity, ActivityIndicator, RefreshControl } from 'react-native';
+import { StyleSheet, View, Text, ScrollView, TouchableOpacity, ActivityIndicator, RefreshControl, Modal, Pressable } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useMemo } from 'react';
 import { useStandings, useStandingsSports, type LeagueStandings } from '../../hooks/useStandings';
 import { colors } from '../../lib/theme';
 import { getSportEmoji } from '../../lib/sport-utils';
 
-function SportSelector({
+// Season configuration
+const SEASON_ORDER = ['fall', 'winter', 'spring'] as const;
+const SEASON_LABELS: Record<string, string> = {
+  fall: 'FALL 2025',
+  winter: 'WINTER 2025-26',
+  spring: 'SPRING 2025',
+};
+
+type SportType = { id: string; name: string; code: string; display_name: string | null; season?: string | null };
+
+function SportPicker({
   sports,
   selectedSport,
   onSelect,
 }: {
-  sports: Array<{ id: string; name: string; code: string; display_name: string | null }>;
+  sports: SportType[];
   selectedSport: string | null;
   onSelect: (code: string | null) => void;
 }) {
+  const [modalVisible, setModalVisible] = useState(false);
+
+  // Group sports by season
+  const sportsBySeason = useMemo(() => {
+    const grouped = new Map<string, SportType[]>();
+
+    for (const season of SEASON_ORDER) {
+      grouped.set(season, []);
+    }
+
+    const seen = new Set<string>();
+    for (const sport of sports) {
+      if (seen.has(sport.code)) continue;
+      seen.add(sport.code);
+
+      const season = sport.season || 'other';
+      if (!grouped.has(season)) {
+        grouped.set(season, []);
+      }
+      grouped.get(season)!.push(sport);
+    }
+
+    return grouped;
+  }, [sports]);
+
+  const selectedSportObj = sports.find(s => s.code === selectedSport);
+  const displayText = selectedSportObj
+    ? `${getSportEmoji(selectedSportObj.code)} ${(selectedSportObj.display_name || selectedSportObj.name).toUpperCase()}`
+    : 'ALL SPORTS';
+
   return (
-    <ScrollView
-      horizontal
-      showsHorizontalScrollIndicator={false}
-      contentContainerStyle={styles.sportSelectorContent}
-      style={styles.sportSelector}
-    >
+    <View style={styles.pickerContainer}>
+      <Text style={styles.pickerLabel}>SELECT SPORT</Text>
       <TouchableOpacity
-        style={[styles.sportChip, !selectedSport && styles.sportChipActive]}
-        onPress={() => onSelect(null)}
+        style={[styles.pickerButton, selectedSport && styles.pickerButtonActive]}
+        onPress={() => setModalVisible(true)}
       >
-        <Text style={[styles.sportChipText, !selectedSport && styles.sportChipTextActive]}>
-          ALL
+        <Text style={[styles.pickerButtonText, selectedSport && styles.pickerButtonTextActive]}>
+          {displayText}
         </Text>
+        <Text style={styles.pickerArrow}>▼</Text>
       </TouchableOpacity>
-      {sports.map((sport) => (
-        <TouchableOpacity
-          key={sport.id}
-          style={[styles.sportChip, selectedSport === sport.code && styles.sportChipActive]}
-          onPress={() => onSelect(sport.code)}
-        >
-          <Text style={[styles.sportChipText, selectedSport === sport.code && styles.sportChipTextActive]}>
-            {getSportEmoji(sport.code)} {(sport.display_name || sport.name).toUpperCase()}
-          </Text>
-        </TouchableOpacity>
-      ))}
-    </ScrollView>
+
+      <Modal
+        animationType="slide"
+        transparent={true}
+        visible={modalVisible}
+        onRequestClose={() => setModalVisible(false)}
+      >
+        <Pressable style={styles.modalOverlay} onPress={() => setModalVisible(false)}>
+          <View style={styles.modalContent}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>SELECT SPORT</Text>
+              <TouchableOpacity onPress={() => setModalVisible(false)}>
+                <Text style={styles.modalClose}>✕</Text>
+              </TouchableOpacity>
+            </View>
+
+            <ScrollView style={styles.modalScroll}>
+              {/* All Sports option */}
+              <TouchableOpacity
+                style={[styles.modalOption, !selectedSport && styles.modalOptionActive]}
+                onPress={() => {
+                  onSelect(null);
+                  setModalVisible(false);
+                }}
+              >
+                <Text style={[styles.modalOptionText, !selectedSport && styles.modalOptionTextActive]}>
+                  ALL SPORTS
+                </Text>
+              </TouchableOpacity>
+
+              {/* Grouped by season */}
+              {SEASON_ORDER.map(season => {
+                const seasonSports = sportsBySeason.get(season) || [];
+                if (seasonSports.length === 0) return null;
+
+                return (
+                  <View key={season}>
+                    <Text style={styles.seasonHeader}>{SEASON_LABELS[season]}</Text>
+                    {seasonSports.map(sport => (
+                      <TouchableOpacity
+                        key={sport.code}
+                        style={[styles.modalOption, selectedSport === sport.code && styles.modalOptionActive]}
+                        onPress={() => {
+                          onSelect(sport.code);
+                          setModalVisible(false);
+                        }}
+                      >
+                        <Text style={[styles.modalOptionText, selectedSport === sport.code && styles.modalOptionTextActive]}>
+                          {getSportEmoji(sport.code)} {(sport.display_name || sport.name).toUpperCase()}
+                        </Text>
+                      </TouchableOpacity>
+                    ))}
+                  </View>
+                );
+              })}
+            </ScrollView>
+          </View>
+        </Pressable>
+      </Modal>
+    </View>
   );
 }
 
@@ -116,9 +201,9 @@ export default function StandingsScreen() {
         <Text style={styles.headerTitle}>► STANDINGS</Text>
       </View>
 
-      {/* Sport Selector */}
+      {/* Sport Picker */}
       {sports.length > 0 && (
-        <SportSelector
+        <SportPicker
           sports={sports}
           selectedSport={selectedSport}
           onSelect={setSelectedSport}
@@ -196,35 +281,109 @@ const styles = StyleSheet.create({
     textTransform: 'uppercase',
     letterSpacing: 1,
   },
-  sportSelector: {
-    maxHeight: 44,
+  // Sport Picker styles
+  pickerContainer: {
+    paddingHorizontal: 16,
+    paddingVertical: 12,
     borderBottomWidth: 1,
     borderBottomColor: colors.border,
   },
-  sportSelectorContent: {
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    alignItems: 'center',
-  },
-  sportChip: {
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderWidth: 1,
-    borderColor: colors.border,
-    backgroundColor: colors.backgroundSecondary,
-    marginRight: 6,
-  },
-  sportChipActive: {
-    borderColor: colors.neonBlue,
-    backgroundColor: 'rgba(5, 217, 232, 0.15)',
-  },
-  sportChipText: {
+  pickerLabel: {
     fontSize: 10,
     fontWeight: '600',
     color: colors.foregroundMuted,
+    letterSpacing: 1,
+    marginBottom: 8,
+  },
+  pickerButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    borderWidth: 2,
+    borderColor: colors.border,
+    backgroundColor: colors.backgroundSecondary,
+  },
+  pickerButtonActive: {
+    borderColor: colors.neonBlue,
+    backgroundColor: 'rgba(5, 217, 232, 0.1)',
+  },
+  pickerButtonText: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: colors.foreground,
+    letterSpacing: 1,
+  },
+  pickerButtonTextActive: {
+    color: colors.neonBlue,
+  },
+  pickerArrow: {
+    fontSize: 10,
+    color: colors.foregroundMuted,
+  },
+  // Modal styles
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.8)',
+    justifyContent: 'flex-end',
+  },
+  modalContent: {
+    backgroundColor: colors.backgroundSecondary,
+    borderTopWidth: 2,
+    borderTopColor: colors.neonPink,
+    maxHeight: '70%',
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.border,
+  },
+  modalTitle: {
+    fontSize: 14,
+    fontWeight: '900',
+    color: colors.neonPink,
+    letterSpacing: 2,
+  },
+  modalClose: {
+    fontSize: 18,
+    color: colors.foregroundMuted,
+    padding: 4,
+  },
+  modalScroll: {
+    paddingBottom: 40,
+  },
+  seasonHeader: {
+    fontSize: 10,
+    fontWeight: '700',
+    color: colors.neonYellow,
+    letterSpacing: 2,
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    backgroundColor: colors.backgroundTertiary,
+    borderTopWidth: 1,
+    borderTopColor: colors.border,
+  },
+  modalOption: {
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.border,
+  },
+  modalOptionActive: {
+    backgroundColor: 'rgba(5, 217, 232, 0.1)',
+  },
+  modalOptionText: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: colors.foreground,
     letterSpacing: 0.5,
   },
-  sportChipTextActive: {
+  modalOptionTextActive: {
     color: colors.neonBlue,
   },
   scrollView: {

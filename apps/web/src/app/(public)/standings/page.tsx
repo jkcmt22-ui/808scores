@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useMemo } from 'react'
 import Link from 'next/link'
 import { Header } from '@/components/layout'
 import { cn } from '@/lib/utils'
@@ -10,67 +10,128 @@ import { useStandings } from '@/hooks/use-standings'
 import { LeagueFilter } from '@/components/filters/league-filter'
 import { LEAGUES } from '@/lib/league-config'
 
+// Season configuration for grouping sports
+const SEASON_ORDER = ['fall', 'winter', 'spring'] as const
+const SEASON_LABELS: Record<string, string> = {
+  fall: 'FALL 2025',
+  winter: 'WINTER 2025-26',
+  spring: 'SPRING 2025'
+}
+
+// Get season year based on sport season type
+function getSeasonYear(season: string | null): number {
+  const now = new Date()
+  const currentYear = parseInt(now.toLocaleDateString('en-CA', {
+    timeZone: 'Pacific/Honolulu',
+    year: 'numeric'
+  }))
+  const currentMonth = now.getMonth() + 1 // 1-12
+
+  // Fall sports (Aug-Nov) use previous year if we're in Jan-Jul
+  if (season === 'fall') {
+    return currentMonth < 8 ? currentYear - 1 : currentYear
+  }
+  // Spring sports (Feb-May) use previous year if we're in Aug-Dec
+  if (season === 'spring') {
+    return currentMonth >= 8 ? currentYear : currentYear
+  }
+  // Winter sports (Dec-Feb) use current calendar year
+  return currentYear
+}
+
 export default function StandingsPage() {
   const { sports, isLoading: sportsLoading } = useSports()
   const [selectedSportCode, setSelectedSportCode] = useState<string | null>(null)
   const [selectedLeague, setSelectedLeague] = useState<string | null>(null)
 
+  // Get the selected sport's season for correct year lookup
+  const selectedSport = useMemo(() =>
+    sports.find(s => s.code === selectedSportCode),
+    [sports, selectedSportCode]
+  )
+  const seasonYear = selectedSport ? getSeasonYear(selectedSport.season) : undefined
+
   const { standings, sport: currentSport, isLoading: standingsLoading, error } = useStandings({
     sportCode: selectedSportCode || undefined,
-    league: selectedLeague || undefined
+    league: selectedLeague || undefined,
+    season: seasonYear?.toString()
   })
 
   const isLoading = sportsLoading || standingsLoading
 
-  // Group sports by base name for selector
-  const sportOptions = sports.reduce((acc, sport) => {
-    const baseName = sport.name
-    if (!acc.find(s => s.name === baseName)) {
-      acc.push(sport)
+  // Group sports by season for dropdown
+  const sportsByseason = useMemo(() => {
+    const grouped = new Map<string, typeof sports>()
+
+    // Initialize groups in order
+    for (const season of SEASON_ORDER) {
+      grouped.set(season, [])
     }
-    return acc
-  }, [] as typeof sports)
+
+    // Group unique sports by season
+    const seen = new Set<string>()
+    for (const sport of sports) {
+      if (seen.has(sport.code)) continue
+      seen.add(sport.code)
+
+      const season = sport.season || 'other'
+      if (!grouped.has(season)) {
+        grouped.set(season, [])
+      }
+      grouped.get(season)!.push(sport)
+    }
+
+    return grouped
+  }, [sports])
 
   return (
     <>
       <Header title="Standings" />
 
-      {/* Sport selector */}
+      {/* Sport selector dropdown */}
       <div className="border-b-2 border-border bg-background-secondary">
-        <div className="hide-scrollbar flex items-center gap-2 overflow-x-auto px-4 py-3">
-          <button
-            onClick={() => setSelectedSportCode(null)}
-            className={cn(
-              'whitespace-nowrap px-4 py-2 font-display text-xs font-bold uppercase tracking-widest transition-all border-2',
-              selectedSportCode === null
-                ? 'bg-neon-blue/20 text-neon-blue border-neon-blue'
-                : 'bg-background-tertiary text-foreground-muted border-border hover:border-neon-pink hover:text-neon-pink'
-            )}
-            style={selectedSportCode === null ? {
-              textShadow: '0 0 10px var(--neon-blue)',
-              boxShadow: '0 0 10px rgba(5, 217, 232, 0.3), inset 0 0 10px rgba(5, 217, 232, 0.1)'
-            } : undefined}
-          >
-            All Sports
-          </button>
-          {sportOptions.map((sport) => (
-            <button
-              key={sport.code}
-              onClick={() => setSelectedSportCode(sport.code)}
+        <div className="px-4 py-3">
+          <label className="text-xs text-foreground-muted block mb-2 font-display uppercase tracking-wider">
+            Select Sport
+          </label>
+          <div className="relative">
+            <select
+              value={selectedSportCode || ''}
+              onChange={(e) => setSelectedSportCode(e.target.value || null)}
               className={cn(
-                'whitespace-nowrap px-4 py-2 font-display text-xs font-bold uppercase tracking-widest transition-all border-2',
-                selectedSportCode === sport.code
-                  ? 'bg-neon-blue/20 text-neon-blue border-neon-blue'
-                  : 'bg-background-tertiary text-foreground-muted border-border hover:border-neon-pink hover:text-neon-pink'
+                'w-full md:w-80 appearance-none bg-background-tertiary border-2 px-4 py-3 pr-10',
+                'font-display text-sm font-bold uppercase tracking-wide',
+                'focus:outline-none cursor-pointer',
+                selectedSportCode
+                  ? 'border-neon-blue text-neon-blue'
+                  : 'border-border text-foreground hover:border-neon-pink'
               )}
-              style={selectedSportCode === sport.code ? {
+              style={selectedSportCode ? {
                 textShadow: '0 0 10px var(--neon-blue)',
                 boxShadow: '0 0 10px rgba(5, 217, 232, 0.3), inset 0 0 10px rgba(5, 217, 232, 0.1)'
               } : undefined}
             >
-              {getSportEmoji(sport.code)} {sport.display_name || sport.name}
-            </button>
-          ))}
+              <option value="">All Sports</option>
+              {SEASON_ORDER.map(season => {
+                const seasonSports = sportsByseason.get(season) || []
+                if (seasonSports.length === 0) return null
+                return (
+                  <optgroup key={season} label={SEASON_LABELS[season]}>
+                    {seasonSports.map(sport => (
+                      <option key={sport.code} value={sport.code}>
+                        {getSportEmoji(sport.code)} {sport.display_name || sport.name}
+                      </option>
+                    ))}
+                  </optgroup>
+                )
+              })}
+            </select>
+            <div className="absolute inset-y-0 right-0 flex items-center px-3 pointer-events-none">
+              <svg className="w-4 h-4 text-foreground-muted" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+              </svg>
+            </div>
+          </div>
         </div>
       </div>
 

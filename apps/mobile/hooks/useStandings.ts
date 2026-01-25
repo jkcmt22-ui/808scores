@@ -70,8 +70,7 @@ export function useStandings(options: UseStandingsOptions = {}): UseStandingsRet
       setIsLoading(true)
       setError(null)
 
-      // Get current year for season - winter sports use current calendar year,
-      // fall sports (like football) use previous calendar year if we're in winter
+      // Get current year for season - different sports use different years
       const now = new Date()
       const currentYear = parseInt(now.toLocaleDateString('en-CA', {
         timeZone: 'Pacific/Honolulu',
@@ -79,22 +78,34 @@ export function useStandings(options: UseStandingsOptions = {}): UseStandingsRet
       }))
       const currentMonth = now.getMonth() + 1 // 1-12
 
-      // Fall sports: football (Aug-Dec) - if we're in Jan-Jul, use previous year
-      const isFallSport = sportCode === 'football'
-      const seasonYear = isFallSport && currentMonth < 8 ? currentYear - 1 : currentYear
-
-      // Get sport ID if sportCode specified
+      // Get sport ID and season if sportCode specified
       let sportId: string | null = null
+      let sportSeason: string | null = null
       if (sportCode) {
         const { data: sportData, error: sportError } = await supabase
           .from('sports')
-          .select('id')
+          .select('id, season')
           .eq('code', sportCode)
           .single()
 
         if (sportError) throw sportError
         sportId = sportData?.id
+        sportSeason = sportData?.season
       }
+
+      // Determine season year based on sport's season
+      // Fall sports (Aug-Nov): use previous year if we're in Jan-Jul
+      // Winter sports (Dec-Feb): use current calendar year
+      // Spring sports (Mar-May): use current year if we're past March, else previous year
+      let seasonYear = currentYear
+      if (sportSeason === 'fall') {
+        seasonYear = currentMonth < 8 ? currentYear - 1 : currentYear
+      } else if (sportSeason === 'spring') {
+        // Spring season is typically March-May
+        // If we're in Aug-Dec, show previous spring's data
+        seasonYear = currentMonth >= 8 ? currentYear : currentYear
+      }
+      // Winter sports use current year (default)
 
       // Fetch from season_standings table
       // If no specific sport, fetch for current year (winter sports)
@@ -201,7 +212,7 @@ export function useStandings(options: UseStandingsOptions = {}): UseStandingsRet
 // Hook to get sports that have standings data
 export function useStandingsSports() {
   const { supabase } = useSupabase()
-  const [sports, setSports] = useState<Array<{ id: string; name: string; code: string; display_name: string | null }>>([])
+  const [sports, setSports] = useState<Array<{ id: string; name: string; code: string; display_name: string | null; season: string | null }>>([])
   const [isLoading, setIsLoading] = useState(true)
 
   useEffect(() => {
@@ -228,7 +239,7 @@ export function useStandingsSports() {
 
         const { data: sportsData } = await supabase
           .from('sports')
-          .select('id, name, code, display_name')
+          .select('id, name, code, display_name, season')
           .in('id', sportIds)
           .eq('active', true)
           .order('sort_order')

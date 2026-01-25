@@ -55,11 +55,10 @@ export function useStandings(options: UseStandingsOptions = {}): UseStandingsRet
       setError(null)
 
       // Get current year for default season
-      const currentYear = new Date().toLocaleDateString('en-CA', {
+      const currentYear = parseInt(new Date().toLocaleDateString('en-CA', {
         timeZone: 'Pacific/Honolulu',
         year: 'numeric'
-      })
-      const targetSeason = season || currentYear
+      }))
 
       // Fetch sport by code if specified
       let sportId: string | null = null
@@ -77,6 +76,11 @@ export function useStandings(options: UseStandingsOptions = {}): UseStandingsRet
         sportId = currentSport.id
       }
 
+      // Determine target season year
+      // If a specific season is provided, use it
+      // Otherwise, if showing all sports, fetch both current and previous year
+      const targetSeason = season ? parseInt(season) : currentYear
+
       // First, try to fetch from season_standings table
       let standingsQuery = supabase
         .from('season_standings')
@@ -84,7 +88,13 @@ export function useStandings(options: UseStandingsOptions = {}): UseStandingsRet
           *,
           school:schools(*)
         `)
-        .eq('season_year', parseInt(targetSeason))
+
+      // If no specific sport, fetch both current year and previous year for comprehensive view
+      if (!sportId && !season) {
+        standingsQuery = standingsQuery.or(`season_year.eq.${currentYear},season_year.eq.${currentYear - 1}`)
+      } else {
+        standingsQuery = standingsQuery.eq('season_year', targetSeason)
+      }
 
       if (sportId) {
         standingsQuery = standingsQuery.eq('sport_id', sportId)
@@ -184,7 +194,7 @@ export function useStandings(options: UseStandingsOptions = {}): UseStandingsRet
 
       // Filter by season (year from scheduled_at)
       const seasonStart = `${targetSeason}-01-01`
-      const seasonEnd = `${parseInt(targetSeason) + 1}-01-01`
+      const seasonEnd = `${targetSeason + 1}-01-01`
       gamesQuery = gamesQuery
         .gte('scheduled_at', seasonStart)
         .lt('scheduled_at', seasonEnd)
