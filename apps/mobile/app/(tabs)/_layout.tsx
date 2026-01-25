@@ -1,15 +1,7 @@
 import React from 'react';
 import FontAwesome from '@expo/vector-icons/FontAwesome';
 import { Tabs } from 'expo-router';
-
-// 808scores neon color palette
-const colors = {
-  primary: '#FF2A6D', // Neon pink
-  secondary: '#00D4FF', // Neon blue
-  background: '#0A0A0F',
-  inactive: '#6B7280',
-  card: '#141419',
-};
+import { colors } from '../../lib/theme';
 
 function TabBarIcon(props: {
   name: React.ComponentProps<typeof FontAwesome>['name'];
@@ -22,26 +14,36 @@ export default function TabLayout() {
   return (
     <Tabs
       screenOptions={{
-        tabBarActiveTintColor: colors.primary,
-        tabBarInactiveTintColor: colors.inactive,
+        tabBarActiveTintColor: colors.neonPink,
+        tabBarInactiveTintColor: colors.foregroundMuted,
         tabBarStyle: {
-          backgroundColor: colors.card,
-          borderTopColor: colors.background,
-          borderTopWidth: 1,
+          backgroundColor: colors.backgroundSecondary,
+          borderTopColor: colors.border,
+          borderTopWidth: 2,
+          paddingTop: 4,
+        },
+        tabBarLabelStyle: {
+          fontSize: 10,
+          fontWeight: '700',
+          letterSpacing: 1,
+          textTransform: 'uppercase',
         },
         headerStyle: {
           backgroundColor: colors.background,
         },
-        headerTintColor: '#FFFFFF',
+        headerTintColor: colors.foreground,
         headerTitleStyle: {
-          fontWeight: 'bold',
+          fontWeight: '900',
+          letterSpacing: 2,
         },
+        headerShadowVisible: false,
       }}
     >
       <Tabs.Screen
         name="index"
         options={{
           title: 'Today',
+          headerShown: false,
           tabBarIcon: ({ color }) => <TabBarIcon name="home" color={color} />,
         }}
       />
@@ -49,6 +51,7 @@ export default function TabLayout() {
         name="games"
         options={{
           title: 'Games',
+          headerShown: false,
           tabBarIcon: ({ color }) => <TabBarIcon name="calendar" color={color} />,
         }}
       />
@@ -56,13 +59,23 @@ export default function TabLayout() {
         name="standings"
         options={{
           title: 'Standings',
+          headerShown: false,
           tabBarIcon: ({ color }) => <TabBarIcon name="trophy" color={color} />,
+        }}
+      />
+      <Tabs.Screen
+        name="community"
+        options={{
+          title: 'Community',
+          headerShown: false,
+          tabBarIcon: ({ color }) => <TabBarIcon name="comments" color={color} />,
         }}
       />
       <Tabs.Screen
         name="profile"
         options={{
           title: 'Profile',
+          headerShown: false,
           tabBarIcon: ({ color }) => <TabBarIcon name="user" color={color} />,
         }}
       />

@@ -8,6 +8,7 @@ import {
   User,
   Plus,
   Compass,
+  MessageSquare,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
@@ -15,7 +16,7 @@ const navItems = [
   { href: '/', label: 'Today', icon: Calendar },
   { href: '/live', label: 'Live', icon: Radio },
   { href: '/submit', label: 'Submit', icon: Plus, isAction: true },
-  { href: '/explore', label: 'Explore', icon: Compass },
+  { href: '/community', label: 'Chat', icon: MessageSquare },
   { href: '/profile', label: 'Profile', icon: User },
 ]
 

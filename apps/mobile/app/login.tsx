@@ -1,19 +1,9 @@
 import { StyleSheet, View, Text, TextInput, TouchableOpacity, KeyboardAvoidingView, Platform, Alert } from 'react-native';
 import { useState } from 'react';
 import { useRouter, Stack } from 'expo-router';
+import FontAwesome from '@expo/vector-icons/FontAwesome';
 import { useSupabase } from '../contexts/SupabaseContext';
-
-// Color palette
-const colors = {
-  background: '#0A0A0F',
-  card: '#141419',
-  cardBorder: '#2A2A35',
-  primary: '#FF2A6D',
-  secondary: '#00D4FF',
-  text: '#FFFFFF',
-  textMuted: '#9CA3AF',
-  inputBg: '#1A1A22',
-};
+import { colors } from '../lib/theme';
 
 export default function LoginScreen() {
   const router = useRouter();
@@ -56,11 +46,14 @@ export default function LoginScreen() {
         <Stack.Screen options={{ headerShown: false }} />
         <View style={styles.container}>
           <View style={styles.content}>
-            <Text style={styles.title}>Check your email</Text>
+            <View style={styles.iconBox}>
+              <FontAwesome name="envelope" size={32} color={colors.neonGreen} />
+            </View>
+            <Text style={styles.title}>CHECK YOUR EMAIL</Text>
             <Text style={styles.subtitle}>
-              We sent a magic link to{'\n'}
-              <Text style={styles.emailHighlight}>{email}</Text>
+              We sent a magic link to
             </Text>
+            <Text style={styles.emailHighlight}>{email}</Text>
             <Text style={styles.hint}>
               Click the link in the email to sign in
             </Text>
@@ -68,7 +61,7 @@ export default function LoginScreen() {
               style={styles.secondaryButton}
               onPress={() => setEmailSent(false)}
             >
-              <Text style={styles.secondaryButtonText}>Try different email</Text>
+              <Text style={styles.secondaryButtonText}>TRY DIFFERENT EMAIL</Text>
             </TouchableOpacity>
           </View>
         </View>
@@ -84,21 +77,26 @@ export default function LoginScreen() {
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
       >
         <TouchableOpacity style={styles.closeButton} onPress={() => router.back()}>
-          <Text style={styles.closeButtonText}>Cancel</Text>
+          <FontAwesome name="times" size={24} color={colors.foregroundMuted} />
         </TouchableOpacity>
 
         <View style={styles.content}>
-          <Text style={styles.title}>Welcome to 808scores</Text>
+          <View style={styles.brandContainer}>
+            <Text style={styles.brandHawaii}>HAWAII</Text>
+            <Text style={styles.brandSports}>SPORTS</Text>
+            <Text style={styles.brandCenter}>CENTER</Text>
+          </View>
+
           <Text style={styles.subtitle}>
             Sign in to track your favorite teams, earn points, and join the conversation
           </Text>
 
           <View style={styles.form}>
-            <Text style={styles.label}>Email</Text>
+            <Text style={styles.label}>EMAIL</Text>
             <TextInput
               style={styles.input}
-              placeholder="your@email.com"
-              placeholderTextColor={colors.textMuted}
+              placeholder="YOUR@EMAIL.COM"
+              placeholderTextColor={colors.foregroundMuted}
               keyboardType="email-address"
               autoCapitalize="none"
               autoCorrect={false}
@@ -112,7 +110,7 @@ export default function LoginScreen() {
               disabled={isLoading}
             >
               <Text style={styles.buttonText}>
-                {isLoading ? 'Sending...' : 'Continue with Email'}
+                {isLoading ? 'SENDING...' : 'CONTINUE WITH EMAIL'}
               </Text>
             </TouchableOpacity>
           </View>
@@ -134,65 +132,107 @@ const styles = StyleSheet.create({
   closeButton: {
     position: 'absolute',
     top: 60,
-    left: 20,
+    right: 20,
     zIndex: 1,
-  },
-  closeButtonText: {
-    color: colors.secondary,
-    fontSize: 16,
+    width: 44,
+    height: 44,
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 2,
+    borderColor: colors.border,
+    backgroundColor: colors.backgroundSecondary,
   },
   content: {
     flex: 1,
     justifyContent: 'center',
     paddingHorizontal: 32,
   },
+  brandContainer: {
+    alignItems: 'center',
+    marginBottom: 24,
+  },
+  brandHawaii: {
+    fontSize: 32,
+    fontWeight: '900',
+    color: colors.neonPink,
+    letterSpacing: 6,
+  },
+  brandSports: {
+    fontSize: 32,
+    fontWeight: '900',
+    color: colors.neonBlue,
+    letterSpacing: 6,
+  },
+  brandCenter: {
+    fontSize: 32,
+    fontWeight: '900',
+    color: colors.neonYellow,
+    letterSpacing: 6,
+  },
+  iconBox: {
+    width: 80,
+    height: 80,
+    justifyContent: 'center',
+    alignItems: 'center',
+    alignSelf: 'center',
+    borderWidth: 2,
+    borderColor: colors.neonGreen,
+    backgroundColor: colors.backgroundSecondary,
+    marginBottom: 24,
+  },
   title: {
-    fontSize: 28,
-    fontWeight: 'bold',
-    color: colors.text,
+    fontSize: 24,
+    fontWeight: '900',
+    color: colors.foreground,
     textAlign: 'center',
     marginBottom: 12,
+    letterSpacing: 4,
   },
   subtitle: {
-    fontSize: 16,
-    color: colors.textMuted,
+    fontSize: 14,
+    color: colors.foregroundMuted,
     textAlign: 'center',
     marginBottom: 32,
-    lineHeight: 24,
+    lineHeight: 22,
   },
   emailHighlight: {
-    color: colors.secondary,
-    fontWeight: '600',
+    color: colors.neonBlue,
+    fontWeight: '700',
+    fontSize: 16,
+    textAlign: 'center',
+    marginVertical: 8,
+    letterSpacing: 1,
   },
   hint: {
-    fontSize: 14,
-    color: colors.textMuted,
+    fontSize: 12,
+    color: colors.foregroundMuted,
     textAlign: 'center',
     marginTop: 16,
+    letterSpacing: 1,
   },
   form: {
     width: '100%',
   },
   label: {
-    fontSize: 14,
-    fontWeight: '500',
-    color: colors.text,
+    fontSize: 12,
+    fontWeight: '700',
+    color: colors.foreground,
     marginBottom: 8,
+    letterSpacing: 2,
   },
   input: {
-    backgroundColor: colors.inputBg,
-    borderWidth: 1,
-    borderColor: colors.cardBorder,
-    borderRadius: 12,
+    backgroundColor: colors.backgroundSecondary,
+    borderWidth: 2,
+    borderColor: colors.border,
     paddingHorizontal: 16,
     paddingVertical: 14,
     fontSize: 16,
-    color: colors.text,
+    color: colors.foreground,
     marginBottom: 16,
+    letterSpacing: 1,
   },
   button: {
-    backgroundColor: colors.primary,
-    borderRadius: 12,
+    backgroundColor: colors.neonPink,
     paddingVertical: 16,
     alignItems: 'center',
   },
@@ -200,24 +240,31 @@ const styles = StyleSheet.create({
     opacity: 0.6,
   },
   buttonText: {
-    color: colors.text,
-    fontSize: 16,
-    fontWeight: '600',
+    color: colors.background,
+    fontSize: 14,
+    fontWeight: '900',
+    letterSpacing: 2,
   },
   secondaryButton: {
     marginTop: 24,
-    paddingVertical: 12,
+    paddingVertical: 14,
+    borderWidth: 2,
+    borderColor: colors.neonBlue,
+    backgroundColor: colors.backgroundSecondary,
   },
   secondaryButtonText: {
-    color: colors.secondary,
-    fontSize: 16,
+    color: colors.neonBlue,
+    fontSize: 14,
+    fontWeight: '700',
     textAlign: 'center',
+    letterSpacing: 2,
   },
   terms: {
-    fontSize: 12,
-    color: colors.textMuted,
+    fontSize: 10,
+    color: colors.foregroundMuted,
     textAlign: 'center',
     marginTop: 24,
-    lineHeight: 18,
+    lineHeight: 16,
+    letterSpacing: 1,
   },
 });

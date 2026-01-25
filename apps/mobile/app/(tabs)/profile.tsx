@@ -1,22 +1,12 @@
-import { StyleSheet, View, Text, TouchableOpacity, ScrollView, Alert } from 'react-native';
+import { StyleSheet, View, Text, TouchableOpacity, ScrollView, Alert, Switch, ActivityIndicator } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import FontAwesome from '@expo/vector-icons/FontAwesome';
 import { useSupabase } from '../../contexts/SupabaseContext';
+import { usePushNotifications } from '../../hooks/usePushNotifications';
+import { colors } from '../../lib/theme';
 
-// Color palette
-const colors = {
-  background: '#0A0A0F',
-  card: '#141419',
-  cardBorder: '#2A2A35',
-  primary: '#FF2A6D',
-  secondary: '#00D4FF',
-  yellow: '#FACC15',
-  green: '#10B981',
-  text: '#FFFFFF',
-  textMuted: '#9CA3AF',
-};
-
-function StatCard({ label, value, color = colors.text }: { label: string; value: string | number; color?: string }) {
+function StatCard({ label, value, color = colors.foreground }: { label: string; value: string | number; color?: string }) {
   return (
     <View style={styles.statCard}>
       <Text style={[styles.statValue, { color }]}>{value}</Text>
@@ -28,9 +18,9 @@ function StatCard({ label, value, color = colors.text }: { label: string; value:
 function MenuButton({ icon, label, onPress }: { icon: string; label: string; onPress: () => void }) {
   return (
     <TouchableOpacity style={styles.menuButton} onPress={onPress}>
-      <FontAwesome name={icon as any} size={20} color={colors.textMuted} style={styles.menuIcon} />
+      <FontAwesome name={icon as any} size={20} color={colors.foregroundMuted} style={styles.menuIcon} />
       <Text style={styles.menuLabel}>{label}</Text>
-      <FontAwesome name="chevron-right" size={14} color={colors.textMuted} />
+      <FontAwesome name="chevron-right" size={14} color={colors.foregroundMuted} />
     </TouchableOpacity>
   );
 }
@@ -38,6 +28,24 @@ function MenuButton({ icon, label, onPress }: { icon: string; label: string; onP
 export default function ProfileScreen() {
   const router = useRouter();
   const { user, profile, isLoading, signOut } = useSupabase();
+  const {
+    isRegistered: notificationsEnabled,
+    isLoading: notificationsLoading,
+    registerForPushNotifications,
+    unregister: unregisterNotifications,
+    error: notificationError,
+  } = usePushNotifications();
+
+  const handleNotificationToggle = async () => {
+    if (notificationsEnabled) {
+      await unregisterNotifications();
+    } else {
+      const success = await registerForPushNotifications();
+      if (!success && notificationError) {
+        Alert.alert('Notifications', notificationError);
+      }
+    }
+  };
 
   const handleSignOut = () => {
     Alert.alert(
@@ -61,24 +69,27 @@ export default function ProfileScreen() {
   // Not logged in state
   if (!user) {
     return (
-      <View style={styles.container}>
+      <SafeAreaView style={styles.container} edges={['top']}>
         <View style={styles.loginContainer}>
-          <FontAwesome name="user-circle" size={80} color={colors.textMuted} />
-          <Text style={styles.loginTitle}>Sign in to 808scores</Text>
+          <View style={styles.userIconBox}>
+            <FontAwesome name="user" size={40} color={colors.neonPink} />
+          </View>
+          <Text style={styles.loginTitle}>SIGN IN</Text>
           <Text style={styles.loginSubtext}>
             Track your favorite teams, earn points, and join the conversation
           </Text>
           <TouchableOpacity style={styles.loginButton} onPress={handleLogin}>
-            <Text style={styles.loginButtonText}>Sign In</Text>
+            <Text style={styles.loginButtonText}>SIGN IN</Text>
           </TouchableOpacity>
         </View>
-      </View>
+      </SafeAreaView>
     );
   }
 
   // Logged in state
   return (
-    <ScrollView style={styles.container} contentContainerStyle={styles.scrollContent}>
+    <SafeAreaView style={styles.container} edges={['top']}>
+      <ScrollView style={styles.scrollContainer} contentContainerStyle={styles.scrollContent}>
       {/* Profile Header */}
       <View style={styles.profileHeader}>
         <View style={styles.avatar}>
@@ -97,12 +108,12 @@ export default function ProfileScreen() {
 
       {/* Stats */}
       <View style={styles.statsContainer}>
-        <StatCard label="Points" value={profile?.total_points || 0} color={colors.yellow} />
-        <StatCard label="Submissions" value={profile?.submission_count || 0} color={colors.secondary} />
+        <StatCard label="POINTS" value={profile?.total_points || 0} color={colors.neonYellow} />
+        <StatCard label="SUBMISSIONS" value={profile?.submission_count || 0} color={colors.neonBlue} />
         <StatCard
-          label="Accuracy"
+          label="ACCURACY"
           value={profile?.accuracy_rate ? `${(profile.accuracy_rate * 100).toFixed(0)}%` : 'N/A'}
-          color={colors.green}
+          color={colors.neonGreen}
         />
       </View>
 
@@ -110,7 +121,23 @@ export default function ProfileScreen() {
       <View style={styles.menuSection}>
         <MenuButton icon="star" label="My Favorites" onPress={() => {}} />
         <MenuButton icon="trophy" label="My Badges" onPress={() => {}} />
-        <MenuButton icon="bell" label="Notifications" onPress={() => {}} />
+
+        {/* Notifications Toggle */}
+        <View style={styles.menuButton}>
+          <FontAwesome name="bell" size={20} color={colors.foregroundMuted} style={styles.menuIcon} />
+          <Text style={styles.menuLabel}>PUSH NOTIFICATIONS</Text>
+          {notificationsLoading ? (
+            <ActivityIndicator size="small" color={colors.neonPink} />
+          ) : (
+            <Switch
+              value={notificationsEnabled}
+              onValueChange={handleNotificationToggle}
+              trackColor={{ false: colors.border, true: colors.neonPink }}
+              thumbColor={colors.foreground}
+            />
+          )}
+        </View>
+
         <MenuButton icon="cog" label="Settings" onPress={() => {}} />
       </View>
 
@@ -119,6 +146,7 @@ export default function ProfileScreen() {
         <Text style={styles.signOutText}>Sign Out</Text>
       </TouchableOpacity>
     </ScrollView>
+    </SafeAreaView>
   );
 }
 
@@ -126,6 +154,9 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: colors.background,
+  },
+  scrollContainer: {
+    flex: 1,
   },
   scrollContent: {
     paddingBottom: 32,
@@ -136,110 +167,130 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     padding: 32,
   },
+  userIconBox: {
+    width: 100,
+    height: 100,
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 2,
+    borderColor: colors.neonPink,
+    backgroundColor: colors.backgroundSecondary,
+    marginBottom: 24,
+  },
   loginTitle: {
     fontSize: 24,
-    fontWeight: 'bold',
-    color: colors.text,
-    marginTop: 24,
-    marginBottom: 8,
+    fontWeight: '900',
+    color: colors.foreground,
+    letterSpacing: 4,
+    marginBottom: 12,
   },
   loginSubtext: {
-    fontSize: 16,
-    color: colors.textMuted,
+    fontSize: 14,
+    color: colors.foregroundMuted,
     textAlign: 'center',
     marginBottom: 32,
+    lineHeight: 22,
   },
   loginButton: {
-    backgroundColor: colors.primary,
+    backgroundColor: colors.neonPink,
     paddingHorizontal: 48,
     paddingVertical: 16,
-    borderRadius: 12,
+    borderWidth: 0,
   },
   loginButtonText: {
-    color: colors.text,
-    fontSize: 18,
-    fontWeight: '600',
+    color: colors.background,
+    fontSize: 16,
+    fontWeight: '900',
+    letterSpacing: 2,
   },
   profileHeader: {
     alignItems: 'center',
     paddingVertical: 32,
     paddingHorizontal: 16,
+    borderBottomWidth: 2,
+    borderBottomColor: colors.border,
   },
   avatar: {
     width: 80,
     height: 80,
-    borderRadius: 40,
-    backgroundColor: colors.primary,
     justifyContent: 'center',
     alignItems: 'center',
+    borderWidth: 2,
+    borderColor: colors.neonPink,
+    backgroundColor: colors.backgroundSecondary,
   },
   avatarText: {
     fontSize: 32,
-    fontWeight: 'bold',
-    color: colors.text,
+    fontWeight: '900',
+    color: colors.neonPink,
   },
   displayName: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    color: colors.text,
+    fontSize: 20,
+    fontWeight: '900',
+    color: colors.foreground,
     marginTop: 16,
+    letterSpacing: 2,
+    textTransform: 'uppercase',
   },
   email: {
-    fontSize: 14,
-    color: colors.textMuted,
+    fontSize: 12,
+    color: colors.foregroundMuted,
     marginTop: 4,
+    letterSpacing: 1,
   },
   tierBadge: {
     marginTop: 12,
     paddingHorizontal: 16,
-    paddingVertical: 6,
-    backgroundColor: colors.card,
-    borderRadius: 16,
-    borderWidth: 1,
-    borderColor: colors.primary,
+    paddingVertical: 8,
+    backgroundColor: colors.backgroundTertiary,
+    borderWidth: 2,
+    borderColor: colors.neonYellow,
   },
   tierText: {
-    color: colors.primary,
+    color: colors.neonYellow,
     fontSize: 12,
-    fontWeight: '600',
+    fontWeight: '900',
+    letterSpacing: 2,
   },
   statsContainer: {
     flexDirection: 'row',
     justifyContent: 'space-around',
-    paddingVertical: 16,
+    paddingVertical: 20,
     paddingHorizontal: 16,
     marginHorizontal: 16,
-    backgroundColor: colors.card,
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: colors.cardBorder,
+    marginTop: 16,
+    backgroundColor: colors.backgroundSecondary,
+    borderWidth: 2,
+    borderColor: colors.border,
   },
   statCard: {
     alignItems: 'center',
   },
   statValue: {
-    fontSize: 24,
-    fontWeight: 'bold',
+    fontSize: 28,
+    fontWeight: '900',
+    fontVariant: ['tabular-nums'],
   },
   statLabel: {
-    fontSize: 12,
-    color: colors.textMuted,
+    fontSize: 10,
+    color: colors.foregroundMuted,
     marginTop: 4,
+    letterSpacing: 1,
+    fontWeight: '700',
   },
   menuSection: {
     marginTop: 24,
     marginHorizontal: 16,
-    backgroundColor: colors.card,
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: colors.cardBorder,
+    backgroundColor: colors.backgroundSecondary,
+    borderWidth: 2,
+    borderColor: colors.border,
   },
   menuButton: {
     flexDirection: 'row',
     alignItems: 'center',
     padding: 16,
     borderBottomWidth: 1,
-    borderBottomColor: colors.cardBorder,
+    borderBottomColor: colors.border,
   },
   menuIcon: {
     width: 24,
@@ -247,22 +298,24 @@ const styles = StyleSheet.create({
   },
   menuLabel: {
     flex: 1,
-    fontSize: 16,
-    color: colors.text,
+    fontSize: 14,
+    color: colors.foreground,
+    fontWeight: '600',
+    letterSpacing: 1,
   },
   signOutButton: {
     marginTop: 24,
     marginHorizontal: 16,
     padding: 16,
-    backgroundColor: colors.card,
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: colors.cardBorder,
+    backgroundColor: colors.backgroundSecondary,
+    borderWidth: 2,
+    borderColor: colors.neonPink,
     alignItems: 'center',
   },
   signOutText: {
-    color: colors.primary,
-    fontSize: 16,
-    fontWeight: '600',
+    color: colors.neonPink,
+    fontSize: 14,
+    fontWeight: '900',
+    letterSpacing: 2,
   },
 });

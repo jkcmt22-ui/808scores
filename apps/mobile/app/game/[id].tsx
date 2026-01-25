@@ -1,34 +1,26 @@
+import { useState } from 'react';
 import { StyleSheet, View, Text, ScrollView, ActivityIndicator, TouchableOpacity } from 'react-native';
 import { useLocalSearchParams, useRouter, Stack } from 'expo-router';
 import { format } from 'date-fns';
 import FontAwesome from '@expo/vector-icons/FontAwesome';
 import { useGame } from '../../hooks/useGames';
-import { getSportEmoji } from '@808scores/shared';
-
-// Color palette
-const colors = {
-  background: '#0A0A0F',
-  card: '#141419',
-  cardBorder: '#2A2A35',
-  primary: '#FF2A6D',
-  secondary: '#00D4FF',
-  yellow: '#FACC15',
-  green: '#10B981',
-  text: '#FFFFFF',
-  textMuted: '#9CA3AF',
-  live: '#EF4444',
-};
+import { getSportEmoji } from '../../lib/sport-utils';
+import { GameChat } from '../../components/GameChat';
+import { colors } from '../../lib/theme';
+import { useSupabase } from '../../contexts/SupabaseContext';
 
 export default function GameDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
   const { game, isLoading, error } = useGame(id || '');
+  const { user } = useSupabase();
+  const [showChat, setShowChat] = useState(false);
 
   if (isLoading) {
     return (
       <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color={colors.primary} />
-        <Text style={styles.loadingText}>Loading game...</Text>
+        <ActivityIndicator size="large" color={colors.neonPink} />
+        <Text style={styles.loadingText}>LOADING GAME...</Text>
       </View>
     );
   }
@@ -36,9 +28,12 @@ export default function GameDetailScreen() {
   if (error || !game) {
     return (
       <View style={styles.errorContainer}>
-        <Text style={styles.errorText}>Game not found</Text>
+        <View style={styles.errorBox}>
+          <Text style={styles.errorScore}>!</Text>
+        </View>
+        <Text style={styles.errorText}>GAME NOT FOUND</Text>
         <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
-          <Text style={styles.backButtonText}>Go Back</Text>
+          <Text style={styles.backButtonText}>GO BACK</Text>
         </TouchableOpacity>
       </View>
     );
@@ -46,112 +41,152 @@ export default function GameDetailScreen() {
 
   const isLive = game.status === 'in_progress';
   const isFinal = game.status === 'final';
+  const isScheduled = game.status === 'scheduled';
   const sportEmoji = getSportEmoji(game.sport?.code || '');
+
+  const getAbbrev = (name: string) => name?.substring(0, 2).toUpperCase() || '??';
 
   const formatGameTime = (dateStr: string) => {
     const date = new Date(dateStr);
-    return format(date, 'EEEE, MMM d @ h:mm a');
+    return format(date, 'EEE, MMM d @ h:mm a').toUpperCase();
+  };
+
+  const handleSubmitScore = () => {
+    router.push(`/submit/${id}`);
   };
 
   return (
     <>
       <Stack.Screen
         options={{
-          title: game.sport?.display_name || game.sport?.name || 'Game',
+          title: '',
           headerStyle: { backgroundColor: colors.background },
-          headerTintColor: colors.text,
+          headerTintColor: colors.foreground,
+          headerShadowVisible: false,
         }}
       />
 
       <ScrollView style={styles.container} contentContainerStyle={styles.content}>
-        {/* Game Status Banner */}
+        {/* Status Banner */}
         {isLive && (
           <View style={styles.liveBanner}>
             <View style={styles.liveDot} />
             <Text style={styles.liveBannerText}>LIVE</Text>
             {game.current_period && (
-              <Text style={styles.periodText}>{game.current_period}</Text>
+              <Text style={styles.periodText}>• {game.current_period}</Text>
             )}
           </View>
         )}
 
         {/* Scoreboard */}
-        <View style={styles.scoreboardCard}>
-          <Text style={styles.sportLabel}>
-            {sportEmoji} {game.sport?.display_name || game.sport?.name}
-          </Text>
+        <View style={[styles.scoreboardCard, isLive && styles.scoreboardLive]}>
+          {/* Sport Label */}
+          <View style={styles.sportHeader}>
+            <Text style={styles.sportLabel}>
+              {sportEmoji} {game.sport?.display_name || game.sport?.name}
+            </Text>
+            {isFinal && <Text style={styles.finalBadge}>FINAL</Text>}
+            {isScheduled && <Text style={styles.scheduledBadge}>{formatGameTime(game.scheduled_at)}</Text>}
+          </View>
 
           {/* Away Team */}
-          <View style={styles.teamScoreRow}>
-            <TouchableOpacity
-              style={styles.teamInfo}
-              onPress={() => router.push(`/school/${game.away_team_id}`)}
-            >
-              <Text style={[styles.teamName, isFinal && game.away_score > game.home_score && styles.winnerText]}>
+          <View style={styles.teamRow}>
+            <View style={[styles.teamAbbrevBox, styles.awayBox]}>
+              <Text style={styles.teamAbbrev}>{getAbbrev(game.away_team?.short_name || game.away_team?.name)}</Text>
+            </View>
+            <View style={styles.teamInfo}>
+              <Text style={[styles.teamName, isFinal && game.away_score > game.home_score && styles.winnerTeam]} numberOfLines={1}>
                 {game.away_team?.name}
               </Text>
               <Text style={styles.teamMeta}>{game.away_team?.island}</Text>
-            </TouchableOpacity>
-            <Text style={[styles.scoreText, isFinal && game.away_score > game.home_score && styles.winnerScore]}>
-              {game.away_score}
-            </Text>
+            </View>
+            <View style={[styles.scoreBox, isFinal && game.away_score > game.home_score && styles.scoreBoxWinner]}>
+              <Text style={[styles.scoreText, isFinal && game.away_score > game.home_score && styles.winnerScore]}>
+                {game.away_score}
+              </Text>
+            </View>
           </View>
 
           {/* Home Team */}
-          <View style={styles.teamScoreRow}>
-            <TouchableOpacity
-              style={styles.teamInfo}
-              onPress={() => router.push(`/school/${game.home_team_id}`)}
-            >
-              <Text style={[styles.teamName, isFinal && game.home_score > game.away_score && styles.winnerText]}>
+          <View style={styles.teamRow}>
+            <View style={[styles.teamAbbrevBox, styles.homeBox]}>
+              <Text style={styles.teamAbbrev}>{getAbbrev(game.home_team?.short_name || game.home_team?.name)}</Text>
+            </View>
+            <View style={styles.teamInfo}>
+              <Text style={[styles.teamName, isFinal && game.home_score > game.away_score && styles.winnerTeam]} numberOfLines={1}>
                 {game.home_team?.name}
               </Text>
-              <Text style={styles.teamMeta}>{game.home_team?.island} (Home)</Text>
-            </TouchableOpacity>
-            <Text style={[styles.scoreText, isFinal && game.home_score > game.away_score && styles.winnerScore]}>
-              {game.home_score}
-            </Text>
+              <Text style={styles.teamMeta}>{game.home_team?.island} • HOME</Text>
+            </View>
+            <View style={[styles.scoreBox, isFinal && game.home_score > game.away_score && styles.scoreBoxWinner]}>
+              <Text style={[styles.scoreText, isFinal && game.home_score > game.away_score && styles.winnerScore]}>
+                {game.home_score}
+              </Text>
+            </View>
           </View>
 
           {/* Game Info */}
           <View style={styles.gameInfo}>
-            <Text style={styles.gameTime}>{formatGameTime(game.scheduled_at)}</Text>
+            {!isScheduled && <Text style={styles.gameTime}>{formatGameTime(game.scheduled_at)}</Text>}
             {game.venue && <Text style={styles.venue}>{game.venue}</Text>}
           </View>
-
-          {isFinal && (
-            <View style={styles.finalBadge}>
-              <Text style={styles.finalBadgeText}>FINAL</Text>
-            </View>
-          )}
         </View>
 
-        {/* Chat Section Placeholder */}
-        <View style={styles.chatSection}>
+        {/* Submit Score Button */}
+        {!isFinal && (
+          user ? (
+            <TouchableOpacity style={styles.submitButton} onPress={handleSubmitScore}>
+              <FontAwesome name="plus-circle" size={20} color={colors.background} />
+              <Text style={styles.submitButtonText}>SUBMIT SCORE</Text>
+            </TouchableOpacity>
+          ) : (
+            <TouchableOpacity style={styles.loginPromptButton} onPress={() => router.push('/login')}>
+              <FontAwesome name="user" size={16} color={colors.neonBlue} />
+              <Text style={styles.loginPromptText}>SIGN IN TO SUBMIT SCORES</Text>
+            </TouchableOpacity>
+          )
+        )}
+
+        {/* Chat Section */}
+        <TouchableOpacity
+          style={styles.chatSection}
+          onPress={() => setShowChat(true)}
+          activeOpacity={0.8}
+        >
           <View style={styles.chatHeader}>
-            <FontAwesome name="comments" size={20} color={colors.secondary} />
-            <Text style={styles.chatTitle}>Game Chat</Text>
-            <Text style={styles.chatCount}>{game.message_count} messages</Text>
+            <FontAwesome name="comments" size={18} color={colors.neonBlue} />
+            <Text style={styles.chatTitle}>GAME CHAT</Text>
+            <Text style={styles.chatCount}>{game.message_count}</Text>
+            <FontAwesome name="chevron-right" size={14} color={colors.foregroundMuted} />
           </View>
-          <View style={styles.chatPlaceholder}>
-            <Text style={styles.chatPlaceholderText}>
-              Chat functionality coming soon!
-            </Text>
-          </View>
-        </View>
+        </TouchableOpacity>
 
         {/* Actions */}
         <View style={styles.actionsSection}>
           <TouchableOpacity style={styles.actionButton}>
-            <FontAwesome name="bell" size={16} color={colors.text} />
-            <Text style={styles.actionButtonText}>Set Reminder</Text>
+            <FontAwesome name="bell-o" size={16} color={colors.neonYellow} />
+            <Text style={styles.actionButtonText}>REMINDER</Text>
           </TouchableOpacity>
           <TouchableOpacity style={styles.actionButton}>
-            <FontAwesome name="share" size={16} color={colors.text} />
-            <Text style={styles.actionButtonText}>Share</Text>
+            <FontAwesome name="share-alt" size={16} color={colors.neonBlue} />
+            <Text style={styles.actionButtonText}>SHARE</Text>
           </TouchableOpacity>
         </View>
       </ScrollView>
+
+      {/* Full Screen Chat */}
+      {showChat && (
+        <View style={styles.chatFullScreen}>
+          <View style={styles.chatFullHeader}>
+            <TouchableOpacity style={styles.closeButton} onPress={() => setShowChat(false)}>
+              <FontAwesome name="chevron-down" size={20} color={colors.foreground} />
+            </TouchableOpacity>
+            <Text style={styles.chatFullTitle}>GAME CHAT</Text>
+            <View style={styles.closeButton} />
+          </View>
+          <GameChat gameId={id || ''} />
+        </View>
+      )}
     </>
   );
 }
@@ -163,6 +198,7 @@ const styles = StyleSheet.create({
   },
   content: {
     padding: 16,
+    paddingBottom: 32,
   },
   loadingContainer: {
     flex: 1,
@@ -171,8 +207,10 @@ const styles = StyleSheet.create({
     backgroundColor: colors.background,
   },
   loadingText: {
-    color: colors.textMuted,
+    color: colors.foregroundMuted,
     marginTop: 12,
+    textTransform: 'uppercase',
+    letterSpacing: 1,
   },
   errorContainer: {
     flex: 1,
@@ -181,154 +219,249 @@ const styles = StyleSheet.create({
     backgroundColor: colors.background,
     padding: 32,
   },
+  errorBox: {
+    width: 80,
+    height: 60,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: '#1a1a1a',
+    borderWidth: 2,
+    borderColor: colors.neonPink,
+    marginBottom: 16,
+  },
+  errorScore: {
+    fontSize: 32,
+    fontWeight: '900',
+    color: colors.neonPink,
+  },
   errorText: {
     fontSize: 18,
-    color: colors.text,
-    marginBottom: 16,
+    fontWeight: '700',
+    color: colors.foreground,
+    textTransform: 'uppercase',
+    letterSpacing: 2,
+    marginBottom: 24,
   },
   backButton: {
     paddingHorizontal: 24,
     paddingVertical: 12,
-    backgroundColor: colors.primary,
-    borderRadius: 8,
+    borderWidth: 2,
+    borderColor: colors.neonBlue,
+    backgroundColor: colors.backgroundSecondary,
   },
   backButtonText: {
-    color: colors.text,
-    fontWeight: '600',
+    color: colors.neonBlue,
+    fontWeight: '700',
+    textTransform: 'uppercase',
+    letterSpacing: 2,
   },
   liveBanner: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: 'rgba(239, 68, 68, 0.2)',
-    paddingVertical: 8,
-    borderRadius: 8,
+    backgroundColor: 'rgba(255, 42, 109, 0.15)',
+    borderWidth: 2,
+    borderColor: colors.neonPink,
+    paddingVertical: 10,
     marginBottom: 16,
     gap: 8,
   },
   liveDot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-    backgroundColor: colors.live,
+    width: 10,
+    height: 10,
+    borderRadius: 5,
+    backgroundColor: colors.neonPink,
   },
   liveBannerText: {
-    color: colors.live,
-    fontWeight: '700',
+    color: colors.neonPink,
+    fontWeight: '900',
     fontSize: 14,
+    letterSpacing: 2,
   },
   periodText: {
-    color: colors.text,
+    color: colors.foreground,
     fontSize: 14,
+    fontWeight: '600',
   },
   scoreboardCard: {
-    backgroundColor: colors.card,
-    borderRadius: 16,
-    borderWidth: 1,
-    borderColor: colors.cardBorder,
-    padding: 20,
+    backgroundColor: colors.backgroundSecondary,
+    borderWidth: 2,
+    borderColor: colors.border,
+    padding: 16,
     marginBottom: 16,
+  },
+  scoreboardLive: {
+    borderColor: colors.neonPink,
+    shadowColor: colors.neonPink,
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.3,
+    shadowRadius: 10,
+    elevation: 5,
+  },
+  sportHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 16,
+    paddingBottom: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.border,
   },
   sportLabel: {
-    fontSize: 14,
-    color: colors.textMuted,
-    textAlign: 'center',
-    marginBottom: 16,
+    fontSize: 12,
+    color: colors.foregroundMuted,
+    textTransform: 'uppercase',
+    letterSpacing: 1,
   },
-  teamScoreRow: {
+  finalBadge: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: colors.foregroundMuted,
+    letterSpacing: 2,
+  },
+  scheduledBadge: {
+    fontSize: 11,
+    fontWeight: '600',
+    color: colors.neonYellow,
+    letterSpacing: 1,
+  },
+  teamRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingVertical: 12,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.cardBorder,
+    gap: 12,
+    marginBottom: 12,
+  },
+  teamAbbrevBox: {
+    width: 44,
+    height: 44,
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 2,
+    backgroundColor: colors.backgroundTertiary,
+  },
+  awayBox: {
+    borderColor: colors.neonBlue,
+  },
+  homeBox: {
+    borderColor: colors.neonPink,
+  },
+  teamAbbrev: {
+    fontSize: 14,
+    fontWeight: '900',
+    color: colors.foreground,
+    letterSpacing: 1,
   },
   teamInfo: {
     flex: 1,
   },
   teamName: {
-    fontSize: 18,
-    color: colors.text,
-    fontWeight: '500',
+    fontSize: 16,
+    color: colors.foreground,
+    fontWeight: '600',
   },
-  winnerText: {
-    fontWeight: '700',
-    color: colors.text,
+  winnerTeam: {
+    fontWeight: '800',
   },
   teamMeta: {
-    fontSize: 12,
-    color: colors.textMuted,
+    fontSize: 11,
+    color: colors.foregroundMuted,
     marginTop: 2,
+    textTransform: 'uppercase',
+    letterSpacing: 1,
+  },
+  scoreBox: {
+    minWidth: 60,
+    height: 44,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: '#1a1a1a',
+    borderWidth: 2,
+    borderColor: '#3a3a3a',
+  },
+  scoreBoxWinner: {
+    backgroundColor: '#0a1a0a',
+    borderColor: '#1a3a1a',
   },
   scoreText: {
-    fontSize: 32,
-    fontWeight: '700',
-    color: colors.text,
-    minWidth: 60,
-    textAlign: 'right',
+    fontSize: 24,
+    fontWeight: '900',
+    color: colors.foreground,
+    fontVariant: ['tabular-nums'],
   },
   winnerScore: {
-    color: colors.green,
+    color: colors.neonGreen,
   },
   gameInfo: {
-    paddingTop: 16,
+    paddingTop: 12,
+    borderTopWidth: 1,
+    borderTopColor: colors.border,
     alignItems: 'center',
   },
   gameTime: {
-    fontSize: 14,
-    color: colors.textMuted,
+    fontSize: 12,
+    color: colors.foregroundMuted,
+    letterSpacing: 1,
   },
   venue: {
-    fontSize: 14,
-    color: colors.textMuted,
+    fontSize: 12,
+    color: colors.foregroundMuted,
     marginTop: 4,
   },
-  finalBadge: {
-    position: 'absolute',
-    top: 16,
-    right: 16,
-    backgroundColor: colors.cardBorder,
-    paddingHorizontal: 12,
-    paddingVertical: 4,
-    borderRadius: 12,
+  submitButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 10,
+    backgroundColor: colors.neonPink,
+    paddingVertical: 14,
+    marginBottom: 16,
   },
-  finalBadgeText: {
-    color: colors.textMuted,
+  submitButtonText: {
+    color: colors.background,
+    fontSize: 14,
+    fontWeight: '900',
+    letterSpacing: 2,
+  },
+  loginPromptButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 10,
+    backgroundColor: colors.backgroundSecondary,
+    borderWidth: 2,
+    borderColor: colors.neonBlue,
+    paddingVertical: 14,
+    marginBottom: 16,
+  },
+  loginPromptText: {
+    color: colors.neonBlue,
     fontSize: 12,
-    fontWeight: '600',
+    fontWeight: '700',
+    letterSpacing: 1,
   },
   chatSection: {
-    backgroundColor: colors.card,
-    borderRadius: 16,
-    borderWidth: 1,
-    borderColor: colors.cardBorder,
+    backgroundColor: colors.backgroundSecondary,
+    borderWidth: 2,
+    borderColor: colors.border,
     marginBottom: 16,
   },
   chatHeader: {
     flexDirection: 'row',
     alignItems: 'center',
-    padding: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.cardBorder,
-    gap: 8,
+    padding: 14,
+    gap: 10,
   },
   chatTitle: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: colors.text,
+    fontSize: 14,
+    fontWeight: '700',
+    color: colors.foreground,
     flex: 1,
+    letterSpacing: 1,
   },
   chatCount: {
     fontSize: 14,
-    color: colors.textMuted,
-  },
-  chatPlaceholder: {
-    padding: 32,
-    alignItems: 'center',
-  },
-  chatPlaceholderText: {
-    color: colors.textMuted,
-    fontSize: 14,
+    fontWeight: '600',
+    color: colors.neonBlue,
   },
   actionsSection: {
     flexDirection: 'row',
@@ -340,15 +473,44 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     gap: 8,
-    backgroundColor: colors.card,
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: colors.cardBorder,
+    backgroundColor: colors.backgroundSecondary,
+    borderWidth: 2,
+    borderColor: colors.border,
     paddingVertical: 14,
   },
   actionButtonText: {
-    color: colors.text,
-    fontSize: 14,
-    fontWeight: '500',
+    color: colors.foreground,
+    fontSize: 12,
+    fontWeight: '700',
+    letterSpacing: 1,
+  },
+  chatFullScreen: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: colors.background,
+  },
+  chatFullHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    borderBottomWidth: 2,
+    borderBottomColor: colors.border,
+  },
+  closeButton: {
+    width: 40,
+    height: 40,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  chatFullTitle: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: colors.foreground,
+    letterSpacing: 2,
   },
 });

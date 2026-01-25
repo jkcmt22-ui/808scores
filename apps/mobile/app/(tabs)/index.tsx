@@ -1,23 +1,11 @@
 import { StyleSheet, View, Text, FlatList, ActivityIndicator, TouchableOpacity, RefreshControl } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { useState, useCallback } from 'react';
 import { useRouter } from 'expo-router';
 import { format } from 'date-fns';
 import { useGames, useLiveGames, type GameWithTeamsAndCount } from '../../hooks/useGames';
-import { getSportEmoji } from '@808scores/shared';
-
-// Color palette
-const colors = {
-  background: '#0A0A0F',
-  card: '#141419',
-  cardBorder: '#2A2A35',
-  primary: '#FF2A6D',
-  secondary: '#00D4FF',
-  yellow: '#FACC15',
-  green: '#10B981',
-  text: '#FFFFFF',
-  textMuted: '#9CA3AF',
-  live: '#EF4444',
-};
+import { getSportEmoji } from '../../lib/sport-utils';
+import { colors } from '../../lib/theme';
 
 function GameCard({ game, onPress }: { game: GameWithTeamsAndCount; onPress: () => void }) {
   const isLive = game.status === 'in_progress';
@@ -29,47 +17,68 @@ function GameCard({ game, onPress }: { game: GameWithTeamsAndCount; onPress: () 
     return format(date, 'h:mm a');
   };
 
+  // Get 2-letter abbreviation
+  const getAbbrev = (name: string) => {
+    return name?.substring(0, 2).toUpperCase() || '??';
+  };
+
   return (
-    <TouchableOpacity style={styles.gameCard} onPress={onPress} activeOpacity={0.7}>
+    <TouchableOpacity
+      style={[styles.gameCard, isLive && styles.gameCardLive]}
+      onPress={onPress}
+      activeOpacity={0.7}
+    >
       {/* Header */}
       <View style={styles.gameHeader}>
+        <View style={styles.statusContainer}>
+          {isLive && (
+            <View style={styles.liveBadge}>
+              <View style={styles.liveDot} />
+              <Text style={styles.liveText}>LIVE</Text>
+            </View>
+          )}
+          {isFinal && (
+            <Text style={styles.finalText}>FINAL</Text>
+          )}
+          {!isLive && !isFinal && (
+            <Text style={styles.timeText}>{formatTime(game.scheduled_at)}</Text>
+          )}
+        </View>
         <Text style={styles.sportLabel}>
           {sportEmoji} {game.sport?.display_name || game.sport?.name}
         </Text>
-        {isLive && (
-          <View style={styles.liveBadge}>
-            <View style={styles.liveDot} />
-            <Text style={styles.liveText}>LIVE</Text>
-          </View>
-        )}
-        {isFinal && (
-          <Text style={styles.finalText}>FINAL</Text>
-        )}
-        {!isLive && !isFinal && (
-          <Text style={styles.timeText}>{formatTime(game.scheduled_at)}</Text>
-        )}
       </View>
 
-      {/* Teams */}
-      <View style={styles.teamsContainer}>
+      {/* Scoreboard */}
+      <View style={styles.scoreboard}>
         {/* Away Team */}
         <View style={styles.teamRow}>
-          <Text style={[styles.teamName, game.status === 'final' && game.away_score > game.home_score && styles.winnerTeam]}>
+          <View style={[styles.teamAbbrevBox, styles.awayBox]}>
+            <Text style={styles.teamAbbrev}>{getAbbrev(game.away_team?.short_name || game.away_team?.name)}</Text>
+          </View>
+          <Text style={[styles.teamName, isFinal && game.away_score > game.home_score && styles.winnerTeam]} numberOfLines={1}>
             {game.away_team?.short_name || game.away_team?.name}
           </Text>
-          <Text style={[styles.score, game.status === 'final' && game.away_score > game.home_score && styles.winnerScore]}>
-            {game.away_score}
-          </Text>
+          <View style={[styles.scoreBox, isFinal && game.away_score > game.home_score && styles.scoreBoxWinner]}>
+            <Text style={[styles.score, isFinal && game.away_score > game.home_score && styles.winnerScore]}>
+              {game.away_score}
+            </Text>
+          </View>
         </View>
 
         {/* Home Team */}
         <View style={styles.teamRow}>
-          <Text style={[styles.teamName, game.status === 'final' && game.home_score > game.away_score && styles.winnerTeam]}>
+          <View style={[styles.teamAbbrevBox, styles.homeBox]}>
+            <Text style={styles.teamAbbrev}>{getAbbrev(game.home_team?.short_name || game.home_team?.name)}</Text>
+          </View>
+          <Text style={[styles.teamName, isFinal && game.home_score > game.away_score && styles.winnerTeam]} numberOfLines={1}>
             {game.home_team?.short_name || game.home_team?.name}
           </Text>
-          <Text style={[styles.score, game.status === 'final' && game.home_score > game.away_score && styles.winnerScore]}>
-            {game.home_score}
-          </Text>
+          <View style={[styles.scoreBox, isFinal && game.home_score > game.away_score && styles.scoreBoxWinner]}>
+            <Text style={[styles.score, isFinal && game.home_score > game.away_score && styles.winnerScore]}>
+              {game.home_score}
+            </Text>
+          </View>
         </View>
       </View>
 
@@ -95,7 +104,6 @@ export default function HomeScreen() {
   const router = useRouter();
   const [refreshing, setRefreshing] = useState(false);
 
-  // Get today's games
   const today = new Date();
   const { games, isLoading, refetch } = useGames({ date: today });
   const { games: liveGames } = useLiveGames();
@@ -110,33 +118,29 @@ export default function HomeScreen() {
     router.push(`/game/${gameId}`);
   };
 
-  // Separate games by status
   const upcomingGames = games.filter(g => g.status === 'scheduled');
   const finalGames = games.filter(g => g.status === 'final');
 
   if (isLoading && games.length === 0) {
     return (
-      <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color={colors.primary} />
+      <SafeAreaView style={styles.loadingContainer} edges={['top']}>
+        <ActivityIndicator size="large" color={colors.neonPink} />
         <Text style={styles.loadingText}>Loading games...</Text>
-      </View>
+      </SafeAreaView>
     );
   }
 
-  // Combine sections
   const sections = [];
-
   if (liveGames.length > 0) {
-    sections.push({ title: 'Live Now', data: liveGames });
+    sections.push({ title: '► LIVE NOW', data: liveGames });
   }
   if (upcomingGames.length > 0) {
-    sections.push({ title: 'Upcoming', data: upcomingGames });
+    sections.push({ title: '► UPCOMING', data: upcomingGames });
   }
   if (finalGames.length > 0) {
-    sections.push({ title: 'Final', data: finalGames });
+    sections.push({ title: '► FINAL', data: finalGames });
   }
 
-  // Flatten for FlatList
   type ListItem = GameWithTeamsAndCount | { type: 'header'; title: string };
   const flatData: ListItem[] = [];
   sections.forEach(section => {
@@ -145,15 +149,23 @@ export default function HomeScreen() {
   });
 
   return (
-    <View style={styles.container}>
+    <SafeAreaView style={styles.container} edges={['top']}>
+      {/* Header with neon branding */}
       <View style={styles.header}>
-        <Text style={styles.headerTitle}>808scores</Text>
-        <Text style={styles.headerSubtitle}>{format(today, 'EEEE, MMMM d')}</Text>
+        <View style={styles.brandContainer}>
+          <Text style={styles.brandHawaii}>Hawaii</Text>
+          <Text style={styles.brandSports}>Sports</Text>
+          <Text style={styles.brandCenter}>Center</Text>
+        </View>
+        <Text style={styles.headerSubtitle}>{format(today, 'EEEE, MMMM d').toUpperCase()}</Text>
       </View>
 
       {games.length === 0 && liveGames.length === 0 && !isLoading ? (
         <View style={styles.emptyContainer}>
-          <Text style={styles.emptyText}>No games scheduled for today</Text>
+          <View style={styles.emptyBox}>
+            <Text style={styles.emptyScore}>--</Text>
+          </View>
+          <Text style={styles.emptyText}>NO GAMES TODAY</Text>
           <Text style={styles.emptySubtext}>Check back later or browse all games</Text>
         </View>
       ) : (
@@ -171,12 +183,12 @@ export default function HomeScreen() {
             <RefreshControl
               refreshing={refreshing}
               onRefresh={onRefresh}
-              tintColor={colors.primary}
+              tintColor={colors.neonPink}
             />
           }
         />
       )}
-    </View>
+    </SafeAreaView>
   );
 }
 
@@ -189,16 +201,41 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingTop: 8,
     paddingBottom: 16,
+    borderBottomWidth: 2,
+    borderBottomColor: colors.border,
   },
-  headerTitle: {
-    fontSize: 28,
-    fontWeight: 'bold',
-    color: colors.text,
+  brandContainer: {
+    flexDirection: 'row',
+    alignItems: 'baseline',
+    gap: 4,
+  },
+  brandHawaii: {
+    fontSize: 24,
+    fontWeight: '900',
+    color: colors.neonPink,
+    textTransform: 'uppercase',
+    letterSpacing: 1,
+  },
+  brandSports: {
+    fontSize: 24,
+    fontWeight: '900',
+    color: colors.neonBlue,
+    textTransform: 'uppercase',
+    letterSpacing: 1,
+  },
+  brandCenter: {
+    fontSize: 24,
+    fontWeight: '900',
+    color: colors.neonYellow,
+    textTransform: 'uppercase',
+    letterSpacing: 1,
   },
   headerSubtitle: {
-    fontSize: 14,
-    color: colors.textMuted,
+    fontSize: 12,
+    color: colors.neonYellow,
     marginTop: 4,
+    fontWeight: '600',
+    letterSpacing: 2,
   },
   loadingContainer: {
     flex: 1,
@@ -207,8 +244,10 @@ const styles = StyleSheet.create({
     backgroundColor: colors.background,
   },
   loadingText: {
-    color: colors.textMuted,
+    color: colors.foregroundMuted,
     marginTop: 12,
+    textTransform: 'uppercase',
+    letterSpacing: 1,
   },
   listContent: {
     paddingHorizontal: 16,
@@ -216,95 +255,148 @@ const styles = StyleSheet.create({
   },
   sectionHeader: {
     paddingVertical: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.border,
+    marginBottom: 8,
   },
   sectionTitle: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: colors.text,
+    fontSize: 14,
+    fontWeight: '700',
+    color: colors.neonPink,
+    textTransform: 'uppercase',
+    letterSpacing: 2,
   },
   gameCard: {
-    backgroundColor: colors.card,
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: colors.cardBorder,
+    backgroundColor: colors.backgroundSecondary,
+    borderWidth: 2,
+    borderColor: colors.border,
     padding: 12,
     marginBottom: 12,
+  },
+  gameCardLive: {
+    borderColor: colors.neonPink,
+    shadowColor: colors.neonPink,
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 5,
   },
   gameHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 8,
+    marginBottom: 12,
+    paddingBottom: 8,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.border,
+  },
+  statusContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
   },
   sportLabel: {
-    fontSize: 12,
-    color: colors.textMuted,
+    fontSize: 11,
+    color: colors.foregroundMuted,
+    textTransform: 'uppercase',
+    letterSpacing: 1,
   },
   liveBadge: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: 'rgba(239, 68, 68, 0.2)',
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 12,
+    gap: 4,
   },
   liveDot: {
-    width: 6,
-    height: 6,
-    borderRadius: 3,
-    backgroundColor: colors.live,
-    marginRight: 4,
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: colors.neonPink,
   },
   liveText: {
-    color: colors.live,
-    fontSize: 11,
-    fontWeight: '600',
+    color: colors.neonPink,
+    fontSize: 12,
+    fontWeight: '900',
+    letterSpacing: 2,
   },
   finalText: {
-    color: colors.textMuted,
-    fontSize: 11,
-    fontWeight: '600',
+    color: colors.foregroundMuted,
+    fontSize: 12,
+    fontWeight: '700',
+    letterSpacing: 2,
   },
   timeText: {
-    color: colors.textMuted,
+    color: colors.neonYellow,
     fontSize: 12,
+    fontWeight: '600',
   },
-  teamsContainer: {
-    gap: 4,
+  scoreboard: {
+    gap: 8,
   },
   teamRow: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
     alignItems: 'center',
-    paddingVertical: 4,
+    gap: 10,
+  },
+  teamAbbrevBox: {
+    width: 36,
+    height: 36,
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 2,
+    backgroundColor: colors.backgroundTertiary,
+  },
+  awayBox: {
+    borderColor: colors.neonBlue,
+  },
+  homeBox: {
+    borderColor: colors.neonPink,
+  },
+  teamAbbrev: {
+    fontSize: 12,
+    fontWeight: '900',
+    color: colors.foreground,
+    letterSpacing: 1,
   },
   teamName: {
-    fontSize: 16,
-    color: colors.text,
     flex: 1,
+    fontSize: 14,
+    color: colors.foreground,
+    fontWeight: '500',
   },
   winnerTeam: {
-    fontWeight: '600',
+    fontWeight: '800',
+  },
+  scoreBox: {
+    minWidth: 50,
+    height: 36,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: '#1a1a1a',
+    borderWidth: 2,
+    borderColor: '#3a3a3a',
+  },
+  scoreBoxWinner: {
+    backgroundColor: '#0a1a0a',
+    borderColor: '#1a3a1a',
   },
   score: {
-    fontSize: 20,
-    fontWeight: '600',
-    color: colors.text,
-    minWidth: 40,
-    textAlign: 'right',
+    fontSize: 18,
+    fontWeight: '900',
+    color: colors.foreground,
+    fontVariant: ['tabular-nums'],
   },
   winnerScore: {
-    color: colors.green,
+    color: colors.neonGreen,
   },
   gameFooter: {
-    marginTop: 8,
+    marginTop: 10,
     paddingTop: 8,
     borderTopWidth: 1,
-    borderTopColor: colors.cardBorder,
+    borderTopColor: colors.border,
   },
   messageCount: {
-    fontSize: 12,
-    color: colors.secondary,
+    fontSize: 11,
+    color: colors.neonBlue,
+    letterSpacing: 1,
   },
   emptyContainer: {
     flex: 1,
@@ -312,14 +404,31 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     padding: 32,
   },
+  emptyBox: {
+    width: 80,
+    height: 60,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: '#1a1a1a',
+    borderWidth: 2,
+    borderColor: '#3a3a3a',
+    marginBottom: 16,
+  },
+  emptyScore: {
+    fontSize: 24,
+    fontWeight: '900',
+    color: colors.foregroundMuted,
+  },
   emptyText: {
-    fontSize: 18,
-    color: colors.text,
-    textAlign: 'center',
+    fontSize: 16,
+    fontWeight: '700',
+    color: colors.foreground,
+    textTransform: 'uppercase',
+    letterSpacing: 2,
   },
   emptySubtext: {
-    fontSize: 14,
-    color: colors.textMuted,
+    fontSize: 12,
+    color: colors.foregroundMuted,
     textAlign: 'center',
     marginTop: 8,
   },

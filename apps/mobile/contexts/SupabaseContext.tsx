@@ -1,13 +1,32 @@
 import React, { createContext, useContext, useEffect, useState } from 'react'
 import { Session, User } from '@supabase/supabase-js'
 import { supabase } from '../lib/supabase'
-import type { User as DBUser } from '@808scores/shared'
+
+// User profile type (inline to avoid shared package React issues)
+interface UserProfile {
+  id: string
+  email: string | null
+  display_name: string | null
+  avatar_url: string | null
+  is_admin: boolean
+  is_verified: boolean
+  role: string
+  created_at: string
+  updated_at: string
+  total_points: number
+  weekly_points: number
+  accuracy_rate: number | null
+  total_predictions: number
+  correct_predictions: number
+  current_streak: number
+  best_streak: number
+}
 
 interface SupabaseContextType {
   supabase: typeof supabase
   session: Session | null
   user: User | null
-  profile: DBUser | null
+  profile: UserProfile | null
   isLoading: boolean
   signOut: () => Promise<void>
   refreshProfile: () => Promise<void>
@@ -17,7 +36,7 @@ const SupabaseContext = createContext<SupabaseContextType | undefined>(undefined
 
 export function SupabaseProvider({ children }: { children: React.ReactNode }) {
   const [session, setSession] = useState<Session | null>(null)
-  const [profile, setProfile] = useState<DBUser | null>(null)
+  const [profile, setProfile] = useState<UserProfile | null>(null)
   const [isLoading, setIsLoading] = useState(true)
 
   const fetchProfile = async (userId: string) => {
@@ -32,7 +51,7 @@ export function SupabaseProvider({ children }: { children: React.ReactNode }) {
         console.error('Error fetching profile:', error)
         return null
       }
-      return data as DBUser
+      return data as UserProfile
     } catch (err) {
       console.error('Profile fetch error:', err)
       return null
