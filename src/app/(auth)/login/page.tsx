@@ -23,6 +23,7 @@ function LoginForm() {
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [message, setMessage] = useState<string | null>(null)
+  const [acceptedTerms, setAcceptedTerms] = useState(false)
 
   const formatPhoneNumber = (value: string) => {
     const digits = value.replace(/\D/g, '')
@@ -80,6 +81,8 @@ function LoginForm() {
 
       sessionStorage.setItem('verifyPhone', cleanPhone)
       sessionStorage.setItem('verifyRedirect', redirect)
+      sessionStorage.setItem('acceptedTerms', 'true')
+      sessionStorage.setItem('termsAcceptedAt', new Date().toISOString())
 
       router.push('/verify')
     } catch (err) {
@@ -113,12 +116,17 @@ function LoginForm() {
       }
 
       if (isSignUp) {
-        // Sign up
+        // Sign up with terms acceptance metadata
         const { error: signUpError } = await supabase.auth.signUp({
           email,
           password,
           options: {
             emailRedirectTo: `${window.location.origin}/api/auth/callback?redirect=${redirect}`,
+            data: {
+              accepted_terms: true,
+              terms_accepted_at: new Date().toISOString(),
+              terms_version: '2026-01',
+            },
           },
         })
 
@@ -222,6 +230,28 @@ function LoginForm() {
               />
             </div>
 
+            {/* Terms checkbox for signup */}
+            {isSignUp && (
+              <label className="flex items-start gap-3 cursor-pointer group">
+                <input
+                  type="checkbox"
+                  checked={acceptedTerms}
+                  onChange={(e) => setAcceptedTerms(e.target.checked)}
+                  className="mt-1 h-5 w-5 rounded border-2 border-border bg-background-secondary text-neon-blue focus:ring-neon-blue focus:ring-offset-0 cursor-pointer"
+                />
+                <span className="text-sm text-foreground-muted leading-relaxed">
+                  I agree to the{' '}
+                  <Link href="/terms" className="text-neon-blue hover:underline" target="_blank">
+                    Terms of Service
+                  </Link>{' '}
+                  and{' '}
+                  <Link href="/privacy" className="text-neon-blue hover:underline" target="_blank">
+                    Privacy Policy
+                  </Link>
+                </span>
+              </label>
+            )}
+
             {error && (
               <div className="flex items-center gap-2 rounded-lg bg-neon-pink/10 border border-neon-pink/30 p-3 text-sm text-neon-pink">
                 <AlertCircle className="h-4 w-4 flex-shrink-0" />
@@ -238,7 +268,7 @@ function LoginForm() {
             <Button
               type="submit"
               className="w-full"
-              disabled={isLoading || !email || !password}
+              disabled={isLoading || !email || !password || (isSignUp && !acceptedTerms)}
               loading={isLoading}
             >
               {!isLoading && (
@@ -287,6 +317,26 @@ function LoginForm() {
               </p>
             </div>
 
+            {/* Terms checkbox for phone auth (could be new user) */}
+            <label className="flex items-start gap-3 cursor-pointer group">
+              <input
+                type="checkbox"
+                checked={acceptedTerms}
+                onChange={(e) => setAcceptedTerms(e.target.checked)}
+                className="mt-1 h-5 w-5 rounded border-2 border-border bg-background-secondary text-neon-blue focus:ring-neon-blue focus:ring-offset-0 cursor-pointer"
+              />
+              <span className="text-sm text-foreground-muted leading-relaxed">
+                I agree to the{' '}
+                <Link href="/terms" className="text-neon-blue hover:underline" target="_blank">
+                  Terms of Service
+                </Link>{' '}
+                and{' '}
+                <Link href="/privacy" className="text-neon-blue hover:underline" target="_blank">
+                  Privacy Policy
+                </Link>
+              </span>
+            </label>
+
             {error && (
               <div className="flex items-center gap-2 rounded-lg bg-neon-pink/10 border border-neon-pink/30 p-3 text-sm text-neon-pink">
                 <AlertCircle className="h-4 w-4 flex-shrink-0" />
@@ -297,7 +347,7 @@ function LoginForm() {
             <Button
               type="submit"
               className="w-full"
-              disabled={isLoading || phone.replace(/\D/g, '').length !== 10}
+              disabled={isLoading || phone.replace(/\D/g, '').length !== 10 || !acceptedTerms}
               loading={isLoading}
             >
               {!isLoading && (
@@ -310,16 +360,18 @@ function LoginForm() {
           </form>
         )}
 
-        <p className="mt-6 text-center text-xs text-foreground-subtle">
-          By continuing, you agree to our{' '}
-          <Link href="/terms" className="text-neon-blue hover:underline">
-            Terms of Service
-          </Link>{' '}
-          and{' '}
-          <Link href="/privacy" className="text-neon-blue hover:underline">
-            Privacy Policy
-          </Link>
-        </p>
+        {!isSignUp && (
+          <p className="mt-6 text-center text-xs text-foreground-subtle">
+            By signing in, you agree to our{' '}
+            <Link href="/terms" className="text-neon-blue hover:underline">
+              Terms of Service
+            </Link>{' '}
+            and{' '}
+            <Link href="/privacy" className="text-neon-blue hover:underline">
+              Privacy Policy
+            </Link>
+          </p>
+        )}
       </div>
     </Card>
   )

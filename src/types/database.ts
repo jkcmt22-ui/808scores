@@ -161,11 +161,14 @@ export interface Database {
           is_banned: boolean
           ban_expires_at: string | null
           onboarding_completed: boolean
+          accepted_terms: boolean
+          terms_accepted_at: string | null
+          terms_version: string | null
           accepted_raffle_terms: boolean
           raffle_terms_accepted_at: string | null
           created_at: string
         }
-        Insert: Omit<Database['public']['Tables']['users']['Row'], 'id' | 'created_at' | 'reputation_score' | 'tier' | 'is_trusted_reporter' | 'total_points' | 'season_points' | 'submission_count' | 'verified_count' | 'strike_count' | 'is_banned' | 'onboarding_completed' | 'accepted_raffle_terms'>
+        Insert: Omit<Database['public']['Tables']['users']['Row'], 'id' | 'created_at' | 'reputation_score' | 'tier' | 'is_trusted_reporter' | 'total_points' | 'season_points' | 'submission_count' | 'verified_count' | 'strike_count' | 'is_banned' | 'onboarding_completed' | 'accepted_terms' | 'accepted_raffle_terms'>
         Update: Partial<Database['public']['Tables']['users']['Insert']>
       }
       submissions: {
