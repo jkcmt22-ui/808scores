@@ -1,8 +1,6 @@
-'use client'
-
 import { useEffect, useState, useCallback, useMemo } from 'react'
-import { createClient } from '@/lib/supabase/client'
-import type { GameWithTeams, SportGender, GameType } from '@/types/database'
+import type { TypedSupabaseClient } from '../lib/supabase/types'
+import type { GameWithTeams, SportGender, GameType } from '../types/database'
 
 // Extended type that includes message count
 export type GameWithTeamsAndCount = GameWithTeams & { message_count: number }
@@ -16,15 +14,17 @@ interface UseGamesOptions {
   excludeGameTypes?: GameType[]
 }
 
-export function useGames(options: UseGamesOptions = {}) {
+export function useGames(supabase: TypedSupabaseClient | null, options: UseGamesOptions = {}) {
   const [games, setGames] = useState<GameWithTeamsAndCount[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<Error | null>(null)
 
-  // Memoize the supabase client
-  const supabase = useMemo(() => createClient()!, [])
-
   const fetchGames = useCallback(async () => {
+    if (!supabase) {
+      setIsLoading(false)
+      return
+    }
+
     setIsLoading(true)
     setError(null)
 
@@ -67,7 +67,7 @@ export function useGames(options: UseGamesOptions = {}) {
         if (exactMatch && 'id' in exactMatch) {
           query = query.eq('sport_id', (exactMatch as { id: string }).id)
         } else {
-          // Try matching by base sport name (e.g., "basketball" matches "boys-basketball" and "girls-basketball")
+          // Try matching by base sport name
           const { data: matchingSports } = await supabase
             .from('sports')
             .select('id')
@@ -162,6 +162,8 @@ export function useGames(options: UseGamesOptions = {}) {
 
   // Subscribe to real-time updates
   useEffect(() => {
+    if (!supabase) return
+
     const channel = supabase
       .channel('games-changes')
       .on(
@@ -176,13 +178,10 @@ export function useGames(options: UseGamesOptions = {}) {
             setGames((current) =>
               current.map((game) => {
                 if (game.id !== payload.new.id) return game
-                // Preserve the joined relation objects (home_team, away_team, sport)
-                // since payload.new only contains raw game fields
                 const updatedFields = payload.new as Record<string, unknown>
                 return {
                   ...game,
                   ...updatedFields,
-                  // Always preserve the relation objects from current state
                   home_team: game.home_team,
                   away_team: game.away_team,
                   sport: game.sport,
@@ -191,7 +190,6 @@ export function useGames(options: UseGamesOptions = {}) {
               })
             )
           } else if (payload.eventType === 'INSERT') {
-            // Refetch to get full game with relations
             fetchGames()
           } else if (payload.eventType === 'DELETE') {
             setGames((current) =>
@@ -215,13 +213,16 @@ export function useGames(options: UseGamesOptions = {}) {
   }
 }
 
-export function useLiveGames() {
+export function useLiveGames(supabase: TypedSupabaseClient | null) {
   const [games, setGames] = useState<GameWithTeamsAndCount[]>([])
   const [isLoading, setIsLoading] = useState(true)
 
-  const supabase = useMemo(() => createClient()!, [])
-
   useEffect(() => {
+    if (!supabase) {
+      setIsLoading(false)
+      return
+    }
+
     const fetchLiveGames = async () => {
       const { data, error } = await supabase
         .from('games')
@@ -237,7 +238,6 @@ export function useLiveGames() {
       if (!error && data) {
         const gamesData = data as GameWithTeams[]
 
-        // Fetch message counts for these games
         if (gamesData.length > 0) {
           const gameIds = gamesData.map(g => g.id)
           const { data: messageCounts } = await supabase
@@ -290,14 +290,17 @@ export function useLiveGames() {
   return { games, isLoading }
 }
 
-export function useGame(gameId: string) {
+export function useGame(supabase: TypedSupabaseClient | null, gameId: string) {
   const [game, setGame] = useState<GameWithTeamsAndCount | null>(null)
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<Error | null>(null)
 
-  const supabase = useMemo(() => createClient()!, [])
-
   useEffect(() => {
+    if (!supabase || !gameId) {
+      setIsLoading(false)
+      return
+    }
+
     const fetchGame = async () => {
       setIsLoading(true)
 
@@ -315,7 +318,6 @@ export function useGame(gameId: string) {
       if (queryError) {
         setError(queryError)
       } else {
-        // Fetch message count for this game
         const { count } = await supabase
           .from('chat_messages')
           .select('*', { count: 'exact', head: true })
@@ -329,9 +331,7 @@ export function useGame(gameId: string) {
       setIsLoading(false)
     }
 
-    if (gameId) {
-      fetchGame()
-    }
+    fetchGame()
 
     // Subscribe to updates for this specific game
     const channel = supabase
@@ -347,13 +347,10 @@ export function useGame(gameId: string) {
         (payload) => {
           setGame((current) => {
             if (!current) return null
-            // Preserve the joined relation objects (home_team, away_team, sport)
-            // since payload.new only contains raw game fields
             const updatedFields = payload.new as Record<string, unknown>
             return {
               ...current,
               ...updatedFields,
-              // Always preserve the relation objects from current state
               home_team: current.home_team,
               away_team: current.away_team,
               sport: current.sport,

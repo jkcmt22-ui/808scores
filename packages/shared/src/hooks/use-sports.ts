@@ -1,8 +1,6 @@
-'use client'
-
 import { useEffect, useState, useMemo } from 'react'
-import { createClient } from '@/lib/supabase/client'
-import type { Sport, SportGender } from '@/types/database'
+import type { TypedSupabaseClient } from '../lib/supabase/types'
+import type { Sport, SportGender } from '../types/database'
 
 export interface SportCategory {
   name: string
@@ -11,14 +9,17 @@ export interface SportCategory {
   hasGenderOptions: boolean
 }
 
-export function useSports() {
+export function useSports(supabase: TypedSupabaseClient | null) {
   const [sports, setSports] = useState<Sport[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<Error | null>(null)
 
-  const supabase = useMemo(() => createClient()!, [])
-
   useEffect(() => {
+    if (!supabase) {
+      setIsLoading(false)
+      return
+    }
+
     const fetchSports = async () => {
       setIsLoading(true)
       setError(null)
@@ -49,7 +50,6 @@ export function useSports() {
     const categoryMap = new Map<string, Sport[]>()
 
     sports.forEach((sport) => {
-      // Use the base name (e.g., "Basketball" not "Boys Basketball")
       const baseName = sport.name
       if (!categoryMap.has(baseName)) {
         categoryMap.set(baseName, [])
