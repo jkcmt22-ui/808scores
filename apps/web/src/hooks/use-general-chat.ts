@@ -50,7 +50,7 @@ export function useGeneralChat(
   const [error, setError] = useState<Error | null>(null)
   const [hasMore, setHasMore] = useState(true)
   const [isSending, setIsSending] = useState(false)
-  const channelRef = useRef<ReturnType<typeof supabase.channel> | null>(null)
+  const channelRef = useRef<ReturnType<NonNullable<typeof supabase>['channel']> | null>(null)
 
   // Fetch messages
   const fetchMessages = useCallback(async (offset = 0) => {
@@ -80,7 +80,7 @@ export function useGeneralChat(
           .eq('user_id', user.id)
           .in('message_id', messageIds)
 
-        const likedIds = new Set((likes || []).map(l => l.message_id))
+        const likedIds = new Set((likes as { message_id: string }[] || []).map(l => l.message_id))
         messagesData.forEach(m => {
           m.user_has_liked = likedIds.has(m.id)
         })
@@ -101,7 +101,7 @@ export function useGeneralChat(
           .in('id', replyIds)
 
         if (replies) {
-          const replyMap = new Map(replies.map(r => [r.id, r]))
+          const replyMap = new Map((replies as GeneralChatMessage[]).map(r => [r.id, r]))
           messagesData.forEach(m => {
             if (m.reply_to_id) {
               m.reply_to = replyMap.get(m.reply_to_id) as GeneralChatMessage | undefined
@@ -155,8 +155,9 @@ export function useGeneralChat(
             .eq('id', payload.new.id)
             .single()
 
-          if (data && !data.is_hidden) {
-            setMessages(prev => [...prev, data as GeneralChatMessage])
+          const message = data as GeneralChatMessage | null
+          if (message && !message.is_hidden) {
+            setMessages(prev => [...prev, message])
           }
         }
       )
@@ -209,10 +210,10 @@ export function useGeneralChat(
           .select('id, display_name')
           .in('display_name', mentionedUsernames)
 
-        mentionedUserIds = (mentionedUsers || []).map(u => u.id)
+        mentionedUserIds = (mentionedUsers as { id: string }[] || []).map(u => u.id)
       }
 
-      const { error: insertError } = await supabase
+      const { error: insertError } = await (supabase as any)
         .from('general_chat_messages')
         .insert({
           user_id: user.id,
@@ -260,7 +261,7 @@ export function useGeneralChat(
           )
         )
       } else {
-        const { error: likeError } = await supabase
+        const { error: likeError } = await (supabase as any)
           .from('general_chat_likes')
           .insert({
             message_id: messageId,
@@ -287,14 +288,14 @@ export function useGeneralChat(
     if (!user || !supabase) return false
 
     try {
-      const { error } = await supabase.rpc('report_general_chat_message', {
+      const { error } = await (supabase as any).rpc('report_general_chat_message', {
         p_message_id: messageId,
         p_user_id: user.id,
       })
 
       if (error) {
         // If function doesn't exist, just increment report count directly
-        await supabase
+        await (supabase as any)
           .from('general_chat_messages')
           .update({ report_count: messages.find(m => m.id === messageId)?.report_count ?? 0 + 1 })
           .eq('id', messageId)
