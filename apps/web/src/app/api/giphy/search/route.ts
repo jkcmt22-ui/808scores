@@ -1,28 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { searchRateLimit, getRateLimitHeaders } from '@/lib/rate-limit'
 
 const GIPHY_API_KEY = process.env.GIPHY_API_KEY
 const GIPHY_RATING_LIMIT = process.env.GIPHY_RATING_LIMIT || 'pg'
-
-// Rate limiting: track requests per user
-const rateLimitMap = new Map<string, { count: number; resetTime: number }>()
-const MAX_REQUESTS_PER_MINUTE = 30
-
-function isRateLimited(userId: string): boolean {
-  const now = Date.now()
-  const userLimit = rateLimitMap.get(userId)
-
-  if (!userLimit || now > userLimit.resetTime) {
-    rateLimitMap.set(userId, { count: 1, resetTime: now + 60000 })
-    return false
-  }
-
-  if (userLimit.count >= MAX_REQUESTS_PER_MINUTE) {
-    return true
-  }
-
-  userLimit.count++
-  return false
-}
 
 // Simple in-memory cache (15 minute TTL)
 const cache = new Map<string, { data: unknown; timestamp: number }>()
@@ -69,10 +49,11 @@ export async function GET(request: NextRequest) {
                  'anonymous'
 
   // Check rate limit
-  if (isRateLimited(userId)) {
+  const rateLimitResult = searchRateLimit(userId)
+  if (!rateLimitResult.allowed) {
     return NextResponse.json(
       { error: 'Rate limit exceeded. Please wait before searching again.' },
-      { status: 429 }
+      { status: 429, headers: getRateLimitHeaders(rateLimitResult) }
     )
   }
 

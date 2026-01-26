@@ -1,7 +1,28 @@
 import { createServerClient } from '@supabase/ssr'
 import { NextResponse, type NextRequest } from 'next/server'
+import { apiRateLimit, getRateLimitHeaders } from '@/lib/rate-limit'
 
 export async function updateSession(request: NextRequest) {
+  // Rate limit API routes
+  if (request.nextUrl.pathname.startsWith('/api/')) {
+    // Get client identifier (prefer user ID from cookie, fall back to IP)
+    const ip = request.headers.get('x-forwarded-for')?.split(',')[0] ||
+               request.headers.get('x-real-ip') ||
+               'anonymous'
+
+    const result = apiRateLimit(ip)
+
+    if (!result.allowed) {
+      return NextResponse.json(
+        { error: 'Too many requests. Please try again later.' },
+        {
+          status: 429,
+          headers: getRateLimitHeaders(result)
+        }
+      )
+    }
+  }
+
   let supabaseResponse = NextResponse.next({
     request,
   })
