@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useMemo } from 'react'
 import Link from 'next/link'
-import { Clock, ChevronRight, Loader2 } from 'lucide-react'
+import { Clock, ChevronRight, ChevronDown, ChevronUp, Loader2 } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import { getSportEmoji } from '@/lib/sport-utils'
 import { formatGameTime } from '@/lib/utils'
@@ -15,6 +15,7 @@ interface ComingSoonProps {
 export function ComingSoon({ maxGames = 5 }: ComingSoonProps) {
   const [games, setGames] = useState<GameWithTeams[]>([])
   const [isLoading, setIsLoading] = useState(true)
+  const [isExpanded, setIsExpanded] = useState(false)
 
   const supabase = useMemo(() => createClient()!, [])
 
@@ -81,53 +82,74 @@ export function ComingSoon({ maxGames = 5 }: ComingSoonProps) {
     return formatGameTime(dateString)
   }
 
+  // Get the next game for preview when collapsed
+  const nextGame = games[0]
+
   return (
     <div className="mb-4">
-      <div className="flex items-center justify-between mb-3">
-        <div className="flex items-center gap-2">
-          <Clock className="h-4 w-4 text-neon-blue" />
-          <h3 className="font-display text-sm font-bold text-foreground uppercase tracking-wider">
-            Coming Soon
-          </h3>
-          <span className="text-xs text-foreground-muted">(Next 24h)</span>
+      {/* Collapsible Header */}
+      <button
+        onClick={() => setIsExpanded(!isExpanded)}
+        className="w-full flex items-center justify-between p-3 border-2 border-border bg-background-secondary hover:border-neon-blue transition-colors"
+      >
+        <div className="flex items-center gap-3 min-w-0 flex-1">
+          <Clock className="h-5 w-5 text-neon-blue flex-shrink-0" />
+          <div className="flex items-center gap-2 min-w-0">
+            <h3 className="font-display text-sm font-bold text-foreground uppercase tracking-wider">
+              Coming Soon
+            </h3>
+            <span className="text-xs text-foreground-muted">({games.length})</span>
+          </div>
+          {/* Preview of next game when collapsed */}
+          {!isExpanded && nextGame && (
+            <span className="text-xs text-foreground-muted truncate hidden sm:inline">
+              — {nextGame.away_team.short_name} @ {nextGame.home_team.short_name} {formatRelativeTime(nextGame.scheduled_at)}
+            </span>
+          )}
         </div>
-        <Link
-          href="/?view=upcoming"
-          className="text-xs text-neon-blue hover:underline font-display uppercase tracking-wider"
-        >
-          View All
-        </Link>
-      </div>
+        <div className="flex items-center gap-2 flex-shrink-0">
+          {isExpanded ? (
+            <ChevronUp className="h-5 w-5 text-foreground-muted" />
+          ) : (
+            <ChevronDown className="h-5 w-5 text-foreground-muted" />
+          )}
+        </div>
+      </button>
 
-      <div className="space-y-2">
-        {games.map((game) => (
-          <Link
-            key={game.id}
-            href={`/game/${game.id}`}
-            className="flex items-center justify-between p-3 border-2 border-border bg-background-secondary hover:border-neon-blue transition-colors"
-          >
-            <div className="flex items-center gap-3 min-w-0 flex-1">
-              <span className="text-lg flex-shrink-0">
-                {getSportEmoji(game.sport.code)}
-              </span>
-              <div className="min-w-0 flex-1">
-                <p className="font-display font-bold text-sm truncate">
-                  {game.away_team.short_name} @ {game.home_team.short_name}
-                </p>
-                <p className="text-xs text-foreground-muted">
-                  {game.sport.display_name || game.sport.name}
-                </p>
-              </div>
-            </div>
-            <div className="flex items-center gap-2 flex-shrink-0">
-              <span className="text-xs font-display font-bold text-neon-yellow">
-                {formatRelativeTime(game.scheduled_at)}
-              </span>
-              <ChevronRight className="h-4 w-4 text-foreground-muted" />
-            </div>
-          </Link>
-        ))}
-      </div>
+      {/* Expanded Content */}
+      {isExpanded && (
+        <div className="border-2 border-t-0 border-border bg-background-secondary/50">
+          <div className="divide-y divide-border/50">
+            {games.map((game) => (
+              <Link
+                key={game.id}
+                href={`/game/${game.id}`}
+                className="flex items-center justify-between p-3 hover:bg-background-tertiary transition-colors"
+              >
+                <div className="flex items-center gap-3 min-w-0 flex-1">
+                  <span className="text-lg flex-shrink-0">
+                    {getSportEmoji(game.sport.code)}
+                  </span>
+                  <div className="min-w-0 flex-1">
+                    <p className="font-display font-bold text-sm truncate">
+                      {game.away_team.short_name} @ {game.home_team.short_name}
+                    </p>
+                    <p className="text-xs text-foreground-muted">
+                      {game.sport.display_name || game.sport.name}
+                    </p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-2 flex-shrink-0">
+                  <span className="text-xs font-display font-bold text-neon-yellow">
+                    {formatRelativeTime(game.scheduled_at)}
+                  </span>
+                  <ChevronRight className="h-4 w-4 text-foreground-muted" />
+                </div>
+              </Link>
+            ))}
+          </div>
+        </div>
+      )}
     </div>
   )
 }
