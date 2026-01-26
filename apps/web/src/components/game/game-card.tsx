@@ -16,11 +16,14 @@ interface GameCardProps {
 }
 
 // Helper to get game type display info
-function getGameTypeBadge(gameType: GameType): { label: string; variant: 'default' | 'warning' | 'success' | 'secondary'; icon?: React.ReactNode } | null {
+// Only show championship badge if game is part of a tournament
+function getGameTypeBadge(gameType: GameType, tournamentId: string | null): { label: string; variant: 'default' | 'warning' | 'success' | 'secondary'; icon?: React.ReactNode } | null {
   switch (gameType) {
     case 'playoff':
       return { label: 'Playoff', variant: 'warning', icon: <Trophy className="h-3 w-3" /> }
     case 'championship':
+      // Only show championship badge if it's part of a tournament
+      if (!tournamentId) return null
       return { label: 'Championship', variant: 'success', icon: <Trophy className="h-3 w-3" /> }
     case 'tournament':
       return { label: 'Tourney', variant: 'warning', icon: <Swords className="h-3 w-3" /> }
@@ -43,7 +46,7 @@ export function GameCard({ game, showSport = false }: GameCardProps) {
   const isLive = isGameLive(game.status)
   const isFinal = isGameFinal(game.status)
   const isScheduled = game.status === 'scheduled'
-  const gameTypeBadge = getGameTypeBadge(game.game_type)
+  const gameTypeBadge = getGameTypeBadge(game.game_type, game.tournament_id)
   const overtimeDisplay = getOvertimeDisplay(game.overtime_count)
 
   // Check if game is overdue for score submission
