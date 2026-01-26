@@ -25,7 +25,7 @@ import {
   ExternalLink,
   Play,
 } from 'lucide-react'
-import { Button, Badge, Tabs, TabsList, TabsTrigger, TabsContent, ReportScoreFAB } from '@/components/ui'
+import { Button, Badge, Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui'
 import { Breadcrumbs } from '@/components/layout'
 import { GameChat } from '@/components/chat'
 import { ShareButtons, RemindMeButton } from '@/components/game'
@@ -653,9 +653,6 @@ export function GameClient({ params }: GamePageProps) {
           </div>
         </div>
       </main>
-
-      {/* Floating Action Button for Score Reporting */}
-      <ReportScoreFAB gameId={id} />
     </div>
   )
 }

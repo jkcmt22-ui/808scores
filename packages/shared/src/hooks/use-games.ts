@@ -5,6 +5,25 @@ import type { GameWithTeams, SportGender, GameType } from '../types/database'
 // Extended type that includes message count
 export type GameWithTeamsAndCount = GameWithTeams & { message_count: number }
 
+// Check if a game should be considered expired (past 5AM HST the day after scheduled_at)
+// 5AM HST = 3PM UTC (15:00 UTC) since HST is UTC-10
+function isGameExpired(scheduledAt: string): boolean {
+  const now = new Date()
+  const scheduled = new Date(scheduledAt)
+
+  // Calculate 5AM HST today in UTC
+  const today5amHST = new Date(now)
+  today5amHST.setUTCHours(15, 0, 0, 0) // 3PM UTC = 5AM HST
+
+  // If current time is before 5AM HST (3PM UTC), use yesterday's 5AM HST
+  if (now.getUTCHours() < 15) {
+    today5amHST.setUTCDate(today5amHST.getUTCDate() - 1)
+  }
+
+  // Game is expired if it was scheduled before the cutoff time
+  return scheduled < today5amHST
+}
+
 interface UseGamesOptions {
   date?: Date
   sportCode?: string
@@ -224,6 +243,11 @@ export function useLiveGames(supabase: TypedSupabaseClient | null) {
     }
 
     const fetchLiveGames = async () => {
+      // First, expire any stale in_progress games (past 5AM HST next day)
+      await supabase.rpc('expire_stale_games').catch(() => {
+        // Ignore errors - function may not exist yet or user may not have permission
+      })
+
       const { data, error } = await supabase
         .from('games')
         .select(`
@@ -236,7 +260,10 @@ export function useLiveGames(supabase: TypedSupabaseClient | null) {
         .order('scheduled_at', { ascending: true })
 
       if (!error && data) {
-        const gamesData = data as GameWithTeams[]
+        // Filter out expired games (past 5AM HST the day after scheduled_at)
+        const gamesData = (data as GameWithTeams[]).filter(
+          game => !isGameExpired(game.scheduled_at)
+        )
 
         if (gamesData.length > 0) {
           const gameIds = gamesData.map(g => g.id)
