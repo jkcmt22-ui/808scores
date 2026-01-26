@@ -19,7 +19,9 @@
       "infoPlist": {
         "NSCameraUsageDescription": "This app uses the camera to capture photos for score reports.",
         "NSPhotoLibraryUsageDescription": "This app accesses your photos to attach images to score reports.",
-        "UIBackgroundModes": ["remote-notification"]
+        "UIBackgroundModes": [
+          "remote-notification"
+        ]
       },
       "config": {
         "usesNonExemptEncryption": false
@@ -61,17 +63,16 @@
     "experiments": {
       "typedRoutes": true
     },
-    "owner": "hawaiisportscenter",
+    "runtimeVersion": "1.0.0",
+    "updates": {
+      "url": "https://u.expo.dev/45656789-7ff9-4ea2-aeae-b5c9688e921f"
+    },
     "extra": {
+      "router": {},
       "eas": {
-        "projectId": "your-project-id"
+        "projectId": "45656789-7ff9-4ea2-aeae-b5c9688e921f"
       }
     },
-    "updates": {
-      "url": "https://u.expo.dev/your-project-id"
-    },
-    "runtimeVersion": {
-      "policy": "appVersion"
-    }
+    "owner": "hawaiisportscenter"
   }
 }
