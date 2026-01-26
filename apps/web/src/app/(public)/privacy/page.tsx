@@ -90,7 +90,7 @@ export default function PrivacyPage() {
             </h2>
             <div className="bg-neon-pink/5 border border-neon-pink/20 p-4 space-y-3">
               <p className="text-sm text-foreground-muted leading-relaxed">
-                <strong>Users Under 13:</strong> 808scores is not directed to children under 13 years of age. We do not knowingly collect personal information from children under 13. If we learn that we have collected personal information from a child under 13, we will delete that information promptly. If you believe we have collected information from a child under 13, please contact us immediately at privacy@808scores.com.
+                <strong>Users Under 13:</strong> 808scores is not directed to children under 13 years of age. We do not knowingly collect personal information from children under 13. If we learn that we have collected personal information from a child under 13, we will delete that information promptly. If you believe we have collected information from a child under 13, please contact us immediately at privacy@hawaiisportscenter.com.
               </p>
               <p className="text-sm text-foreground-muted leading-relaxed">
                 <strong>Users Ages 13-17:</strong> Users between 13 and 17 years old may use 808scores with parental consent. By creating an account, users in this age range represent that a parent or legal guardian has reviewed and approved their use of the service and these policies. We encourage parents to supervise their children&apos;s online activities.
@@ -102,7 +102,7 @@ export default function PrivacyPage() {
                 <li>Request to review their child&apos;s personal information</li>
                 <li>Request deletion of their child&apos;s account and personal information</li>
                 <li>Refuse to allow further collection or use of their child&apos;s information</li>
-                <li>Contact us at privacy@808scores.com to exercise these rights</li>
+                <li>Contact us at privacy@hawaiisportscenter.com to exercise these rights</li>
               </ul>
             </div>
           </section>
@@ -123,7 +123,7 @@ export default function PrivacyPage() {
               <strong>FERPA Disclaimer:</strong> We do not obtain student information directly from schools or educational records. Information displayed is gathered from publicly available sources such as athletic association websites, news reports, and user submissions.
             </p>
             <p className="text-sm text-foreground-muted leading-relaxed mt-2">
-              <strong>Removal Requests:</strong> Student athletes, parents, or legal guardians who wish to have a student&apos;s information removed from 808scores may submit a request to privacy@808scores.com. We will process valid removal requests within 30 days.
+              <strong>Removal Requests:</strong> Student athletes, parents, or legal guardians who wish to have a student&apos;s information removed from 808scores may submit a request to privacy@hawaiisportscenter.com. We will process valid removal requests within 30 days.
             </p>
           </section>
 
@@ -165,7 +165,7 @@ export default function PrivacyPage() {
               <li><strong>Location:</strong> Deny or revoke location access through your device settings; this only affects optional location-based features</li>
             </ul>
             <p className="text-sm text-foreground-muted leading-relaxed mt-2">
-              To exercise these rights, contact us at privacy@808scores.com. We will respond to valid requests within 30 days.
+              To exercise these rights, contact us at privacy@hawaiisportscenter.com. We will respond to valid requests within 30 days.
             </p>
           </section>
 
@@ -257,11 +257,11 @@ export default function PrivacyPage() {
               If you have questions about this Privacy Policy, our data practices, or wish to exercise your privacy rights, please contact us at:
             </p>
             <ul className="list-none text-sm text-foreground-muted space-y-1 mt-2">
-              <li><strong>Privacy Inquiries:</strong> privacy@808scores.com</li>
-              <li><strong>General Support:</strong> support@808scores.com</li>
+              <li><strong>Privacy Inquiries:</strong> privacy@hawaiisportscenter.com</li>
+              <li><strong>General Support:</strong> support@hawaiisportscenter.com</li>
             </ul>
             <p className="text-sm text-foreground-muted leading-relaxed mt-4">
-              For COPPA-related inquiries or parental requests, please email privacy@808scores.com with &quot;COPPA Request&quot; in the subject line.
+              For COPPA-related inquiries or parental requests, please email privacy@hawaiisportscenter.com with &quot;COPPA Request&quot; in the subject line.
             </p>
           </section>
 

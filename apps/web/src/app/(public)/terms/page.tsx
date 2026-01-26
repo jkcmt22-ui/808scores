@@ -178,7 +178,7 @@ export default function TermsPage() {
               9. DMCA & Copyright Claims
             </h2>
             <p className="text-sm text-foreground-muted leading-relaxed">
-              We respect intellectual property rights and respond to valid DMCA takedown notices. If you believe content on 808scores infringes your copyright, please send a notice to: dmca@808scores.com containing:
+              We respect intellectual property rights and respond to valid DMCA takedown notices. If you believe content on 808scores infringes your copyright, please send a notice to: dmca@hawaiisportscenter.com containing:
             </p>
             <ul className="list-disc list-inside text-sm text-foreground-muted space-y-1">
               <li>Identification of the copyrighted work claimed to be infringed</li>
@@ -260,7 +260,7 @@ export default function TermsPage() {
                 <strong>PLEASE READ THIS SECTION CAREFULLY. IT AFFECTS YOUR LEGAL RIGHTS, INCLUDING YOUR RIGHT TO FILE A LAWSUIT IN COURT.</strong>
               </p>
               <p className="text-sm text-foreground-muted leading-relaxed">
-                <strong>Informal Resolution:</strong> Before initiating arbitration, you agree to contact us at legal@808scores.com to attempt to resolve any dispute informally. We will attempt to resolve the dispute within 30 days.
+                <strong>Informal Resolution:</strong> Before initiating arbitration, you agree to contact us at legal@hawaiisportscenter.com to attempt to resolve any dispute informally. We will attempt to resolve the dispute within 30 days.
               </p>
               <p className="text-sm text-foreground-muted leading-relaxed">
                 <strong>Binding Arbitration:</strong> If we cannot resolve a dispute informally, any controversy or claim arising out of or relating to these Terms or the Service shall be settled by binding arbitration administered by the American Arbitration Association (&quot;AAA&quot;) in accordance with its Consumer Arbitration Rules. The arbitration shall take place in Honolulu, Hawaii, or at another mutually agreed location, or via telephone/video conference.
@@ -272,7 +272,7 @@ export default function TermsPage() {
                 <strong>Exceptions:</strong> This arbitration agreement does not preclude you from bringing issues to the attention of federal, state, or local agencies. Such agencies can, if the law allows, seek relief against us on your behalf. Additionally, either party may bring a claim in small claims court if it qualifies.
               </p>
               <p className="text-sm text-foreground-muted leading-relaxed">
-                <strong>Opt-Out:</strong> You may opt out of this arbitration agreement by sending written notice to legal@808scores.com within 30 days of first accepting these Terms. Your notice must include your name, address, and a clear statement that you wish to opt out of arbitration.
+                <strong>Opt-Out:</strong> You may opt out of this arbitration agreement by sending written notice to legal@hawaiisportscenter.com within 30 days of first accepting these Terms. Your notice must include your name, address, and a clear statement that you wish to opt out of arbitration.
               </p>
             </div>
           </section>
@@ -330,8 +330,8 @@ export default function TermsPage() {
               If you have questions about these Terms of Service, please contact us at:
             </p>
             <ul className="list-none text-sm text-foreground-muted space-y-1">
-              <li>Email: legal@808scores.com</li>
-              <li>General inquiries: support@808scores.com</li>
+              <li>Email: legal@hawaiisportscenter.com</li>
+              <li>General inquiries: support@hawaiisportscenter.com</li>
             </ul>
           </section>
 
