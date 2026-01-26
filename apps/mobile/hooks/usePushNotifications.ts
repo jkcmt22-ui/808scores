@@ -11,6 +11,8 @@ Notifications.setNotificationHandler({
     shouldShowAlert: true,
     shouldPlaySound: true,
     shouldSetBadge: true,
+    shouldShowBanner: true,
+    shouldShowList: true,
   }),
 })
 
@@ -32,8 +34,8 @@ export function usePushNotifications(): UsePushNotificationsReturn {
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
-  const notificationListener = useRef<Notifications.EventSubscription>()
-  const responseListener = useRef<Notifications.EventSubscription>()
+  const notificationListener = useRef<Notifications.EventSubscription | undefined>(undefined)
+  const responseListener = useRef<Notifications.EventSubscription | undefined>(undefined)
 
   // Check existing registration on mount
   useEffect(() => {
@@ -71,12 +73,8 @@ export function usePushNotifications(): UsePushNotificationsReturn {
     )
 
     return () => {
-      if (notificationListener.current) {
-        Notifications.removeNotificationSubscription(notificationListener.current)
-      }
-      if (responseListener.current) {
-        Notifications.removeNotificationSubscription(responseListener.current)
-      }
+      notificationListener.current?.remove()
+      responseListener.current?.remove()
     }
   }, [])
 

@@ -36,6 +36,65 @@ interface NotificationPayload {
   }
 }
 
+interface PushSubscription {
+  endpoint: string
+  p256dh: string | null
+  auth: string | null
+  platform: string | null
+}
+
+// Send Expo push notifications
+async function sendExpoPushNotifications(
+  tokens: string[],
+  payload: NotificationPayload
+): Promise<{ sent: number; failed: number }> {
+  if (tokens.length === 0) {
+    return { sent: 0, failed: 0 }
+  }
+
+  // Expo push notification format
+  const messages = tokens.map(token => ({
+    to: token,
+    title: payload.title,
+    body: payload.body,
+    data: payload.data,
+    sound: 'default',
+    badge: 1,
+    categoryId: payload.data?.type || 'score_update',
+  }))
+
+  try {
+    const response = await fetch('https://exp.host/--/api/v2/push/send', {
+      method: 'POST',
+      headers: {
+        'Accept': 'application/json',
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(messages),
+    })
+
+    const result = await response.json()
+
+    let sent = 0
+    let failed = 0
+
+    if (result.data) {
+      for (const ticket of result.data) {
+        if (ticket.status === 'ok') {
+          sent++
+        } else {
+          failed++
+        }
+      }
+    }
+
+    return { sent, failed }
+  } catch (error) {
+    console.error('Error sending Expo push notifications:', error)
+    return { sent: 0, failed: tokens.length }
+  }
+}
+
 type NotificationType = 'score_update' | 'game_start' | 'game_final' | 'playoff_alert'
 
 interface SendNotificationBody {
@@ -129,14 +188,6 @@ function buildNotificationPayload(body: SendNotificationBody): NotificationPaylo
 
 export async function POST(request: NextRequest) {
   try {
-    // Check if VAPID is configured
-    if (!vapidConfigured) {
-      return NextResponse.json({
-        error: 'Push notifications not configured',
-        message: 'VAPID keys not set'
-      }, { status: 503 })
-    }
-
     // Verify the request has a valid secret (for webhook security)
     const authHeader = request.headers.get('authorization')
     const webhookSecret = process.env.WEBHOOK_SECRET
@@ -168,7 +219,7 @@ export async function POST(request: NextRequest) {
     const isTargetedNotification = (homeTeamId && awayTeamId) &&
       (notificationType === 'playoff_alert' || gameType !== 'regular_season')
 
-    let subscriptions: Array<{ endpoint: string; p256dh: string; auth: string }> = []
+    let subscriptions: PushSubscription[] = []
 
     if (isTargetedNotification) {
       // Get users who follow either team with notifications enabled
@@ -189,28 +240,28 @@ export async function POST(request: NextRequest) {
         // Get push subscriptions for these users
         const { data: userSubs, error: subError } = await supabase
           .from('push_subscriptions')
-          .select('endpoint, p256dh, auth')
+          .select('endpoint, p256dh, auth, platform')
           .in('user_id', userIds)
 
         if (subError) {
           console.error('Error fetching user subscriptions:', subError)
         }
 
-        subscriptions = userSubs || []
+        subscriptions = (userSubs || []) as PushSubscription[]
         console.log(`Playoff notification: ${subscriptions.length} subscribers for teams ${homeTeamId}, ${awayTeamId}`)
       }
     } else {
       // Fallback: send to all subscribers
       const { data, error } = await supabase
         .from('push_subscriptions')
-        .select('endpoint, p256dh, auth')
+        .select('endpoint, p256dh, auth, platform')
 
       if (error) {
         console.error('Error fetching subscriptions:', error)
         return NextResponse.json({ error: 'Failed to fetch subscriptions' }, { status: 500 })
       }
 
-      subscriptions = data || []
+      subscriptions = (data || []) as PushSubscription[]
     }
 
     if (subscriptions.length === 0) {
@@ -220,46 +271,74 @@ export async function POST(request: NextRequest) {
     // Build notification payload
     const payload = buildNotificationPayload(body)
 
-    // Send notifications to all relevant subscribers
-    const results = await Promise.allSettled(
-      subscriptions.map(async (sub) => {
-        const pushSubscription = {
-          endpoint: sub.endpoint,
-          keys: {
-            p256dh: sub.p256dh,
-            auth: sub.auth
-          }
-        }
-
-        try {
-          await webpush.sendNotification(
-            pushSubscription,
-            JSON.stringify(payload)
-          )
-          return { success: true, endpoint: sub.endpoint }
-        } catch (err: unknown) {
-          const error = err as { statusCode?: number }
-          // If subscription is expired/invalid, delete it
-          if (error.statusCode === 410 || error.statusCode === 404) {
-            await supabase
-              .from('push_subscriptions')
-              .delete()
-              .eq('endpoint', sub.endpoint)
-          }
-          return { success: false, endpoint: sub.endpoint, error: err }
-        }
-      })
+    // Separate web and expo subscriptions
+    const webSubscriptions = subscriptions.filter(
+      sub => sub.platform !== 'expo' && sub.p256dh && sub.auth
     )
+    const expoSubscriptions = subscriptions.filter(sub => sub.platform === 'expo')
+    const expoTokens = expoSubscriptions.map(sub => sub.endpoint)
 
-    const sent = results.filter(r => r.status === 'fulfilled' && (r.value as { success: boolean }).success).length
-    const failed = results.length - sent
+    let webSent = 0
+    let webFailed = 0
+    let expoSent = 0
+    let expoFailed = 0
+
+    // Send web push notifications (only if VAPID is configured)
+    if (vapidConfigured && webSubscriptions.length > 0) {
+      const results = await Promise.allSettled(
+        webSubscriptions.map(async (sub) => {
+          const pushSubscription = {
+            endpoint: sub.endpoint,
+            keys: {
+              p256dh: sub.p256dh!,
+              auth: sub.auth!
+            }
+          }
+
+          try {
+            await webpush.sendNotification(
+              pushSubscription,
+              JSON.stringify(payload)
+            )
+            return { success: true, endpoint: sub.endpoint }
+          } catch (err: unknown) {
+            const error = err as { statusCode?: number }
+            // If subscription is expired/invalid, delete it
+            if (error.statusCode === 410 || error.statusCode === 404) {
+              await supabase
+                .from('push_subscriptions')
+                .delete()
+                .eq('endpoint', sub.endpoint)
+            }
+            return { success: false, endpoint: sub.endpoint, error: err }
+          }
+        })
+      )
+
+      webSent = results.filter(r => r.status === 'fulfilled' && (r.value as { success: boolean }).success).length
+      webFailed = results.length - webSent
+    }
+
+    // Send Expo push notifications
+    if (expoTokens.length > 0) {
+      const expoResult = await sendExpoPushNotifications(expoTokens, payload)
+      expoSent = expoResult.sent
+      expoFailed = expoResult.failed
+    }
+
+    const totalSent = webSent + expoSent
+    const totalFailed = webFailed + expoFailed
 
     return NextResponse.json({
       success: true,
-      sent,
-      failed,
+      sent: totalSent,
+      failed: totalFailed,
       total: subscriptions.length,
-      targeted: isTargetedNotification
+      targeted: isTargetedNotification,
+      breakdown: {
+        web: { sent: webSent, failed: webFailed, total: webSubscriptions.length },
+        expo: { sent: expoSent, failed: expoFailed, total: expoSubscriptions.length }
+      }
     })
   } catch (error) {
     console.error('Error sending notifications:', error)

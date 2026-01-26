@@ -108,6 +108,7 @@ export function usePushNotifications(): UsePushNotificationsReturn {
           endpoint: subscriptionData.endpoint,
           p256dh: subscriptionData.p256dh,
           auth: subscriptionData.auth,
+          platform: 'web',
           updated_at: new Date().toISOString()
         } as never, {
           onConflict: 'endpoint'

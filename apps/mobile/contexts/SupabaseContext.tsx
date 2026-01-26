@@ -20,6 +20,8 @@ interface UserProfile {
   correct_predictions: number
   current_streak: number
   best_streak: number
+  tier: string | null
+  submission_count: number
 }
 
 interface SupabaseContextType {
