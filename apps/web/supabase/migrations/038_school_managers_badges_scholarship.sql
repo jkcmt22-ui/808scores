@@ -28,6 +28,9 @@ CREATE TABLE IF NOT EXISTS school_managers (
 CREATE INDEX idx_school_managers_user ON school_managers(user_id) WHERE is_active = true;
 CREATE INDEX idx_school_managers_school ON school_managers(school_id) WHERE is_active = true;
 
+-- Add is_school_manager flag to users table
+ALTER TABLE users ADD COLUMN IF NOT EXISTS is_school_manager BOOLEAN DEFAULT false;
+
 -- Add logo and description to schools
 ALTER TABLE schools ADD COLUMN IF NOT EXISTS logo_url TEXT DEFAULT NULL;
 ALTER TABLE schools ADD COLUMN IF NOT EXISTS description TEXT DEFAULT NULL;

@@ -641,6 +641,10 @@ export default function AdminPage() {
             <Users className="mr-2 h-4 w-4" />
             Schools
           </Button>
+          <Button variant="outline" size="sm" onClick={() => router.push('/admin/school-managers')}>
+            <Shield className="mr-2 h-4 w-4" />
+            School Managers
+          </Button>
           <Button variant="outline" size="sm" onClick={() => router.push('/admin/rosters')}>
             <Users className="mr-2 h-4 w-4" />
             Rosters
