@@ -2,7 +2,8 @@
 
 import { useState, useEffect, useCallback } from 'react'
 import Link from 'next/link'
-import { Bell, Search, User, LogIn, LogOut, Settings, ChevronDown, Command } from 'lucide-react'
+import { Bell, Search, User, LogIn, LogOut, Settings, ChevronDown, Command, Sun, Moon } from 'lucide-react'
+import { useTheme } from 'next-themes'
 import { Button, Avatar } from '@/components/ui'
 import { GlobalSearch } from '@/components/search/global-search'
 import { useAuth, useNotifications } from '@/hooks'
@@ -24,6 +25,13 @@ export function Header({
   const { unreadCount } = useNotifications(profile?.id)
   const [showUserMenu, setShowUserMenu] = useState(false)
   const [searchOpen, setSearchOpen] = useState(false)
+  const { theme, setTheme, resolvedTheme } = useTheme()
+  const [mounted, setMounted] = useState(false)
+
+  // Prevent hydration mismatch
+  useEffect(() => {
+    setMounted(true)
+  }, [])
 
   // Handle Cmd+K / Ctrl+K keyboard shortcut
   useEffect(() => {
@@ -84,6 +92,23 @@ export function Header({
                   <span>K</span>
                 </kbd>
               </button>
+            )}
+
+            {/* Theme Toggle */}
+            {mounted && (
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => setTheme(resolvedTheme === 'dark' ? 'light' : 'dark')}
+                aria-label={`Switch to ${resolvedTheme === 'dark' ? 'light' : 'dark'} mode`}
+                className="text-foreground-muted hover:text-neon-yellow"
+              >
+                {resolvedTheme === 'dark' ? (
+                  <Sun className="h-5 w-5" />
+                ) : (
+                  <Moon className="h-5 w-5" />
+                )}
+              </Button>
             )}
 
             {showNotifications && isAuthenticated && (

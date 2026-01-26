@@ -2,7 +2,7 @@
 @import "tailwindcss";
 
 :root {
-  /* 80s Neon Theme */
+  /* 80s Neon Theme - Dark Mode (Default) */
   --background: #0a0a12;
   --background-secondary: #12121f;
   --background-tertiary: #1a1a2e;
@@ -45,6 +45,48 @@
   /* Fonts */
   --font-retro: 'Press Start 2P', monospace;
   --font-display: 'Orbitron', sans-serif;
+}
+
+/* Light Mode - 80s Retro Light */
+.light {
+  --background: #f5f0fa;
+  --background-secondary: #ebe5f2;
+  --background-tertiary: #e0d8ea;
+  --foreground: #1a1a2e;
+  --foreground-muted: #4a4a5e;
+  --foreground-subtle: #6a6a7e;
+
+  --border: #c5bdd2;
+  --border-hover: #a59db2;
+
+  /* Neon Colors - Slightly deeper for light bg contrast */
+  --neon-pink: #e01958;
+  --neon-blue: #0099a8;
+  --neon-yellow: #c9a800;
+  --neon-purple: #a800a0;
+  --neon-green: #00b800;
+  --neon-orange: #e05520;
+
+  /* Accent - Hot Pink */
+  --accent: #e01958;
+  --accent-hover: #ff2a6d;
+  --accent-muted: #f5d0dc;
+
+  /* Score colors */
+  --score-red: #e01958;
+  --score-amber: #c9a800;
+  --score-green: #00a000;
+
+  --success: #00a000;
+  --success-muted: #d0f0d0;
+
+  --warning: #c9a800;
+  --warning-muted: #f5f0c0;
+
+  --destructive: #e01958;
+  --destructive-muted: #f5d0dc;
+
+  --live: #e01958;
 }
 
 @theme inline {
@@ -468,4 +510,155 @@ body {
 .focus-ring-visible:focus-visible {
   outline: none;
   box-shadow: 0 0 0 2px var(--background), 0 0 0 4px var(--neon-yellow), 0 0 12px var(--neon-yellow);
+}
+
+/* ===== LIGHT MODE OVERRIDES ===== */
+
+/* Light mode: reduce neon glow effects */
+.light .neon-text-pink {
+  text-shadow: none;
+}
+
+.light .neon-text-blue {
+  text-shadow: none;
+}
+
+.light .neon-text-yellow {
+  text-shadow: none;
+}
+
+.light .neon-text-green {
+  text-shadow: none;
+}
+
+/* Light mode: scoreboard panel */
+.light .scoreboard-panel {
+  background: linear-gradient(180deg, var(--background-secondary) 0%, var(--background) 100%);
+  border-color: var(--border);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.light .scoreboard-panel::before {
+  background: linear-gradient(90deg, transparent, var(--neon-blue), transparent);
+  opacity: 0.3;
+}
+
+/* Light mode: score LED displays */
+.light .score-led {
+  background: linear-gradient(180deg, var(--background-tertiary) 0%, var(--background-secondary) 100%);
+  border-color: var(--border);
+  text-shadow: none;
+}
+
+.light .score-led-amber {
+  text-shadow: none;
+  background: linear-gradient(180deg, var(--background-tertiary) 0%, var(--background-secondary) 100%);
+  border-color: var(--border);
+}
+
+.light .score-led-green {
+  text-shadow: none;
+  background: linear-gradient(180deg, var(--background-tertiary) 0%, var(--background-secondary) 100%);
+  border-color: var(--border);
+}
+
+.light .score-led-white {
+  color: var(--foreground);
+  text-shadow: none;
+  background: linear-gradient(180deg, var(--background-tertiary) 0%, var(--background-secondary) 100%);
+  border-color: var(--border);
+}
+
+/* Light mode: score display */
+.light .score-display {
+  text-shadow: none;
+}
+
+/* Light mode: neon borders use subtle shadows instead */
+.light .neon-border-pink {
+  box-shadow: 0 2px 8px rgba(224, 25, 88, 0.2);
+}
+
+.light .neon-border-blue {
+  box-shadow: 0 2px 8px rgba(0, 153, 168, 0.2);
+}
+
+/* Light mode: glow classes use subtle shadows */
+.light .glow-yellow,
+.light .glow-pink,
+.light .glow-blue,
+.light .glow-green {
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+}
+
+.light .glow-subtle-yellow,
+.light .glow-subtle-pink,
+.light .glow-subtle-blue,
+.light .glow-subtle-green {
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.1);
+}
+
+/* Light mode: retro button */
+.light .btn-retro {
+  background: linear-gradient(180deg, var(--background-secondary) 0%, var(--background-tertiary) 100%);
+  border-top-color: var(--background);
+  border-left-color: var(--background);
+  border-bottom-color: var(--border);
+  border-right-color: var(--border);
+  box-shadow: 0 4px 0 var(--border);
+}
+
+.light .btn-retro:hover {
+  background: linear-gradient(180deg, var(--background) 0%, var(--background-secondary) 100%);
+}
+
+/* Light mode: neon button */
+.light .btn-neon {
+  text-shadow: none;
+  box-shadow: 0 2px 8px rgba(224, 25, 88, 0.3);
+}
+
+.light .btn-neon:hover {
+  box-shadow: 0 4px 12px rgba(224, 25, 88, 0.4);
+}
+
+/* Light mode: shimmer animation */
+.light .animate-shimmer {
+  background: linear-gradient(
+    90deg,
+    var(--background-secondary) 25%,
+    var(--background) 50%,
+    var(--background-secondary) 75%
+  );
+  background-size: 200% 100%;
+}
+
+/* Light mode: scrollbar */
+.light .custom-scrollbar::-webkit-scrollbar-track {
+  background: var(--background-secondary);
+}
+
+.light .custom-scrollbar::-webkit-scrollbar-thumb {
+  background: linear-gradient(180deg, var(--neon-pink), var(--neon-purple));
+}
+
+/* Light mode: live pulse - no glow */
+.light .animate-live-pulse {
+  animation: live-pulse-light 1s ease-in-out infinite;
+}
+
+@keyframes live-pulse-light {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.6;
+  }
+}
+
+/* Light mode: grid background */
+.light .grid-bg {
+  background-image:
+    linear-gradient(rgba(0, 153, 168, 0.05) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(0, 153, 168, 0.05) 1px, transparent 1px);
 }

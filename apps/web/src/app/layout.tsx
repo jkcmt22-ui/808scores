@@ -4,7 +4,7 @@ import { Analytics } from "@vercel/analytics/next"
 import { SpeedInsights } from "@vercel/speed-insights/next"
 import "./globals.css"
 import { BottomNavigation, SubmitFAB } from "@/components/layout"
-import { AuthProvider } from "@/components/providers"
+import { AuthProvider, ThemeProvider } from "@/components/providers"
 import { InstallPrompt } from "@/components/pwa"
 
 const geistSans = Geist({
@@ -80,7 +80,7 @@ export default function RootLayout({
   children: React.ReactNode
 }>) {
   return (
-    <html lang="en">
+    <html lang="en" suppressHydrationWarning>
       <head>
         <link rel="icon" href="/favicon.ico" sizes="any" />
         <link rel="icon" href="/icon.svg" type="image/svg+xml" />
@@ -89,6 +89,7 @@ export default function RootLayout({
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
+        <ThemeProvider>
         <AuthProvider>
           <a
             href="#main-content"
@@ -103,6 +104,7 @@ export default function RootLayout({
           <SubmitFAB />
           <BottomNavigation />
         </AuthProvider>
+        </ThemeProvider>
         <Analytics />
         <SpeedInsights />
       </body>
