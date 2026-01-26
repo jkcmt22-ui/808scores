@@ -56,8 +56,12 @@ export async function GET(request: NextRequest) {
 
   const searchParams = request.nextUrl.searchParams
   const query = searchParams.get('q')
-  const limit = Math.min(parseInt(searchParams.get('limit') || '20'), 50)
-  const offset = parseInt(searchParams.get('offset') || '0')
+
+  // Validate and sanitize integer parameters
+  const parsedLimit = parseInt(searchParams.get('limit') || '20', 10)
+  const parsedOffset = parseInt(searchParams.get('offset') || '0', 10)
+  const limit = Math.min(Math.max(isNaN(parsedLimit) ? 20 : parsedLimit, 1), 50)
+  const offset = Math.max(isNaN(parsedOffset) ? 0 : parsedOffset, 0)
 
   // Get user ID from header (set by auth middleware) or use IP
   const userId = request.headers.get('x-user-id') ||

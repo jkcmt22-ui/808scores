@@ -10,6 +10,7 @@ import { createClient } from '@/lib/supabase/client'
 import { useAuth, useChatLikes } from '@/hooks'
 // formatRelativeTime moved to ChatMessage component
 import { validateMessage, recordMessage } from '@/lib/content-filter'
+import { isValidGifUrl } from '@808scores/shared'
 import { awardChatPoints } from '@/lib/points/chat-points'
 import Link from 'next/link'
 import type { ChatMessageWithUser } from '@/types/database'
@@ -271,6 +272,12 @@ export function GameChat({ gameId }: GameChatProps) {
 
   const handleSendGif = async (gif: { id: string; url: string }) => {
     if (!user || isSending) return
+
+    // SECURITY: Validate GIF URL is from allowed domain
+    if (!isValidGifUrl(gif.url)) {
+      setError('Invalid GIF URL: only GIPHY images are allowed')
+      return
+    }
 
     // Rate limit - 3 seconds between messages
     const now = Date.now()

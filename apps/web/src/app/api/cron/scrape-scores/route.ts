@@ -20,10 +20,10 @@ function verifyCronSecret(request: NextRequest): boolean {
   const authHeader = request.headers.get('authorization')
   const cronSecret = process.env.CRON_SECRET
 
-  // Allow if no secret configured (development)
+  // SECURITY: Require CRON_SECRET in all environments
   if (!cronSecret) {
-    console.warn('CRON_SECRET not configured - allowing request')
-    return true
+    console.error('CRON_SECRET not configured - request denied for security')
+    return false
   }
 
   return authHeader === `Bearer ${cronSecret}`

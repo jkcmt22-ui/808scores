@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useCallback, useRef } from 'react'
 import { createClient } from '@/lib/supabase/client'
+import { isValidGifUrl } from '@808scores/shared'
 import type { User } from '@supabase/supabase-js'
 
 export interface GeneralChatMessage {
@@ -243,6 +244,12 @@ export function useGeneralChat(
   const sendGif = useCallback(async (gif: { id: string; url: string }, replyToId?: string | null): Promise<boolean> => {
     if (!user || !supabase) {
       setError(new Error('Cannot send GIF: not logged in'))
+      return false
+    }
+
+    // SECURITY: Validate GIF URL is from allowed domain
+    if (!isValidGifUrl(gif.url)) {
+      setError(new Error('Invalid GIF URL: only GIPHY images are allowed'))
       return false
     }
 

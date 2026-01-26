@@ -188,11 +188,17 @@ function buildNotificationPayload(body: SendNotificationBody): NotificationPaylo
 
 export async function POST(request: NextRequest) {
   try {
-    // Verify the request has a valid secret (for webhook security)
+    // SECURITY: Verify the request has a valid secret (mandatory)
     const authHeader = request.headers.get('authorization')
     const webhookSecret = process.env.WEBHOOK_SECRET
 
-    if (webhookSecret && authHeader !== `Bearer ${webhookSecret}`) {
+    // Require WEBHOOK_SECRET in all environments
+    if (!webhookSecret) {
+      console.error('WEBHOOK_SECRET not configured - request denied for security')
+      return NextResponse.json({ error: 'Server configuration error' }, { status: 503 })
+    }
+
+    if (authHeader !== `Bearer ${webhookSecret}`) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 

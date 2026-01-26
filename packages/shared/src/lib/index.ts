@@ -22,6 +22,8 @@ export {
   censorText,
   validateMessage,
   shouldAutoHide,
+  containsBlockedImageUrl,
+  isValidGifUrl,
 } from './content-filter'
 
 // Supabase types
