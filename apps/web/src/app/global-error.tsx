@@ -45,28 +45,57 @@ export default function GlobalError({
           </h1>
           <p style={{
             color: "#a0a0b0",
-            marginBottom: "1.5rem",
+            marginBottom: "1rem",
             fontSize: "0.875rem",
           }}>
             We hit an unexpected error. Our team has been notified.
           </p>
-          <button
-            onClick={() => reset()}
-            style={{
-              backgroundColor: "#ff2a6d",
-              color: "#000",
-              border: "none",
-              padding: "0.75rem 1.5rem",
-              fontSize: "0.875rem",
-              fontWeight: "bold",
-              textTransform: "uppercase",
-              letterSpacing: "0.1em",
-              cursor: "pointer",
-              boxShadow: "0 0 15px #ff2a6d",
-            }}
-          >
-            Try Again
-          </button>
+          {error.digest && (
+            <p style={{
+              color: "#606070",
+              marginBottom: "1.5rem",
+              fontSize: "0.75rem",
+              fontFamily: "monospace",
+            }}>
+              Error ID: {error.digest}
+            </p>
+          )}
+          <div style={{ display: "flex", gap: "0.75rem", justifyContent: "center", flexWrap: "wrap" }}>
+            <button
+              onClick={() => reset()}
+              style={{
+                backgroundColor: "#ff2a6d",
+                color: "#000",
+                border: "none",
+                padding: "0.75rem 1.5rem",
+                fontSize: "0.875rem",
+                fontWeight: "bold",
+                textTransform: "uppercase",
+                letterSpacing: "0.1em",
+                cursor: "pointer",
+                boxShadow: "0 0 15px #ff2a6d",
+              }}
+            >
+              Try Again
+            </button>
+            <a
+              href="/"
+              style={{
+                backgroundColor: "transparent",
+                color: "#a0a0b0",
+                border: "1px solid #404050",
+                padding: "0.75rem 1.5rem",
+                fontSize: "0.875rem",
+                fontWeight: "bold",
+                textTransform: "uppercase",
+                letterSpacing: "0.1em",
+                cursor: "pointer",
+                textDecoration: "none",
+              }}
+            >
+              Go Home
+            </a>
+          </div>
         </div>
       </body>
     </html>
