@@ -244,9 +244,11 @@ export function useLiveGames(supabase: TypedSupabaseClient | null) {
 
     const fetchLiveGames = async () => {
       // First, expire any stale in_progress games (past 5AM HST next day)
-      await supabase.rpc('expire_stale_games').catch(() => {
+      try {
+        await supabase.rpc('expire_stale_games')
+      } catch {
         // Ignore errors - function may not exist yet or user may not have permission
-      })
+      }
 
       const { data, error } = await supabase
         .from('games')
