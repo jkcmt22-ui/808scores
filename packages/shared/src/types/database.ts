@@ -166,10 +166,54 @@ export interface Database {
           terms_version: string | null
           accepted_raffle_terms: boolean
           raffle_terms_accepted_at: string | null
+          notifications_enabled: boolean
+          regular_season_notifications: boolean
+          marketing_opt_in: boolean
           created_at: string
         }
-        Insert: Omit<Database['public']['Tables']['users']['Row'], 'id' | 'created_at' | 'reputation_score' | 'tier' | 'is_trusted_reporter' | 'total_points' | 'season_points' | 'submission_count' | 'verified_count' | 'strike_count' | 'is_banned' | 'onboarding_completed' | 'accepted_terms' | 'accepted_raffle_terms'>
-        Update: Partial<Database['public']['Tables']['users']['Insert']>
+        Insert: {
+          phone?: string | null
+          email?: string | null
+          display_name?: string | null
+          avatar_url?: string | null
+          is_super_admin?: boolean
+          is_admin?: boolean
+          trusted_reporter_approved_at?: string | null
+          accuracy_rate?: number | null
+          ban_expires_at?: string | null
+          terms_accepted_at?: string | null
+          terms_version?: string | null
+          raffle_terms_accepted_at?: string | null
+        }
+        Update: {
+          phone?: string | null
+          email?: string | null
+          display_name?: string | null
+          avatar_url?: string | null
+          reputation_score?: number
+          tier?: UserTier
+          is_super_admin?: boolean
+          is_admin?: boolean
+          is_trusted_reporter?: boolean
+          trusted_reporter_approved_at?: string | null
+          total_points?: number
+          season_points?: number
+          accuracy_rate?: number | null
+          submission_count?: number
+          verified_count?: number
+          strike_count?: number
+          is_banned?: boolean
+          ban_expires_at?: string | null
+          onboarding_completed?: boolean
+          accepted_terms?: boolean
+          terms_accepted_at?: string | null
+          terms_version?: string | null
+          accepted_raffle_terms?: boolean
+          raffle_terms_accepted_at?: string | null
+          notifications_enabled?: boolean
+          regular_season_notifications?: boolean
+          marketing_opt_in?: boolean
+        }
       }
       submissions: {
         Row: {
@@ -332,8 +376,11 @@ export interface Database {
           mentions: string[]
           like_count: number
           created_at: string
+          message_type: 'text' | 'gif'
+          gif_url: string | null
+          gif_id: string | null
         }
-        Insert: Omit<Database['public']['Tables']['chat_messages']['Row'], 'id' | 'created_at' | 'is_hidden' | 'report_count' | 'like_count'> & { reply_to_id?: string | null; mentions?: string[] }
+        Insert: Omit<Database['public']['Tables']['chat_messages']['Row'], 'id' | 'created_at' | 'is_hidden' | 'report_count' | 'like_count' | 'message_type' | 'gif_url' | 'gif_id'> & { reply_to_id?: string | null; mentions?: string[]; message_type?: 'text' | 'gif'; gif_url?: string | null; gif_id?: string | null }
         Update: Partial<Database['public']['Tables']['chat_messages']['Insert']>
       }
       chat_likes: {
@@ -739,6 +786,7 @@ export interface ChatMessageWithUser extends ChatMessage {
   reply_to?: {
     id: string
     content: string
+    message_type?: 'text' | 'gif'
     user?: {
       display_name: string | null
     }

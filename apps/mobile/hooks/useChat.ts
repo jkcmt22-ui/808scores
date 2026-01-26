@@ -12,12 +12,23 @@ export interface ChatMessage {
   mentions: string[]
   like_count: number
   created_at: string
+  message_type?: 'text' | 'gif'
+  gif_url?: string | null
+  gif_id?: string | null
   user?: {
     id: string
     display_name: string | null
     avatar_url: string | null
   }
   liked_by_me?: boolean
+  reply_to?: {
+    id: string
+    content: string
+    message_type?: 'text' | 'gif'
+    user?: {
+      display_name: string | null
+    }
+  } | null
 }
 
 interface UseChatOptions {
@@ -30,6 +41,7 @@ interface UseChatReturn {
   isLoading: boolean
   error: Error | null
   sendMessage: (content: string, replyToId?: string) => Promise<boolean>
+  sendGif: (gif: { id: string; url: string }, replyToId?: string) => Promise<boolean>
   likeMessage: (messageId: string) => Promise<boolean>
   unlikeMessage: (messageId: string) => Promise<boolean>
   loadMore: () => Promise<void>
@@ -54,7 +66,13 @@ export function useChat({ gameId, limit = 50 }: UseChatOptions): UseChatReturn {
         .from('chat_messages')
         .select(`
           *,
-          user:users(id, display_name, avatar_url)
+          user:users(id, display_name, avatar_url),
+          reply_to:chat_messages!reply_to_id(
+            id,
+            content,
+            message_type,
+            user:users(display_name)
+          )
         `)
         .eq('game_id', gameId)
         .eq('is_hidden', false)
@@ -123,7 +141,13 @@ export function useChat({ gameId, limit = 50 }: UseChatOptions): UseChatReturn {
             .from('chat_messages')
             .select(`
               *,
-              user:users(id, display_name, avatar_url)
+              user:users(id, display_name, avatar_url),
+              reply_to:chat_messages!reply_to_id(
+                id,
+                content,
+                message_type,
+                user:users(display_name)
+              )
             `)
             .eq('id', payload.new.id)
             .single()
@@ -192,6 +216,7 @@ export function useChat({ gameId, limit = 50 }: UseChatOptions): UseChatReturn {
           content: content.trim(),
           reply_to_id: replyToId || null,
           mentions: mentionedUserIds,
+          message_type: 'text',
         })
 
       if (insertError) throw insertError
@@ -200,6 +225,41 @@ export function useChat({ gameId, limit = 50 }: UseChatOptions): UseChatReturn {
     } catch (err) {
       console.error('Error sending message:', err)
       setError(err instanceof Error ? err : new Error('Failed to send message'))
+      return false
+    } finally {
+      setIsSending(false)
+    }
+  }, [supabase, user, gameId])
+
+  // Send GIF
+  const sendGif = useCallback(async (gif: { id: string; url: string }, replyToId?: string): Promise<boolean> => {
+    if (!user || !gameId) {
+      setError(new Error('Cannot send GIF: not logged in'))
+      return false
+    }
+
+    setIsSending(true)
+
+    try {
+      const { error: insertError } = await supabase
+        .from('chat_messages')
+        .insert({
+          game_id: gameId,
+          user_id: user.id,
+          content: '',
+          reply_to_id: replyToId || null,
+          mentions: [],
+          message_type: 'gif',
+          gif_url: gif.url,
+          gif_id: gif.id,
+        })
+
+      if (insertError) throw insertError
+
+      return true
+    } catch (err) {
+      console.error('Error sending GIF:', err)
+      setError(err instanceof Error ? err : new Error('Failed to send GIF'))
       return false
     } finally {
       setIsSending(false)
@@ -276,6 +336,7 @@ export function useChat({ gameId, limit = 50 }: UseChatOptions): UseChatReturn {
     isLoading,
     error,
     sendMessage,
+    sendGif,
     likeMessage,
     unlikeMessage,
     loadMore,

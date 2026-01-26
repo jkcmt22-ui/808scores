@@ -35,7 +35,9 @@ export function GameChat({ gameId }: GameChatProps) {
   const [isSending, setIsSending] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [lastMessageTime, setLastMessageTime] = useState<number>(0)
+  const [highlightedMessageId, setHighlightedMessageId] = useState<string | null>(null)
   const messagesEndRef = useRef<HTMLDivElement>(null)
+  const messagesContainerRef = useRef<HTMLDivElement>(null)
   const supabase = createClient()!
 
   // Chat likes hook
@@ -47,6 +49,19 @@ export function GameChat({ gameId }: GameChatProps) {
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
   }
+
+  const scrollToMessage = useCallback((messageId: string) => {
+    const container = messagesContainerRef.current
+    if (!container) return
+
+    const messageElement = container.querySelector(`[data-message-id="${messageId}"]`)
+    if (messageElement) {
+      messageElement.scrollIntoView({ behavior: 'smooth', block: 'center' })
+      setHighlightedMessageId(messageId)
+      // Clear highlight after animation
+      setTimeout(() => setHighlightedMessageId(null), 2000)
+    }
+  }, [])
 
   const fetchMessages = useCallback(async () => {
     const { data, error: fetchError } = await supabase
@@ -224,6 +239,7 @@ export function GameChat({ gameId }: GameChatProps) {
         content: newMessage.trim(),
         reply_to_id: replyingTo?.id || null,
         mentions: mentions,
+        message_type: 'text',
       })
       .select()
       .single()
@@ -248,6 +264,50 @@ export function GameChat({ gameId }: GameChatProps) {
           await awardChatPoints(mentionedUserId, 'mention_received', data?.id)
         }
       }
+    }
+
+    setIsSending(false)
+  }
+
+  const handleSendGif = async (gif: { id: string; url: string }) => {
+    if (!user || isSending) return
+
+    // Rate limit - 3 seconds between messages
+    const now = Date.now()
+    if (now - lastMessageTime < 3000) {
+      setError('Please wait a moment before sending another message')
+      return
+    }
+
+    setIsSending(true)
+    setError(null)
+
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const { data, error: sendError } = await (supabase as any)
+      .from('chat_messages')
+      .insert({
+        game_id: gameId,
+        user_id: user.id,
+        content: '', // GIF messages have empty content
+        gif_url: gif.url,
+        gif_id: gif.id,
+        message_type: 'gif',
+        reply_to_id: replyingTo?.id || null,
+        mentions: [],
+      })
+      .select()
+      .single()
+
+    if (sendError) {
+      console.error('Error sending GIF:', sendError)
+      setError('Failed to send GIF')
+    } else {
+      setReplyingTo(null)
+      setLastMessageTime(now)
+      recordMessage(user.id)
+
+      // Award points for sending a GIF (counts as comment)
+      await awardChatPoints(user.id, 'comment', data?.id)
     }
 
     setIsSending(false)
@@ -310,6 +370,7 @@ export function GameChat({ gameId }: GameChatProps) {
 
       {/* Messages */}
       <div
+        ref={messagesContainerRef}
         role="log"
         aria-live="polite"
         aria-label="Chat messages"
@@ -336,6 +397,8 @@ export function GameChat({ gameId }: GameChatProps) {
               onReply={handleReply}
               onReport={handleReport}
               onToggleLike={handleToggleLike}
+              onScrollToMessage={scrollToMessage}
+              isHighlighted={highlightedMessageId === msg.id}
             />
           ))
         )}
@@ -361,7 +424,7 @@ export function GameChat({ gameId }: GameChatProps) {
         <div className="px-4 py-2 bg-background-tertiary border-t-2 border-border flex items-center gap-2">
           <span className="text-xs text-foreground-muted flex-1 truncate">
             Replying to <span className="text-neon-blue">@{replyingTo.user?.display_name || 'User'}</span>
-            : {replyingTo.content.substring(0, 40)}...
+            : {replyingTo.message_type === 'gif' ? '[GIF]' : replyingTo.content.substring(0, 40)}...
           </span>
           <button
             onClick={cancelReply}
@@ -391,6 +454,9 @@ export function GameChat({ gameId }: GameChatProps) {
               maxLength={280}
               disabled={isSending}
               onSubmit={handleSendMessage}
+              onGifSelect={handleSendGif}
+              showGifButton={true}
+              showEmojiButton={true}
             />
             <Button
               type="submit"

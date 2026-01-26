@@ -119,7 +119,8 @@ export default function ProfileSettingsPage() {
 
     setIsSavingNotifications(true)
     try {
-      const { error } = await supabase
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const { error } = await (supabase as any)
         .from('users')
         .update({
           notifications_enabled: notificationsEnabled,

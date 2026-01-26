@@ -114,6 +114,25 @@ const SPAM_PATTERNS = [
   /\b(buy|sell|discount|free|click|visit|check out)\b.*\b(link|site|website|store)\b/gi, // Spam phrases
 ]
 
+// Blocked image URL patterns (block direct image links except from allowed domains)
+const BLOCKED_IMAGE_PATTERNS = [
+  /https?:\/\/(?!media\d?\.giphy\.com)[^\s]+\.(jpg|jpeg|png|webp|bmp|gif)(\?[^\s]*)?/gi,
+  /https?:\/\/imgur\.com/gi,
+  /https?:\/\/i\.imgur\.com/gi,
+  /https?:\/\/prnt\.sc/gi,
+  /https?:\/\/prntscr\.com/gi,
+]
+
+// Allowed GIF domains (for server-side validation)
+const ALLOWED_GIF_DOMAINS = [
+  'media.giphy.com',
+  'media0.giphy.com',
+  'media1.giphy.com',
+  'media2.giphy.com',
+  'media3.giphy.com',
+  'media4.giphy.com',
+]
+
 // Rate limit tracking (in-memory, resets on deploy)
 const userMessageTimes: Map<string, number[]> = new Map()
 const MAX_MESSAGES_PER_MINUTE = 10
@@ -149,6 +168,34 @@ export function isSpam(text: string): boolean {
     pattern.lastIndex = 0
   }
   return false
+}
+
+/**
+ * Check if text contains blocked image URLs
+ */
+export function containsBlockedImageUrl(text: string): boolean {
+  for (const pattern of BLOCKED_IMAGE_PATTERNS) {
+    if (pattern.test(text)) {
+      pattern.lastIndex = 0
+      return true
+    }
+    pattern.lastIndex = 0
+  }
+  return false
+}
+
+/**
+ * Validate a GIF URL is from an allowed domain
+ */
+export function isValidGifUrl(url: string | null | undefined): boolean {
+  if (!url) return false
+
+  try {
+    const parsed = new URL(url)
+    return ALLOWED_GIF_DOMAINS.includes(parsed.hostname)
+  } catch {
+    return false
+  }
 }
 
 /**
@@ -216,6 +263,11 @@ export function validateMessage(
   // Check for spam patterns
   if (isSpam(text)) {
     return { valid: false, error: 'This message looks like spam' }
+  }
+
+  // Check for blocked image URLs
+  if (containsBlockedImageUrl(text)) {
+    return { valid: false, error: 'Image links are not allowed. Use the GIF picker instead.' }
   }
 
   // Check rate limiting

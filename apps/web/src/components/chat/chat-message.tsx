@@ -14,6 +14,8 @@ interface ChatMessageProps {
   onReply: (message: ChatMessageWithUser) => void
   onReport: (messageId: string) => void
   onToggleLike: (messageId: string) => Promise<void>
+  onScrollToMessage?: (messageId: string) => void
+  isHighlighted?: boolean
 }
 
 // Helper to render content with highlighted mentions
@@ -44,23 +46,60 @@ export function ChatMessageComponent({
   onReply,
   onReport,
   onToggleLike,
+  onScrollToMessage,
+  isHighlighted,
 }: ChatMessageProps) {
   const [isHovered, setIsHovered] = useState(false)
   const isOwnMessage = currentUserId === message.user_id
+  const isGifMessage = message.message_type === 'gif' && message.gif_url
+
+  const handleReplyClick = () => {
+    if (message.reply_to?.id && onScrollToMessage) {
+      onScrollToMessage(message.reply_to.id)
+    }
+  }
 
   return (
     <div
-      className="group animate-fade-in"
+      className={cn(
+        'group animate-fade-in transition-all duration-300',
+        isHighlighted && 'bg-neon-blue/10 -mx-4 px-4 py-2 rounded-lg'
+      )}
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
+      data-message-id={message.id}
     >
-      {/* Reply preview */}
+      {/* Reply preview with visual threading */}
       {message.reply_to && (
-        <div className="ml-10 mb-1 px-3 py-1.5 bg-background-tertiary/50 border-l-2 border-foreground-subtle/30 text-xs text-foreground-subtle">
-          <span className="text-foreground-muted">Replying to </span>
-          <span className="text-neon-blue">@{message.reply_to.user?.display_name || 'User'}</span>
-          <span className="text-foreground-subtle">: </span>
-          <span className="truncate">{message.reply_to.content.substring(0, 50)}{message.reply_to.content.length > 50 ? '...' : ''}</span>
+        <div
+          className={cn(
+            'ml-10 mb-1 px-3 py-1.5 border-l-2 text-xs',
+            'bg-background-tertiary/50 border-foreground-subtle/30',
+            onScrollToMessage && 'cursor-pointer hover:border-neon-blue hover:bg-background-tertiary/80 transition-colors'
+          )}
+          onClick={handleReplyClick}
+          role={onScrollToMessage ? 'button' : undefined}
+          tabIndex={onScrollToMessage ? 0 : undefined}
+          onKeyDown={(e) => {
+            if (onScrollToMessage && (e.key === 'Enter' || e.key === ' ')) {
+              e.preventDefault()
+              handleReplyClick()
+            }
+          }}
+          aria-label={onScrollToMessage ? 'Click to scroll to original message' : undefined}
+        >
+          <div className="flex items-center gap-2">
+            {/* Mini avatar for reply */}
+            <div className="h-4 w-4 rounded-full bg-background-tertiary flex items-center justify-center text-[8px] font-medium flex-shrink-0">
+              {message.reply_to.user?.display_name?.[0]?.toUpperCase() || 'U'}
+            </div>
+            <span className="text-neon-blue font-medium">
+              @{message.reply_to.user?.display_name || 'User'}
+            </span>
+          </div>
+          <span className="text-foreground-subtle mt-0.5 block truncate">
+            {message.reply_to.content.substring(0, 80)}{message.reply_to.content.length > 80 ? '...' : ''}
+          </span>
         </div>
       )}
 
@@ -86,10 +125,24 @@ export function ChatMessageComponent({
             </span>
           </div>
 
-          {/* Content */}
-          <p className="text-sm text-foreground-muted mt-0.5 break-words">
-            {renderContentWithMentions(message.content)}
-          </p>
+          {/* Content - GIF or Text */}
+          {isGifMessage ? (
+            <div className="mt-1.5 max-w-[280px]">
+              <img
+                src={message.gif_url!}
+                alt="GIF"
+                className="rounded-lg border border-border max-h-[200px] w-auto"
+                loading="lazy"
+              />
+              <span className="text-[10px] text-foreground-subtle font-mono block mt-1">
+                via GIPHY
+              </span>
+            </div>
+          ) : (
+            <p className="text-sm text-foreground-muted mt-0.5 break-words">
+              {renderContentWithMentions(message.content)}
+            </p>
+          )}
 
           {/* Actions */}
           <div className="flex items-center gap-4 mt-1.5">

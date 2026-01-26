@@ -14,6 +14,9 @@ export interface GeneralChatMessage {
   mentions: string[]
   like_count: number
   created_at: string
+  message_type?: 'text' | 'gif'
+  gif_url?: string | null
+  gif_id?: string | null
   user?: {
     id: string
     display_name: string | null
@@ -33,6 +36,7 @@ interface UseGeneralChatReturn {
   isLoading: boolean
   error: Error | null
   sendMessage: (content: string, replyToId?: string | null) => Promise<boolean>
+  sendGif: (gif: { id: string; url: string }, replyToId?: string | null) => Promise<boolean>
   toggleLike: (messageId: string) => Promise<void>
   reportMessage: (messageId: string) => Promise<boolean>
   loadMore: () => Promise<void>
@@ -220,6 +224,7 @@ export function useGeneralChat(
           content: content.trim(),
           reply_to_id: replyToId || null,
           mentions: mentionedUserIds,
+          message_type: 'text',
         })
 
       if (insertError) throw insertError
@@ -228,6 +233,40 @@ export function useGeneralChat(
     } catch (err) {
       console.error('Error sending message:', err)
       setError(err instanceof Error ? err : new Error('Failed to send message'))
+      return false
+    } finally {
+      setIsSending(false)
+    }
+  }, [supabase, user])
+
+  // Send GIF
+  const sendGif = useCallback(async (gif: { id: string; url: string }, replyToId?: string | null): Promise<boolean> => {
+    if (!user || !supabase) {
+      setError(new Error('Cannot send GIF: not logged in'))
+      return false
+    }
+
+    setIsSending(true)
+
+    try {
+      const { error: insertError } = await (supabase as any)
+        .from('general_chat_messages')
+        .insert({
+          user_id: user.id,
+          content: '',
+          reply_to_id: replyToId || null,
+          mentions: [],
+          message_type: 'gif',
+          gif_url: gif.url,
+          gif_id: gif.id,
+        })
+
+      if (insertError) throw insertError
+
+      return true
+    } catch (err) {
+      console.error('Error sending GIF:', err)
+      setError(err instanceof Error ? err : new Error('Failed to send GIF'))
       return false
     } finally {
       setIsSending(false)
@@ -319,6 +358,7 @@ export function useGeneralChat(
     isLoading,
     error,
     sendMessage,
+    sendGif,
     toggleLike,
     reportMessage,
     loadMore,

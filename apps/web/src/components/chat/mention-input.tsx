@@ -1,7 +1,10 @@
 'use client'
 
 import { useState, useRef, useEffect, useCallback } from 'react'
+import { ImageIcon } from 'lucide-react'
 import { Input } from '@/components/ui'
+import { EmojiPickerButton } from './emoji-picker-button'
+import { GifPicker } from './gif-picker'
 import { cn } from '@/lib/utils'
 
 interface MentionUser {
@@ -19,6 +22,9 @@ interface MentionInputProps {
   disabled?: boolean
   className?: string
   onSubmit?: () => void
+  onGifSelect?: (gif: { id: string; url: string }) => void
+  showGifButton?: boolean
+  showEmojiButton?: boolean
 }
 
 export function MentionInput({
@@ -30,12 +36,16 @@ export function MentionInput({
   disabled = false,
   className,
   onSubmit,
+  onGifSelect,
+  showGifButton = true,
+  showEmojiButton = true,
 }: MentionInputProps) {
   const [showSuggestions, setShowSuggestions] = useState(false)
   const [suggestions, setSuggestions] = useState<MentionUser[]>([])
   const [selectedIndex, setSelectedIndex] = useState(0)
   const [mentionQuery, setMentionQuery] = useState('')
   const [mentionStartPos, setMentionStartPos] = useState(-1)
+  const [showGifPicker, setShowGifPicker] = useState(false)
   const inputRef = useRef<HTMLInputElement>(null)
   const suggestionsRef = useRef<HTMLDivElement>(null)
 
@@ -113,6 +123,26 @@ export function MentionInput({
     }
   }
 
+  // Block paste of images
+  const handlePaste = (e: React.ClipboardEvent<HTMLInputElement>) => {
+    const items = e.clipboardData.items
+    for (let i = 0; i < items.length; i++) {
+      if (items[i].type.startsWith('image/')) {
+        e.preventDefault()
+        return
+      }
+    }
+  }
+
+  // Block drag and drop
+  const handleDrop = (e: React.DragEvent<HTMLInputElement>) => {
+    e.preventDefault()
+  }
+
+  const handleDragOver = (e: React.DragEvent<HTMLInputElement>) => {
+    e.preventDefault()
+  }
+
   // Select a suggestion
   const selectSuggestion = (user: MentionUser) => {
     if (!user.display_name) return
@@ -127,6 +157,31 @@ export function MentionInput({
 
     // Focus back to input
     inputRef.current?.focus()
+  }
+
+  // Handle emoji selection
+  const handleEmojiSelect = (emoji: string) => {
+    const input = inputRef.current
+    if (!input) return
+
+    const start = input.selectionStart || value.length
+    const end = input.selectionEnd || value.length
+    const newValue = value.slice(0, start) + emoji + value.slice(end)
+
+    const mentions = parseMentions(newValue)
+    onChange(newValue, mentions)
+
+    // Move cursor after emoji
+    setTimeout(() => {
+      input.setSelectionRange(start + emoji.length, start + emoji.length)
+      input.focus()
+    }, 0)
+  }
+
+  // Handle GIF selection
+  const handleGifSelect = (gif: { id: string; url: string }) => {
+    setShowGifPicker(false)
+    onGifSelect?.(gif)
   }
 
   // Close suggestions when clicking outside
@@ -147,51 +202,93 @@ export function MentionInput({
   }, [])
 
   return (
-    <div className="relative flex-1">
-      <Input
-        ref={inputRef}
-        value={value}
-        onChange={handleChange}
-        onKeyDown={handleKeyDown}
-        placeholder={placeholder}
-        maxLength={maxLength}
-        disabled={disabled}
-        className={cn('font-mono text-sm', className)}
-      />
-
-      {/* Suggestions dropdown */}
-      {showSuggestions && suggestions.length > 0 && (
-        <div
-          ref={suggestionsRef}
-          className="absolute bottom-full left-0 right-0 mb-1 bg-background-secondary border-2 border-border rounded-md shadow-lg z-50 max-h-40 overflow-y-auto"
-        >
-          {suggestions.map((user, index) => (
-            <button
-              key={user.id}
-              onClick={() => selectSuggestion(user)}
-              className={cn(
-                'w-full px-3 py-2 text-left text-sm flex items-center gap-2 transition-colors',
-                index === selectedIndex
-                  ? 'bg-neon-blue/20 text-neon-blue'
-                  : 'hover:bg-background-tertiary text-foreground'
-              )}
-            >
-              <div className="h-6 w-6 rounded-full bg-background-tertiary flex items-center justify-center text-xs font-medium">
-                {user.avatar_url ? (
-                  <img
-                    src={user.avatar_url}
-                    alt=""
-                    className="h-full w-full rounded-full object-cover"
-                  />
-                ) : (
-                  user.display_name?.[0]?.toUpperCase() || '?'
-                )}
-              </div>
-              <span className="font-mono">{user.display_name || 'User'}</span>
-            </button>
-          ))}
-        </div>
+    <div className="relative flex-1 flex items-center gap-1">
+      {/* Emoji button */}
+      {showEmojiButton && (
+        <EmojiPickerButton
+          onEmojiSelect={handleEmojiSelect}
+          disabled={disabled}
+        />
       )}
+
+      {/* GIF button */}
+      {showGifButton && onGifSelect && (
+        <button
+          type="button"
+          onClick={() => setShowGifPicker(!showGifPicker)}
+          disabled={disabled}
+          className={cn(
+            'p-2 min-w-[44px] min-h-[44px] flex items-center justify-center',
+            'text-foreground-muted hover:text-neon-pink transition-colors',
+            'disabled:opacity-50 disabled:cursor-not-allowed',
+            showGifPicker && 'text-neon-pink'
+          )}
+          aria-label="Add GIF"
+          aria-expanded={showGifPicker}
+        >
+          <ImageIcon className="h-5 w-5" />
+        </button>
+      )}
+
+      {/* Input */}
+      <div className="relative flex-1">
+        <Input
+          ref={inputRef}
+          value={value}
+          onChange={handleChange}
+          onKeyDown={handleKeyDown}
+          onPaste={handlePaste}
+          onDrop={handleDrop}
+          onDragOver={handleDragOver}
+          placeholder={placeholder}
+          maxLength={maxLength}
+          disabled={disabled}
+          className={cn('font-mono text-sm', className)}
+        />
+
+        {/* Suggestions dropdown */}
+        {showSuggestions && suggestions.length > 0 && (
+          <div
+            ref={suggestionsRef}
+            className="absolute bottom-full left-0 right-0 mb-1 bg-background-secondary border-2 border-border rounded-md shadow-lg z-50 max-h-40 overflow-y-auto"
+          >
+            {suggestions.map((user, index) => (
+              <button
+                key={user.id}
+                onClick={() => selectSuggestion(user)}
+                className={cn(
+                  'w-full px-3 py-2 text-left text-sm flex items-center gap-2 transition-colors',
+                  index === selectedIndex
+                    ? 'bg-neon-blue/20 text-neon-blue'
+                    : 'hover:bg-background-tertiary text-foreground'
+                )}
+              >
+                <div className="h-6 w-6 rounded-full bg-background-tertiary flex items-center justify-center text-xs font-medium">
+                  {user.avatar_url ? (
+                    <img
+                      src={user.avatar_url}
+                      alt=""
+                      className="h-full w-full rounded-full object-cover"
+                    />
+                  ) : (
+                    user.display_name?.[0]?.toUpperCase() || '?'
+                  )}
+                </div>
+                <span className="font-mono">{user.display_name || 'User'}</span>
+              </button>
+            ))}
+          </div>
+        )}
+
+        {/* GIF Picker */}
+        {showGifButton && onGifSelect && (
+          <GifPicker
+            isOpen={showGifPicker}
+            onClose={() => setShowGifPicker(false)}
+            onSelect={handleGifSelect}
+          />
+        )}
+      </div>
     </div>
   )
 }

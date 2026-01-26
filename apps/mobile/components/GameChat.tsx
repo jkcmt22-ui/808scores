@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react'
+import React, { useState, useRef, useCallback } from 'react'
 import {
   StyleSheet,
   View,
@@ -9,24 +9,34 @@ import {
   KeyboardAvoidingView,
   Platform,
   ActivityIndicator,
+  Image,
 } from 'react-native'
 import { format } from 'date-fns'
 import FontAwesome from '@expo/vector-icons/FontAwesome'
+import EmojiPicker from 'rn-emoji-keyboard'
 import { useChat, type ChatMessage } from '../hooks/useChat'
 import { useSupabase } from '../contexts/SupabaseContext'
+import { GifPicker } from './GifPicker'
 import { colors } from '../lib/theme'
+import Constants from 'expo-constants'
+
+const API_BASE_URL = Constants.expoConfig?.extra?.apiBaseUrl || 'https://808scores.com'
 
 interface MessageItemProps {
   message: ChatMessage
   onLike: (id: string) => void
   onUnlike: (id: string) => void
+  onReply: (message: ChatMessage) => void
+  onScrollToMessage?: (id: string) => void
   currentUserId?: string
+  isHighlighted?: boolean
 }
 
-function MessageItem({ message, onLike, onUnlike, currentUserId }: MessageItemProps) {
+function MessageItem({ message, onLike, onUnlike, onReply, onScrollToMessage, currentUserId, isHighlighted }: MessageItemProps) {
   const isOwnMessage = message.user_id === currentUserId
   const displayName = message.user?.display_name || 'Anonymous'
   const initial = displayName.charAt(0).toUpperCase()
+  const isGifMessage = message.message_type === 'gif' && message.gif_url
 
   const handleLikeToggle = () => {
     if (message.liked_by_me) {
@@ -36,43 +46,99 @@ function MessageItem({ message, onLike, onUnlike, currentUserId }: MessageItemPr
     }
   }
 
+  const handleReplyPress = () => {
+    if (message.reply_to?.id && onScrollToMessage) {
+      onScrollToMessage(message.reply_to.id)
+    }
+  }
+
   return (
-    <View style={[styles.messageContainer, isOwnMessage && styles.ownMessage]}>
-      {/* Avatar */}
-      <View style={[styles.avatar, isOwnMessage && styles.ownAvatar]}>
-        <Text style={[styles.avatarText, isOwnMessage && styles.ownAvatarText]}>{initial}</Text>
-      </View>
-
-      {/* Message Content */}
-      <View style={[styles.messageContent, isOwnMessage && styles.ownMessageContent]}>
-        <View style={styles.messageHeader}>
-          <Text style={[styles.displayName, isOwnMessage && styles.ownDisplayName]}>{displayName.toUpperCase()}</Text>
-          <Text style={styles.timestamp}>
-            {format(new Date(message.created_at), 'h:mm a')}
-          </Text>
-        </View>
-        <Text style={styles.messageText}>{message.content}</Text>
-
-        {/* Actions */}
-        <View style={styles.messageActions}>
-          <TouchableOpacity
-            style={styles.likeButton}
-            onPress={handleLikeToggle}
-            disabled={!currentUserId}
-            accessibilityLabel={`${message.liked_by_me ? 'Unlike' : 'Like'} message${message.like_count > 0 ? `, ${message.like_count} likes` : ''}`}
-            accessibilityRole="button"
-          >
-            <FontAwesome
-              name={message.liked_by_me ? 'heart' : 'heart-o'}
-              size={14}
-              color={message.liked_by_me ? colors.neonPink : colors.foregroundMuted}
-            />
-            {message.like_count > 0 && (
-              <Text style={[styles.likeCount, message.liked_by_me && styles.likedCount]}>
-                {message.like_count}
+    <View style={[styles.messageContainer, isOwnMessage && styles.ownMessage, isHighlighted && styles.highlightedMessage]}>
+      {/* Reply preview */}
+      {message.reply_to && (
+        <TouchableOpacity
+          style={styles.replyPreview}
+          onPress={handleReplyPress}
+          disabled={!onScrollToMessage}
+          activeOpacity={0.7}
+        >
+          <View style={styles.replyHeader}>
+            <View style={styles.replyAvatar}>
+              <Text style={styles.replyAvatarText}>
+                {message.reply_to.user?.display_name?.charAt(0).toUpperCase() || 'U'}
               </Text>
+            </View>
+            <Text style={styles.replyUsername}>
+              @{message.reply_to.user?.display_name || 'User'}
+            </Text>
+          </View>
+          <Text style={styles.replyContent} numberOfLines={2}>
+            {message.reply_to.message_type === 'gif' ? '[GIF]' : message.reply_to.content}
+          </Text>
+        </TouchableOpacity>
+      )}
+
+      <View style={styles.messageRow}>
+        {/* Avatar */}
+        <View style={[styles.avatar, isOwnMessage && styles.ownAvatar]}>
+          <Text style={[styles.avatarText, isOwnMessage && styles.ownAvatarText]}>{initial}</Text>
+        </View>
+
+        {/* Message Content */}
+        <View style={[styles.messageContent, isOwnMessage && styles.ownMessageContent]}>
+          <View style={styles.messageHeader}>
+            <Text style={[styles.displayName, isOwnMessage && styles.ownDisplayName]}>{displayName.toUpperCase()}</Text>
+            <Text style={styles.timestamp}>
+              {format(new Date(message.created_at), 'h:mm a')}
+            </Text>
+          </View>
+
+          {/* GIF or Text Content */}
+          {isGifMessage ? (
+            <View style={styles.gifContainer}>
+              <Image
+                source={{ uri: message.gif_url! }}
+                style={styles.gifImage}
+                resizeMode="contain"
+              />
+              <Text style={styles.giphyAttribution}>via GIPHY</Text>
+            </View>
+          ) : (
+            <Text style={styles.messageText}>{message.content}</Text>
+          )}
+
+          {/* Actions */}
+          <View style={styles.messageActions}>
+            <TouchableOpacity
+              style={styles.likeButton}
+              onPress={handleLikeToggle}
+              disabled={!currentUserId}
+              accessibilityLabel={`${message.liked_by_me ? 'Unlike' : 'Like'} message${message.like_count > 0 ? `, ${message.like_count} likes` : ''}`}
+              accessibilityRole="button"
+            >
+              <FontAwesome
+                name={message.liked_by_me ? 'heart' : 'heart-o'}
+                size={14}
+                color={message.liked_by_me ? colors.neonPink : colors.foregroundMuted}
+              />
+              {message.like_count > 0 && (
+                <Text style={[styles.likeCount, message.liked_by_me && styles.likedCount]}>
+                  {message.like_count}
+                </Text>
+              )}
+            </TouchableOpacity>
+
+            {currentUserId && (
+              <TouchableOpacity
+                style={styles.replyButton}
+                onPress={() => onReply(message)}
+                accessibilityLabel="Reply to message"
+              >
+                <FontAwesome name="reply" size={14} color={colors.foregroundMuted} />
+                <Text style={styles.replyButtonText}>Reply</Text>
+              </TouchableOpacity>
             )}
-          </TouchableOpacity>
+          </View>
         </View>
       </View>
     </View>
@@ -85,8 +151,12 @@ interface GameChatProps {
 
 export function GameChat({ gameId }: GameChatProps) {
   const { user } = useSupabase()
-  const { messages, isLoading, sendMessage, likeMessage, unlikeMessage, isSending } = useChat({ gameId })
+  const { messages, isLoading, sendMessage, sendGif, likeMessage, unlikeMessage, isSending } = useChat({ gameId })
   const [inputText, setInputText] = useState('')
+  const [replyingTo, setReplyingTo] = useState<ChatMessage | null>(null)
+  const [showGifPicker, setShowGifPicker] = useState(false)
+  const [showEmojiPicker, setShowEmojiPicker] = useState(false)
+  const [highlightedMessageId, setHighlightedMessageId] = useState<string | null>(null)
   const flatListRef = useRef<FlatList>(null)
 
   const handleSend = async () => {
@@ -95,17 +165,49 @@ export function GameChat({ gameId }: GameChatProps) {
     const text = inputText
     setInputText('')
 
-    const success = await sendMessage(text)
+    const success = await sendMessage(text, replyingTo?.id)
     if (success) {
-      // Scroll to bottom after sending
+      setReplyingTo(null)
       setTimeout(() => {
         flatListRef.current?.scrollToEnd({ animated: true })
       }, 100)
     } else {
-      // Restore text if failed
       setInputText(text)
     }
   }
+
+  const handleGifSelect = async (gif: { id: string; url: string }) => {
+    setShowGifPicker(false)
+    const success = await sendGif(gif, replyingTo?.id)
+    if (success) {
+      setReplyingTo(null)
+      setTimeout(() => {
+        flatListRef.current?.scrollToEnd({ animated: true })
+      }, 100)
+    }
+  }
+
+  const handleEmojiSelect = (emoji: { emoji: string }) => {
+    setInputText(prev => prev + emoji.emoji)
+    setShowEmojiPicker(false)
+  }
+
+  const handleReply = (message: ChatMessage) => {
+    setReplyingTo(message)
+  }
+
+  const cancelReply = () => {
+    setReplyingTo(null)
+  }
+
+  const scrollToMessage = useCallback((messageId: string) => {
+    const index = messages.findIndex(m => m.id === messageId)
+    if (index !== -1 && flatListRef.current) {
+      flatListRef.current.scrollToIndex({ index, animated: true, viewPosition: 0.5 })
+      setHighlightedMessageId(messageId)
+      setTimeout(() => setHighlightedMessageId(null), 2000)
+    }
+  }, [messages])
 
   if (isLoading) {
     return (
@@ -132,7 +234,10 @@ export function GameChat({ gameId }: GameChatProps) {
             message={item}
             onLike={likeMessage}
             onUnlike={unlikeMessage}
+            onReply={handleReply}
+            onScrollToMessage={scrollToMessage}
             currentUserId={user?.id}
+            isHighlighted={highlightedMessageId === item.id}
           />
         )}
         contentContainerStyle={styles.messagesList}
@@ -148,14 +253,53 @@ export function GameChat({ gameId }: GameChatProps) {
         onContentSizeChange={() => {
           flatListRef.current?.scrollToEnd({ animated: false })
         }}
+        onScrollToIndexFailed={(info) => {
+          setTimeout(() => {
+            flatListRef.current?.scrollToIndex({ index: info.index, animated: true })
+          }, 100)
+        }}
       />
+
+      {/* Reply Preview */}
+      {replyingTo && (
+        <View style={styles.replyBanner}>
+          <View style={styles.replyBannerContent}>
+            <Text style={styles.replyBannerLabel}>Replying to </Text>
+            <Text style={styles.replyBannerUsername}>@{replyingTo.user?.display_name || 'User'}</Text>
+            <Text style={styles.replyBannerPreview} numberOfLines={1}>
+              : {replyingTo.message_type === 'gif' ? '[GIF]' : replyingTo.content}
+            </Text>
+          </View>
+          <TouchableOpacity style={styles.replyBannerClose} onPress={cancelReply}>
+            <FontAwesome name="times" size={16} color={colors.foregroundMuted} />
+          </TouchableOpacity>
+        </View>
+      )}
 
       {/* Input Area */}
       {user ? (
         <View style={styles.inputContainer}>
+          {/* Emoji Button */}
+          <TouchableOpacity
+            style={styles.iconButton}
+            onPress={() => setShowEmojiPicker(true)}
+            accessibilityLabel="Add emoji"
+          >
+            <FontAwesome name="smile-o" size={20} color={colors.foregroundMuted} />
+          </TouchableOpacity>
+
+          {/* GIF Button */}
+          <TouchableOpacity
+            style={styles.iconButton}
+            onPress={() => setShowGifPicker(true)}
+            accessibilityLabel="Add GIF"
+          >
+            <FontAwesome name="image" size={20} color={colors.foregroundMuted} />
+          </TouchableOpacity>
+
           <TextInput
             style={styles.input}
-            placeholder="ADD A COMMENT..."
+            placeholder={replyingTo ? 'Write a reply...' : 'ADD A COMMENT...'}
             placeholderTextColor={colors.foregroundMuted}
             value={inputText}
             onChangeText={setInputText}
@@ -186,6 +330,43 @@ export function GameChat({ gameId }: GameChatProps) {
           <Text style={styles.loginPromptText}>LOG IN TO JOIN THE CONVERSATION</Text>
         </View>
       )}
+
+      {/* GIF Picker */}
+      <GifPicker
+        visible={showGifPicker}
+        onClose={() => setShowGifPicker(false)}
+        onSelect={handleGifSelect}
+        apiBaseUrl={API_BASE_URL}
+      />
+
+      {/* Emoji Picker */}
+      <EmojiPicker
+        open={showEmojiPicker}
+        onClose={() => setShowEmojiPicker(false)}
+        onEmojiSelected={handleEmojiSelect}
+        theme={{
+          backdrop: colors.background + 'CC',
+          knob: colors.border,
+          container: colors.backgroundSecondary,
+          header: colors.foreground,
+          skinTonesContainer: colors.backgroundTertiary,
+          category: {
+            icon: colors.foregroundMuted,
+            iconActive: colors.neonPink,
+            container: colors.backgroundSecondary,
+            containerActive: colors.backgroundTertiary,
+          },
+          search: {
+            text: colors.foreground,
+            placeholder: colors.foregroundMuted,
+            icon: colors.foregroundMuted,
+            background: colors.backgroundTertiary,
+          },
+          emoji: {
+            selected: colors.neonPink + '40',
+          },
+        }}
+      />
     </KeyboardAvoidingView>
   )
 }
@@ -211,11 +392,55 @@ const styles = StyleSheet.create({
     flexGrow: 1,
   },
   messageContainer: {
-    flexDirection: 'row',
     marginBottom: 12,
   },
-  ownMessage: {
-    // Styled differently below
+  messageRow: {
+    flexDirection: 'row',
+  },
+  ownMessage: {},
+  highlightedMessage: {
+    backgroundColor: colors.neonBlue + '20',
+    marginHorizontal: -12,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 8,
+  },
+  replyPreview: {
+    marginLeft: 40,
+    marginBottom: 4,
+    paddingLeft: 8,
+    paddingVertical: 4,
+    borderLeftWidth: 2,
+    borderLeftColor: colors.foregroundMuted,
+    backgroundColor: colors.backgroundTertiary + '80',
+  },
+  replyHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+  },
+  replyAvatar: {
+    width: 14,
+    height: 14,
+    borderRadius: 7,
+    backgroundColor: colors.backgroundTertiary,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  replyAvatarText: {
+    color: colors.foregroundMuted,
+    fontSize: 8,
+    fontWeight: '700',
+  },
+  replyUsername: {
+    color: colors.neonBlue,
+    fontSize: 10,
+    fontWeight: '600',
+  },
+  replyContent: {
+    color: colors.foregroundMuted,
+    fontSize: 11,
+    marginTop: 2,
   },
   avatar: {
     width: 32,
@@ -274,9 +499,25 @@ const styles = StyleSheet.create({
     fontSize: 14,
     lineHeight: 20,
   },
+  gifContainer: {
+    marginTop: 4,
+  },
+  gifImage: {
+    width: '100%',
+    height: 150,
+    borderRadius: 8,
+    backgroundColor: colors.backgroundTertiary,
+  },
+  giphyAttribution: {
+    color: colors.foregroundMuted,
+    fontSize: 9,
+    marginTop: 4,
+    letterSpacing: 0.5,
+  },
   messageActions: {
     flexDirection: 'row',
     marginTop: 8,
+    gap: 16,
   },
   likeButton: {
     flexDirection: 'row',
@@ -290,6 +531,46 @@ const styles = StyleSheet.create({
   },
   likedCount: {
     color: colors.neonPink,
+  },
+  replyButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+  },
+  replyButtonText: {
+    color: colors.foregroundMuted,
+    fontSize: 12,
+  },
+  replyBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    backgroundColor: colors.backgroundTertiary,
+    borderTopWidth: 1,
+    borderTopColor: colors.border,
+  },
+  replyBannerContent: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  replyBannerLabel: {
+    color: colors.foregroundMuted,
+    fontSize: 12,
+  },
+  replyBannerUsername: {
+    color: colors.neonBlue,
+    fontSize: 12,
+    fontWeight: '600',
+  },
+  replyBannerPreview: {
+    color: colors.foregroundMuted,
+    fontSize: 12,
+    flex: 1,
+  },
+  replyBannerClose: {
+    padding: 8,
   },
   emptyContainer: {
     alignItems: 'center',
@@ -323,6 +604,12 @@ const styles = StyleSheet.create({
     borderTopWidth: 2,
     borderTopColor: colors.border,
     gap: 8,
+  },
+  iconButton: {
+    width: 40,
+    height: 44,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   input: {
     flex: 1,
