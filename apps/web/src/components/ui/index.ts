@@ -3,7 +3,16 @@ export { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter }
 export { Badge } from './badge'
 export { Input } from './input'
 export { Textarea } from './textarea'
-export { Skeleton, GameCardSkeleton, ChatMessageSkeleton } from './skeleton'
+export {
+  Skeleton,
+  GameCardSkeleton,
+  ChatMessageSkeleton,
+  SchoolCardSkeleton,
+  LeaderboardRowSkeleton,
+  ProfileSkeleton,
+  TournamentCardSkeleton,
+  StandingsRowSkeleton,
+} from './skeleton'
 export { Tabs, TabsList, TabsTrigger, TabsContent } from './tabs'
 export { Avatar } from './avatar'
 export { FAB, ReportScoreFAB } from './fab'

@@ -43,13 +43,46 @@ export function EmptyState({
 }: EmptyStateProps) {
   const Icon = iconMap[icon]
 
+  // Color based on icon type for variety
+  const iconColors: Record<IconType, { border: string; bg: string; text: string; glow: string }> = {
+    calendar: { border: 'border-neon-blue/30', bg: 'bg-neon-blue/5', text: 'text-neon-blue', glow: 'shadow-[0_0_20px_rgba(0,212,255,0.15)]' },
+    star: { border: 'border-neon-yellow/30', bg: 'bg-neon-yellow/5', text: 'text-neon-yellow', glow: 'shadow-[0_0_20px_rgba(255,215,0,0.15)]' },
+    search: { border: 'border-neon-pink/30', bg: 'bg-neon-pink/5', text: 'text-neon-pink', glow: 'shadow-[0_0_20px_rgba(255,42,109,0.15)]' },
+    trophy: { border: 'border-neon-yellow/30', bg: 'bg-neon-yellow/5', text: 'text-neon-yellow', glow: 'shadow-[0_0_20px_rgba(255,215,0,0.15)]' },
+    chat: { border: 'border-neon-green/30', bg: 'bg-neon-green/5', text: 'text-neon-green', glow: 'shadow-[0_0_20px_rgba(0,255,136,0.15)]' },
+    bell: { border: 'border-neon-blue/30', bg: 'bg-neon-blue/5', text: 'text-neon-blue', glow: 'shadow-[0_0_20px_rgba(0,212,255,0.15)]' },
+    users: { border: 'border-neon-green/30', bg: 'bg-neon-green/5', text: 'text-neon-green', glow: 'shadow-[0_0_20px_rgba(0,255,136,0.15)]' },
+  }
+
+  const colors = iconColors[icon]
+
   return (
     <div className={`flex flex-col items-center justify-center py-12 px-4 text-center ${className || ''}`}>
-      <div className="scoreboard-panel p-6 mb-4">
-        <div className="score-led text-4xl mb-4 text-foreground-muted">--</div>
-        <Icon className="h-10 w-10 text-neon-blue mx-auto" />
+      {/* Illustrated container with decorations */}
+      <div className={`relative p-8 mb-6 border-2 ${colors.border} ${colors.bg} ${colors.glow}`}>
+        {/* Decorative corner elements */}
+        <div className="absolute top-0 left-0 w-3 h-3 border-t-2 border-l-2 border-current opacity-30" />
+        <div className="absolute top-0 right-0 w-3 h-3 border-t-2 border-r-2 border-current opacity-30" />
+        <div className="absolute bottom-0 left-0 w-3 h-3 border-b-2 border-l-2 border-current opacity-30" />
+        <div className="absolute bottom-0 right-0 w-3 h-3 border-b-2 border-r-2 border-current opacity-30" />
+
+        {/* Decorative dots */}
+        <div className="absolute top-3 right-3 flex gap-1">
+          <div className={`w-1.5 h-1.5 rounded-full ${colors.text} opacity-40`} style={{ backgroundColor: 'currentColor' }} />
+          <div className={`w-1 h-1 rounded-full ${colors.text} opacity-20`} style={{ backgroundColor: 'currentColor' }} />
+        </div>
+
+        {/* Score display */}
+        <div className={`score-led text-4xl mb-3 ${colors.text} opacity-50`}>--</div>
+
+        {/* Main icon */}
+        <Icon className={`h-12 w-12 mx-auto ${colors.text}`} />
+
+        {/* Subtle animated pulse */}
+        <div className={`absolute inset-0 ${colors.bg} animate-pulse opacity-30 pointer-events-none`} />
       </div>
-      <h3 className="mb-2 font-display text-lg font-bold text-foreground uppercase tracking-wider">
+
+      <h3 className="mb-2 font-display text-xl font-black text-foreground uppercase tracking-widest">
         {title}
       </h3>
       <p className="text-sm text-foreground-muted max-w-xs font-display mb-6">
