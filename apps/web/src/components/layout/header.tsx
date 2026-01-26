@@ -62,7 +62,7 @@ export function Header({
   return (
     <>
       <header className="sticky top-0 z-40 border-b-2 border-border bg-background safe-top">
-        <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-4">
+        <div className="flex h-16 items-center justify-between px-4">
           {/* Neon Logo */}
           <Link href="/" className="flex items-center">
             <div className="flex items-baseline gap-0.5">
