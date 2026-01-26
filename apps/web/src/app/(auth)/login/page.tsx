@@ -24,6 +24,7 @@ function LoginForm() {
   const [error, setError] = useState<string | null>(null)
   const [message, setMessage] = useState<string | null>(null)
   const [acceptedTerms, setAcceptedTerms] = useState(false)
+  const [marketingOptIn, setMarketingOptIn] = useState(false)
 
   const formatPhoneNumber = (value: string) => {
     const digits = value.replace(/\D/g, '')
@@ -83,6 +84,7 @@ function LoginForm() {
       sessionStorage.setItem('verifyRedirect', redirect)
       sessionStorage.setItem('acceptedTerms', 'true')
       sessionStorage.setItem('termsAcceptedAt', new Date().toISOString())
+      sessionStorage.setItem('marketingOptIn', marketingOptIn ? 'true' : 'false')
 
       router.push('/verify')
     } catch (err) {
@@ -116,7 +118,7 @@ function LoginForm() {
       }
 
       if (isSignUp) {
-        // Sign up with terms acceptance metadata
+        // Sign up with terms acceptance and marketing preferences
         const { error: signUpError } = await supabase.auth.signUp({
           email,
           password,
@@ -126,6 +128,7 @@ function LoginForm() {
               accepted_terms: true,
               terms_accepted_at: new Date().toISOString(),
               terms_version: '2026-01',
+              marketing_opt_in: marketingOptIn,
             },
           },
         })
@@ -232,24 +235,38 @@ function LoginForm() {
 
             {/* Terms checkbox for signup */}
             {isSignUp && (
-              <label className="flex items-start gap-3 cursor-pointer group">
-                <input
-                  type="checkbox"
-                  checked={acceptedTerms}
-                  onChange={(e) => setAcceptedTerms(e.target.checked)}
-                  className="mt-1 h-5 w-5 rounded border-2 border-border bg-background-secondary text-neon-blue focus:ring-neon-blue focus:ring-offset-0 cursor-pointer"
-                />
-                <span className="text-sm text-foreground-muted leading-relaxed">
-                  I agree to the{' '}
-                  <Link href="/terms" className="text-neon-blue hover:underline" target="_blank">
-                    Terms of Service
-                  </Link>{' '}
-                  and{' '}
-                  <Link href="/privacy" className="text-neon-blue hover:underline" target="_blank">
-                    Privacy Policy
-                  </Link>
-                </span>
-              </label>
+              <div className="space-y-3">
+                <label className="flex items-start gap-3 cursor-pointer group">
+                  <input
+                    type="checkbox"
+                    checked={acceptedTerms}
+                    onChange={(e) => setAcceptedTerms(e.target.checked)}
+                    className="mt-1 h-5 w-5 rounded border-2 border-border bg-background-secondary text-neon-blue focus:ring-neon-blue focus:ring-offset-0 cursor-pointer"
+                  />
+                  <span className="text-sm text-foreground-muted leading-relaxed">
+                    I agree to the{' '}
+                    <Link href="/terms" className="text-neon-blue hover:underline" target="_blank">
+                      Terms of Service
+                    </Link>{' '}
+                    and{' '}
+                    <Link href="/privacy" className="text-neon-blue hover:underline" target="_blank">
+                      Privacy Policy
+                    </Link>
+                  </span>
+                </label>
+
+                <label className="flex items-start gap-3 cursor-pointer group">
+                  <input
+                    type="checkbox"
+                    checked={marketingOptIn}
+                    onChange={(e) => setMarketingOptIn(e.target.checked)}
+                    className="mt-1 h-5 w-5 rounded border-2 border-border bg-background-secondary text-neon-blue focus:ring-neon-blue focus:ring-offset-0 cursor-pointer"
+                  />
+                  <span className="text-sm text-foreground-muted leading-relaxed">
+                    Send me updates about Hawaii high school sports, new features, and special announcements (optional)
+                  </span>
+                </label>
+              </div>
             )}
 
             {error && (
@@ -318,24 +335,38 @@ function LoginForm() {
             </div>
 
             {/* Terms checkbox for phone auth (could be new user) */}
-            <label className="flex items-start gap-3 cursor-pointer group">
-              <input
-                type="checkbox"
-                checked={acceptedTerms}
-                onChange={(e) => setAcceptedTerms(e.target.checked)}
-                className="mt-1 h-5 w-5 rounded border-2 border-border bg-background-secondary text-neon-blue focus:ring-neon-blue focus:ring-offset-0 cursor-pointer"
-              />
-              <span className="text-sm text-foreground-muted leading-relaxed">
-                I agree to the{' '}
-                <Link href="/terms" className="text-neon-blue hover:underline" target="_blank">
-                  Terms of Service
-                </Link>{' '}
-                and{' '}
-                <Link href="/privacy" className="text-neon-blue hover:underline" target="_blank">
-                  Privacy Policy
-                </Link>
-              </span>
-            </label>
+            <div className="space-y-3">
+              <label className="flex items-start gap-3 cursor-pointer group">
+                <input
+                  type="checkbox"
+                  checked={acceptedTerms}
+                  onChange={(e) => setAcceptedTerms(e.target.checked)}
+                  className="mt-1 h-5 w-5 rounded border-2 border-border bg-background-secondary text-neon-blue focus:ring-neon-blue focus:ring-offset-0 cursor-pointer"
+                />
+                <span className="text-sm text-foreground-muted leading-relaxed">
+                  I agree to the{' '}
+                  <Link href="/terms" className="text-neon-blue hover:underline" target="_blank">
+                    Terms of Service
+                  </Link>{' '}
+                  and{' '}
+                  <Link href="/privacy" className="text-neon-blue hover:underline" target="_blank">
+                    Privacy Policy
+                  </Link>
+                </span>
+              </label>
+
+              <label className="flex items-start gap-3 cursor-pointer group">
+                <input
+                  type="checkbox"
+                  checked={marketingOptIn}
+                  onChange={(e) => setMarketingOptIn(e.target.checked)}
+                  className="mt-1 h-5 w-5 rounded border-2 border-border bg-background-secondary text-neon-blue focus:ring-neon-blue focus:ring-offset-0 cursor-pointer"
+                />
+                <span className="text-sm text-foreground-muted leading-relaxed">
+                  Send me updates about Hawaii high school sports, new features, and special announcements (optional)
+                </span>
+              </label>
+            </div>
 
             {error && (
               <div className="flex items-center gap-2 rounded-lg bg-neon-pink/10 border border-neon-pink/30 p-3 text-sm text-neon-pink">

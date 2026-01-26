@@ -55,6 +55,13 @@ export default function ProfileSettingsPage() {
   // Sport toggle state
   const [isAddingSport, setIsAddingSport] = useState<string | null>(null)
 
+  // Notification preferences state
+  const [notificationsEnabled, setNotificationsEnabled] = useState(true)
+  const [regularSeasonNotifications, setRegularSeasonNotifications] = useState(false)
+  const [marketingOptIn, setMarketingOptIn] = useState(false)
+  const [isSavingNotifications, setIsSavingNotifications] = useState(false)
+  const [notificationsSaved, setNotificationsSaved] = useState(false)
+
   const supabase = createClient()!
 
   // Initialize from profile
@@ -62,6 +69,10 @@ export default function ProfileSettingsPage() {
     if (profile) {
       setUsername(profile.display_name || '')
       setAvatarUrl(profile.avatar_url)
+      // Load notification preferences
+      setNotificationsEnabled((profile as { notifications_enabled?: boolean }).notifications_enabled ?? true)
+      setRegularSeasonNotifications((profile as { regular_season_notifications?: boolean }).regular_season_notifications ?? false)
+      setMarketingOptIn((profile as { marketing_opt_in?: boolean }).marketing_opt_in ?? false)
     }
   }, [profile])
 
@@ -99,6 +110,32 @@ export default function ProfileSettingsPage() {
       setUsernameError('Failed to save username')
     } finally {
       setIsSavingUsername(false)
+    }
+  }
+
+  // Save notification preferences
+  const handleSaveNotificationPreferences = async () => {
+    if (!user) return
+
+    setIsSavingNotifications(true)
+    try {
+      const { error } = await supabase
+        .from('users')
+        .update({
+          notifications_enabled: notificationsEnabled,
+          regular_season_notifications: regularSeasonNotifications,
+          marketing_opt_in: marketingOptIn,
+        })
+        .eq('id', user.id)
+
+      if (error) throw error
+
+      setNotificationsSaved(true)
+      setTimeout(() => setNotificationsSaved(false), 2000)
+    } catch (err) {
+      console.error('Failed to save notification preferences:', err)
+    } finally {
+      setIsSavingNotifications(false)
     }
   }
 
@@ -305,6 +342,106 @@ export default function ProfileSettingsPage() {
               <p className="text-xs text-foreground-muted">
                 3-20 characters. Letters, numbers, and underscores only.
               </p>
+            </div>
+          </div>
+        </Card>
+
+        {/* Notification Preferences Section */}
+        <Card className="border-2 border-border">
+          <div className="p-6">
+            <h2 className="mb-4 font-display text-sm font-bold uppercase tracking-wider text-foreground-muted">
+              Notification Preferences
+            </h2>
+
+            <div className="space-y-4">
+              {/* Global notifications toggle */}
+              <label className="flex items-center justify-between cursor-pointer">
+                <div>
+                  <p className="font-medium text-foreground">Push Notifications</p>
+                  <p className="text-xs text-foreground-muted">Receive push notifications for game updates</p>
+                </div>
+                <button
+                  onClick={() => setNotificationsEnabled(!notificationsEnabled)}
+                  className={cn(
+                    'relative inline-flex h-6 w-11 items-center rounded-full transition-colors',
+                    notificationsEnabled ? 'bg-neon-green' : 'bg-border'
+                  )}
+                >
+                  <span
+                    className={cn(
+                      'inline-block h-4 w-4 transform rounded-full bg-white transition-transform',
+                      notificationsEnabled ? 'translate-x-6' : 'translate-x-1'
+                    )}
+                  />
+                </button>
+              </label>
+
+              {/* Regular season notifications toggle */}
+              <label className={cn(
+                'flex items-center justify-between cursor-pointer',
+                !notificationsEnabled && 'opacity-50 pointer-events-none'
+              )}>
+                <div>
+                  <p className="font-medium text-foreground">Regular Season Games</p>
+                  <p className="text-xs text-foreground-muted">Get notified for all games, not just playoffs</p>
+                </div>
+                <button
+                  onClick={() => setRegularSeasonNotifications(!regularSeasonNotifications)}
+                  disabled={!notificationsEnabled}
+                  className={cn(
+                    'relative inline-flex h-6 w-11 items-center rounded-full transition-colors',
+                    regularSeasonNotifications ? 'bg-neon-green' : 'bg-border'
+                  )}
+                >
+                  <span
+                    className={cn(
+                      'inline-block h-4 w-4 transform rounded-full bg-white transition-transform',
+                      regularSeasonNotifications ? 'translate-x-6' : 'translate-x-1'
+                    )}
+                  />
+                </button>
+              </label>
+
+              <div className="border-t border-border my-4" />
+
+              {/* Marketing opt-in toggle */}
+              <label className="flex items-center justify-between cursor-pointer">
+                <div>
+                  <p className="font-medium text-foreground">Newsletter & Updates</p>
+                  <p className="text-xs text-foreground-muted">Receive promotional emails and announcements</p>
+                </div>
+                <button
+                  onClick={() => setMarketingOptIn(!marketingOptIn)}
+                  className={cn(
+                    'relative inline-flex h-6 w-11 items-center rounded-full transition-colors',
+                    marketingOptIn ? 'bg-neon-green' : 'bg-border'
+                  )}
+                >
+                  <span
+                    className={cn(
+                      'inline-block h-4 w-4 transform rounded-full bg-white transition-transform',
+                      marketingOptIn ? 'translate-x-6' : 'translate-x-1'
+                    )}
+                  />
+                </button>
+              </label>
+
+              <Button
+                onClick={handleSaveNotificationPreferences}
+                disabled={isSavingNotifications}
+                className="w-full mt-4"
+              >
+                {isSavingNotifications ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : notificationsSaved ? (
+                  <>
+                    <Check className="h-4 w-4 mr-2" />
+                    Saved
+                  </>
+                ) : (
+                  'Save Preferences'
+                )}
+              </Button>
             </div>
           </div>
         </Card>

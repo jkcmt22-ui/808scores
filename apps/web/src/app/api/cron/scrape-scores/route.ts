@@ -378,11 +378,13 @@ export async function GET(request: NextRequest) {
       const result = await upsertGame(supabase, game)
       stats[result.action]++
 
-      // Check if this is a playoff/championship game with score changes
+      // Check if this game should trigger notifications
       const isPlayoffGame = game.gameType === 'playoff' || game.gameType === 'championship' || game.gameType === 'tournament'
+      const isRegularSeason = game.gameType === 'regular_season'
       const hasScoreActivity = game.status === 'in_progress' || game.status === 'final'
 
-      if (isPlayoffGame && hasScoreActivity && result.scoreChanged && result.id && result.homeTeamId && result.awayTeamId) {
+      // Send notifications for playoff games OR regular season games (regular season will be filtered to opted-in users)
+      if ((isPlayoffGame || isRegularSeason) && hasScoreActivity && result.scoreChanged && result.id && result.homeTeamId && result.awayTeamId) {
         playoffGamesToNotify.push({
           gameId: result.id,
           game,

@@ -215,9 +215,9 @@ export async function POST(request: NextRequest) {
 
     const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_KEY)
 
-    // Determine if we should filter by team followers
-    const isTargetedNotification = (homeTeamId && awayTeamId) &&
-      (notificationType === 'playoff_alert' || gameType !== 'regular_season')
+    // Determine notification targeting
+    const isRegularSeason = gameType === 'regular_season'
+    const isTargetedNotification = (homeTeamId && awayTeamId)
 
     let subscriptions: PushSubscription[] = []
 
@@ -235,33 +235,73 @@ export async function POST(request: NextRequest) {
 
       if (teamFollowers && teamFollowers.length > 0) {
         // Get unique user IDs
-        const userIds = [...new Set(teamFollowers.map(f => f.user_id))]
+        let userIds = [...new Set(teamFollowers.map(f => f.user_id))]
 
-        // Get push subscriptions for these users
-        const { data: userSubs, error: subError } = await supabase
+        // Filter by user notification preferences
+        // 1. Must have notifications_enabled = true (global opt-in)
+        // 2. For regular season, must also have regular_season_notifications = true
+        let userQuery = supabase
+          .from('users')
+          .select('id')
+          .in('id', userIds)
+          .eq('notifications_enabled', true)
+
+        if (isRegularSeason) {
+          userQuery = userQuery.eq('regular_season_notifications', true)
+        }
+
+        const { data: eligibleUsers, error: userError } = await userQuery
+
+        if (userError) {
+          console.error('Error fetching user preferences:', userError)
+        }
+
+        if (eligibleUsers && eligibleUsers.length > 0) {
+          userIds = eligibleUsers.map(u => u.id)
+
+          // Get push subscriptions for these users
+          const { data: userSubs, error: subError } = await supabase
+            .from('push_subscriptions')
+            .select('endpoint, p256dh, auth, platform')
+            .in('user_id', userIds)
+
+          if (subError) {
+            console.error('Error fetching user subscriptions:', subError)
+          }
+
+          subscriptions = (userSubs || []) as PushSubscription[]
+          console.log(`${isRegularSeason ? 'Regular season' : 'Playoff'} notification: ${subscriptions.length} subscribers for teams ${homeTeamId}, ${awayTeamId}`)
+        }
+      }
+    } else {
+      // Fallback: send to all subscribers with notifications enabled
+      // First get users with notifications enabled
+      let userQuery = supabase
+        .from('users')
+        .select('id')
+        .eq('notifications_enabled', true)
+
+      if (isRegularSeason) {
+        userQuery = userQuery.eq('regular_season_notifications', true)
+      }
+
+      const { data: eligibleUsers } = await userQuery
+
+      if (eligibleUsers && eligibleUsers.length > 0) {
+        const userIds = eligibleUsers.map(u => u.id)
+
+        const { data, error } = await supabase
           .from('push_subscriptions')
           .select('endpoint, p256dh, auth, platform')
           .in('user_id', userIds)
 
-        if (subError) {
-          console.error('Error fetching user subscriptions:', subError)
+        if (error) {
+          console.error('Error fetching subscriptions:', error)
+          return NextResponse.json({ error: 'Failed to fetch subscriptions' }, { status: 500 })
         }
 
-        subscriptions = (userSubs || []) as PushSubscription[]
-        console.log(`Playoff notification: ${subscriptions.length} subscribers for teams ${homeTeamId}, ${awayTeamId}`)
+        subscriptions = (data || []) as PushSubscription[]
       }
-    } else {
-      // Fallback: send to all subscribers
-      const { data, error } = await supabase
-        .from('push_subscriptions')
-        .select('endpoint, p256dh, auth, platform')
-
-      if (error) {
-        console.error('Error fetching subscriptions:', error)
-        return NextResponse.json({ error: 'Failed to fetch subscriptions' }, { status: 500 })
-      }
-
-      subscriptions = (data || []) as PushSubscription[]
     }
 
     if (subscriptions.length === 0) {
