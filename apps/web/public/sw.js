@@ -1,7 +1,7 @@
 // Service Worker for Hawaii Sports Center
-// Version 3 - Enhanced offline support and caching
+// Version 4 - Offline score submission queue
 
-const CACHE_VERSION = 'v3'
+const CACHE_VERSION = 'v4'
 const STATIC_CACHE = `static-${CACHE_VERSION}`
 const DYNAMIC_CACHE = `dynamic-${CACHE_VERSION}`
 
@@ -219,14 +219,82 @@ self.addEventListener('notificationclick', (event) => {
   )
 })
 
-// Background sync for offline score submissions (future enhancement)
+// Background sync for offline score submissions
 self.addEventListener('sync', (event) => {
   console.log('[SW] Background sync:', event.tag)
 
   if (event.tag === 'sync-submissions') {
-    // Future: Handle offline score submission sync
+    event.waitUntil(
+      syncPendingSubmissions()
+    )
   }
 })
+
+// Sync pending submissions by notifying the main app
+async function syncPendingSubmissions() {
+  console.log('[SW] Syncing pending submissions...')
+
+  // Notify all clients to perform the sync
+  // (The actual sync happens in the main app where we have auth context)
+  const clients = await self.clients.matchAll({ type: 'window' })
+
+  for (const client of clients) {
+    client.postMessage({
+      type: 'SYNC_SUBMISSIONS',
+      timestamp: Date.now()
+    })
+  }
+
+  // Also show a notification if there are pending submissions
+  try {
+    const db = await openIndexedDB()
+    const count = await getPendingCount(db)
+
+    if (count > 0) {
+      console.log(`[SW] Found ${count} pending submissions to sync`)
+
+      // Notify the user
+      await self.registration.showNotification('Hawaii Sports Center', {
+        body: `Syncing ${count} pending score${count > 1 ? 's' : ''}...`,
+        icon: '/icons/icon-192.png',
+        badge: '/icons/icon-192.png',
+        tag: 'sync-progress',
+        silent: true
+      })
+    }
+  } catch (err) {
+    console.warn('[SW] Error checking pending submissions:', err)
+  }
+}
+
+// IndexedDB helpers for the service worker
+const DB_NAME = 'hawaiisports-offline'
+const DB_VERSION = 1
+const STORE_NAME = 'pending-submissions'
+
+function openIndexedDB() {
+  return new Promise((resolve, reject) => {
+    const request = indexedDB.open(DB_NAME, DB_VERSION)
+    request.onerror = () => reject(request.error)
+    request.onsuccess = () => resolve(request.result)
+    request.onupgradeneeded = (event) => {
+      const db = event.target.result
+      if (!db.objectStoreNames.contains(STORE_NAME)) {
+        db.createObjectStore(STORE_NAME, { keyPath: 'id' })
+      }
+    }
+  })
+}
+
+function getPendingCount(db) {
+  return new Promise((resolve, reject) => {
+    const transaction = db.transaction(STORE_NAME, 'readonly')
+    const store = transaction.objectStore(STORE_NAME)
+    const request = store.count()
+    request.onerror = () => reject(request.error)
+    request.onsuccess = () => resolve(request.result)
+  })
+}
 
 // Periodic background sync (future enhancement)
 self.addEventListener('periodicsync', (event) => {

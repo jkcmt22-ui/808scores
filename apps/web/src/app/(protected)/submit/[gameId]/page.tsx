@@ -1,6 +1,6 @@
 'use client'
 
-import { use, useState, useMemo } from 'react'
+import { use, useState, useMemo, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import {
   ArrowLeft,
@@ -11,10 +11,13 @@ import {
   Loader2,
   Star,
   Clock,
+  WifiOff,
+  CloudOff,
 } from 'lucide-react'
 import { Button, Card, Input, Badge, Skeleton } from '@/components/ui'
 import { useGame, useAuth } from '@/hooks'
 import { createClient } from '@/lib/supabase/client'
+import { addToQueue, isOnline, onOnlineStatusChange } from '@/lib/offline-queue'
 import { cn } from '@/lib/utils'
 import type { PeriodsConfig, SubmissionType as DBSubmissionType } from '@/types/database'
 
@@ -66,7 +69,7 @@ export default function SubmitPage({ params }: SubmitPageProps) {
   const { user, profile } = useAuth()
   const supabase = createClient()!
 
-  const [step, setStep] = useState<'type' | 'score' | 'extras' | 'confirm' | 'success'>('type')
+  const [step, setStep] = useState<'type' | 'score' | 'extras' | 'confirm' | 'success' | 'queued'>('type')
   const [submissionType, setSubmissionType] = useState<SubmissionType | null>(null)
   const [period, setPeriod] = useState<string>('')
   const [inningHalf, setInningHalf] = useState<'top' | 'bottom'>('top')
@@ -78,6 +81,13 @@ export default function SubmitPage({ params }: SubmitPageProps) {
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [showOvertimePeriods, setShowOvertimePeriods] = useState(false)
   const [submitError, setSubmitError] = useState<string | null>(null)
+  const [online, setOnline] = useState(true)
+
+  // Track online/offline status
+  useEffect(() => {
+    setOnline(isOnline())
+    return onOnlineStatusChange(setOnline)
+  }, [])
 
   // Parse periods config
   const periodsConfig = useMemo(() => {
@@ -150,9 +160,36 @@ export default function SubmitPage({ params }: SubmitPageProps) {
     setIsSubmitting(true)
     setSubmitError(null)
 
+    const fullPeriod = getFullPeriod()
+
+    // If offline, queue the submission for later
+    if (!online) {
+      try {
+        await addToQueue({
+          gameId,
+          gameName: `${game.away_team.short_name} @ ${game.home_team.short_name}`,
+          submissionType: submissionType as 'period_score' | 'final_score' | 'live_update',
+          period: submissionType === 'final_score' ? null : fullPeriod,
+          homeScore: parseInt(homeScore),
+          awayScore: parseInt(awayScore),
+          timeRemaining: timeRemaining || null,
+          hasPhoto,
+          hasLocation,
+          pointsEarned: calculatePoints(),
+        })
+        setStep('queued')
+      } catch (err) {
+        console.error('Failed to queue submission:', err)
+        setSubmitError('Failed to save offline. Please try again.')
+      } finally {
+        setIsSubmitting(false)
+      }
+      return
+    }
+
+    // Online submission
     try {
       // Create the submission
-      const fullPeriod = getFullPeriod()
       const submissionData = {
         game_id: gameId,
         user_id: user.id,
@@ -594,6 +631,29 @@ export default function SubmitPage({ params }: SubmitPageProps) {
             </div>
           </div>
         )
+
+      case 'queued':
+        return (
+          <div className="flex flex-col items-center justify-center py-12 text-center">
+            <div className="mb-4 flex h-20 w-20 items-center justify-center bg-neon-yellow/20 border-2 border-neon-yellow">
+              <CloudOff className="h-10 w-10 text-neon-yellow" />
+            </div>
+            <h2 className="mb-2 text-2xl font-bold font-display text-foreground">Saved Offline!</h2>
+            <p className="mb-6 text-foreground-muted max-w-xs">
+              Your score has been saved and will be submitted automatically when you&apos;re back online.
+            </p>
+            <div className="mb-8 p-6 bg-neon-yellow/10 border-2 border-neon-yellow/30">
+              <p className="text-sm text-neon-yellow">Points pending</p>
+              <p className="text-5xl font-bold font-display text-neon-yellow">+{calculatePoints()}</p>
+            </div>
+            <div className="flex gap-3">
+              <Button variant="outline" onClick={() => router.push(`/game/${gameId}`)}>
+                View Game
+              </Button>
+              <Button onClick={() => router.push('/')}>Go Home</Button>
+            </div>
+          </div>
+        )
     }
   }
 
@@ -618,8 +678,18 @@ export default function SubmitPage({ params }: SubmitPageProps) {
         </div>
       </header>
 
+      {/* Offline indicator */}
+      {!online && step !== 'success' && step !== 'queued' && (
+        <div className="flex items-center gap-2 px-4 py-2 bg-neon-yellow/20 border-b border-neon-yellow/30">
+          <WifiOff className="h-4 w-4 text-neon-yellow" />
+          <span className="text-sm text-neon-yellow font-display">
+            You&apos;re offline. Score will be saved and synced later.
+          </span>
+        </div>
+      )}
+
       {/* Game info banner */}
-      {step !== 'success' && (
+      {step !== 'success' && step !== 'queued' && (
         <div className="border-b-2 border-border bg-background-secondary px-4 py-3">
           <div className="flex items-center justify-between">
             <div>

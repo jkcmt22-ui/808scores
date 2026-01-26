@@ -25,3 +25,4 @@ export {
 export { useSecurity, useTrustScore } from './use-security'
 export { useNotifications, type Notification } from './use-notifications'
 export { useBadges, useUserBadges, type Badge, type UserBadge } from './use-badges'
+export { useOfflineQueue } from './use-offline-queue'

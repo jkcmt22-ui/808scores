@@ -6,6 +6,7 @@ import { Bell, Search, User, LogIn, LogOut, Settings, ChevronDown, Command, Sun,
 import { useTheme } from 'next-themes'
 import { Button, Avatar } from '@/components/ui'
 import { GlobalSearch } from '@/components/search/global-search'
+import { PendingIndicator } from '@/components/offline'
 import { useAuth, useNotifications } from '@/hooks'
 import { cn } from '@/lib/utils'
 
@@ -93,6 +94,9 @@ export function Header({
                 </kbd>
               </button>
             )}
+
+            {/* Pending Submissions Indicator */}
+            <PendingIndicator />
 
             {/* Theme Toggle */}
             {mounted && (
