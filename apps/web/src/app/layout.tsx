@@ -3,7 +3,7 @@ import { Geist, Geist_Mono } from "next/font/google"
 import { Analytics } from "@vercel/analytics/next"
 import { SpeedInsights } from "@vercel/speed-insights/next"
 import "./globals.css"
-import { BottomNavigation, SubmitFAB } from "@/components/layout"
+import { BottomNavigation } from "@/components/layout"
 import { AuthProvider, ThemeProvider } from "@/components/providers"
 import { InstallPrompt } from "@/components/pwa"
 
@@ -101,7 +101,6 @@ export default function RootLayout({
             {children}
           </main>
           <InstallPrompt />
-          <SubmitFAB />
           <BottomNavigation />
         </AuthProvider>
         </ThemeProvider>
