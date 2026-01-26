@@ -26,7 +26,7 @@ export interface ScrapedGame {
 async function fetchPage(url: string): Promise<string> {
   const response = await fetch(url, {
     headers: {
-      'User-Agent': 'Mozilla/5.0 (compatible; 808scores/1.0; +https://808scores.vercel.app)',
+      'User-Agent': 'Mozilla/5.0 (compatible; 808scores/1.0; +https://hawaiisportscenter.com)',
       'Accept': 'text/html,application/xhtml+xml',
     },
   })

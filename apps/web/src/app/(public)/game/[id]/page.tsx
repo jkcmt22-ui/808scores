@@ -2,7 +2,7 @@ import { Metadata } from 'next'
 import { createClient } from '@supabase/supabase-js'
 import { GameClient } from './game-client'
 
-const SITE_URL = 'https://808scores.vercel.app'
+const SITE_URL = 'https://www.hawaiisportscenter.com'
 
 interface GamePageProps {
   params: Promise<{ id: string }>

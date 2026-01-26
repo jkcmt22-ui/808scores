@@ -105,7 +105,7 @@ export function GameClient({ params }: GamePageProps) {
       shareText = `Final: ${game.away_team.short_name} ${game.away_score} - ${game.home_team.short_name} ${game.home_score} | ${sportName}`
     }
 
-    const shareUrl = `https://808scores.vercel.app/game/${id}`
+    const shareUrl = `https://www.hawaiisportscenter.com/game/${id}`
     const shareData = {
       title: shareText,
       text: `${shareText}\n\nFollow live on Hawaii Sports Center`,

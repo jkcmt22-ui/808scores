@@ -15,7 +15,7 @@ export function ShareButtons({ title, text, url, className }: ShareButtonsProps)
   const [copied, setCopied] = useState(false)
   const [showOptions, setShowOptions] = useState(false)
 
-  const fullUrl = url.startsWith('http') ? url : `https://808scores.vercel.app${url}`
+  const fullUrl = url.startsWith('http') ? url : `https://www.hawaiisportscenter.com${url}`
   const encodedUrl = encodeURIComponent(fullUrl)
   const encodedText = encodeURIComponent(text)
   const encodedTitle = encodeURIComponent(title)
@@ -168,7 +168,7 @@ export function ShareButtons({ title, text, url, className }: ShareButtonsProps)
 export function InlineShareButtons({ title, text, url }: ShareButtonsProps) {
   const [copied, setCopied] = useState(false)
 
-  const fullUrl = url.startsWith('http') ? url : `https://808scores.vercel.app${url}`
+  const fullUrl = url.startsWith('http') ? url : `https://www.hawaiisportscenter.com${url}`
   const encodedUrl = encodeURIComponent(fullUrl)
   const encodedText = encodeURIComponent(text)
 

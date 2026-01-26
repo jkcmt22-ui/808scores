@@ -2,7 +2,7 @@ import { Metadata } from 'next'
 import { createClient } from '@supabase/supabase-js'
 import { SchoolClient } from './school-client'
 
-const SITE_URL = 'https://808scores.vercel.app'
+const SITE_URL = 'https://www.hawaiisportscenter.com'
 
 interface SchoolPageProps {
   params: Promise<{ id: string }>

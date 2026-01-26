@@ -1,7 +1,7 @@
 import { MetadataRoute } from 'next'
 import { createClient } from '@supabase/supabase-js'
 
-const SITE_URL = 'https://808scores.vercel.app'
+const SITE_URL = 'https://www.hawaiisportscenter.com'
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   // Static pages
