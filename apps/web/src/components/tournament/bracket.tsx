@@ -1,6 +1,6 @@
 'use client'
 
-import { useMemo } from 'react'
+import React, { useMemo, useRef, useEffect, useState } from 'react'
 import Link from 'next/link'
 import { cn, formatGameTime, formatGameDate } from '@/lib/utils'
 import type { TournamentBracket, BracketRound, BracketGame, TournamentRound } from '@/types/database'
@@ -20,8 +20,15 @@ const ELIMINATION_ROUND_ORDER: TournamentRound[] = [
   'final',
 ]
 
+// Game card height for connector calculations
+const GAME_CARD_HEIGHT = 80
+const COLUMN_GAP = 16
+const COLUMN_WIDTH = 200
+
 export function Bracket({ bracket, className }: BracketProps) {
-  const { tournament, rounds } = bracket
+  const { rounds } = bracket
+  const containerRef = useRef<HTMLDivElement>(null)
+  const [showConnectors, setShowConnectors] = useState(false)
 
   // Filter to elimination rounds only (exclude pool play and third place for main bracket)
   const eliminationRounds = useMemo(() => {
@@ -32,6 +39,12 @@ export function Bracket({ bracket, className }: BracketProps) {
 
   // Check if there's a third place game
   const thirdPlaceRound = rounds.find((r) => r.round === 'third_place')
+
+  // Show connectors after mount (to ensure proper positioning)
+  useEffect(() => {
+    const timer = setTimeout(() => setShowConnectors(true), 100)
+    return () => clearTimeout(timer)
+  }, [])
 
   if (eliminationRounds.length === 0) {
     return (
@@ -44,7 +57,12 @@ export function Bracket({ bracket, className }: BracketProps) {
   return (
     <div className={cn('overflow-x-auto', className)}>
       {/* Main Bracket */}
-      <div className="flex gap-4 min-w-max p-4">
+      <div ref={containerRef} className="relative flex gap-4 min-w-max p-4">
+        {/* Connector Lines SVG Overlay */}
+        {showConnectors && eliminationRounds.length > 1 && (
+          <BracketConnectors rounds={eliminationRounds} />
+        )}
+
         {eliminationRounds.map((round, roundIndex) => (
           <BracketRoundColumn
             key={round.round}
@@ -67,6 +85,85 @@ export function Bracket({ bracket, className }: BracketProps) {
         </div>
       )}
     </div>
+  )
+}
+
+// SVG Connector Lines between bracket rounds
+function BracketConnectors({ rounds }: { rounds: BracketRound[] }) {
+  const connectors: React.ReactElement[] = []
+  const headerHeight = 28 // Height of round header
+  const baseSpacing = 16 // Base margin between games
+
+  for (let roundIndex = 0; roundIndex < rounds.length - 1; roundIndex++) {
+    const currentRound = rounds[roundIndex]
+    const spacingMultiplier = Math.pow(2, roundIndex)
+    const nextSpacingMultiplier = Math.pow(2, roundIndex + 1)
+    const currentOffset = (spacingMultiplier - 1) * 40
+    const nextOffset = (nextSpacingMultiplier - 1) * 40
+
+    // X positions
+    const x1 = roundIndex * (COLUMN_WIDTH + COLUMN_GAP) + COLUMN_WIDTH // End of current column
+    const x2 = (roundIndex + 1) * (COLUMN_WIDTH + COLUMN_GAP) // Start of next column
+
+    // For each pair of games that feed into the next round
+    for (let gameIndex = 0; gameIndex < currentRound.games.length; gameIndex += 2) {
+      if (gameIndex + 1 >= currentRound.games.length) break
+
+      const gameSpacing = (spacingMultiplier - 1) * 80 + baseSpacing
+
+      // Y positions for the two games feeding into next round
+      const y1Top = headerHeight + currentOffset + gameIndex * (GAME_CARD_HEIGHT + gameSpacing) + GAME_CARD_HEIGHT / 2
+      const y1Bottom = headerHeight + currentOffset + (gameIndex + 1) * (GAME_CARD_HEIGHT + gameSpacing) + GAME_CARD_HEIGHT / 2
+
+      // Y position for the target game in next round
+      const nextGameIndex = Math.floor(gameIndex / 2)
+      const nextGameSpacing = (nextSpacingMultiplier - 1) * 80 + baseSpacing
+      const y2 = headerHeight + nextOffset + nextGameIndex * (GAME_CARD_HEIGHT + nextGameSpacing) + GAME_CARD_HEIGHT / 2
+
+      // Midpoint X for the connector bend
+      const midX = x1 + COLUMN_GAP / 2
+
+      // Draw connector path: horizontal from game -> vertical merge -> horizontal to next game
+      const path = `
+        M ${x1} ${y1Top}
+        H ${midX}
+        V ${y2}
+        H ${x2}
+        M ${x1} ${y1Bottom}
+        H ${midX}
+        V ${y2}
+      `
+
+      connectors.push(
+        <path
+          key={`connector-${roundIndex}-${gameIndex}`}
+          d={path}
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="2"
+          className="text-border"
+        />
+      )
+    }
+  }
+
+  // Calculate SVG dimensions
+  const totalWidth = rounds.length * (COLUMN_WIDTH + COLUMN_GAP)
+  const lastRoundMultiplier = Math.pow(2, rounds.length - 1)
+  const lastRoundOffset = (lastRoundMultiplier - 1) * 40
+  const lastRoundGames = rounds[rounds.length - 1]?.games.length || 1
+  const lastRoundSpacing = (lastRoundMultiplier - 1) * 80 + baseSpacing
+  const totalHeight = headerHeight + lastRoundOffset + lastRoundGames * (GAME_CARD_HEIGHT + lastRoundSpacing)
+
+  return (
+    <svg
+      className="absolute top-0 left-0 pointer-events-none"
+      width={totalWidth}
+      height={totalHeight}
+      style={{ zIndex: 0 }}
+    >
+      {connectors}
+    </svg>
   )
 }
 
