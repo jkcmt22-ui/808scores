@@ -23,6 +23,7 @@ import { useFavoriteTeams } from '@/hooks/use-favorite-teams'
 import { useAuth } from '@/hooks/use-auth'
 import { useSchoolSchedule, type ScheduleGame, type SportSchedule } from '@/hooks/use-school-schedule'
 import { RosterList } from '@/components/school/roster-list'
+import { TeamStats } from '@/components/school/team-stats'
 import { createClient } from '@/lib/supabase/client'
 import { cn, formatGameTime, formatGameDate } from '@/lib/utils'
 import { getSportEmoji } from '@/lib/sport-utils'
@@ -328,6 +329,15 @@ export function SchoolClient({ params }: SchoolPageProps) {
             </Link>
           )}
         </div>
+
+        {/* Team Stats Summary */}
+        {school.recentGames.length > 0 && (
+          <TeamStats
+            schoolId={id}
+            games={school.recentGames}
+            className="mt-4"
+          />
+        )}
       </div>
 
       {/* Games Tabs */}
