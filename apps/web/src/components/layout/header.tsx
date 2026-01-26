@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react'
 import Link from 'next/link'
-import { Bell, Search, User, LogIn, LogOut, Settings, ChevronDown, Command, Sun, Moon } from 'lucide-react'
+import { Bell, Search, User, LogIn, LogOut, Settings, ChevronDown, Command, Sun, Moon, Shield } from 'lucide-react'
 import { useTheme } from 'next-themes'
 import { Button, Avatar } from '@/components/ui'
 import { GlobalSearch } from '@/components/search/global-search'
@@ -203,6 +203,17 @@ export function Header({
                             <Settings className="h-4 w-4" aria-hidden="true" />
                             Settings
                           </Link>
+                          {(profile?.is_admin || profile?.is_super_admin) && (
+                            <Link
+                              href="/admin"
+                              role="menuitem"
+                              onClick={() => setShowUserMenu(false)}
+                              className="flex items-center gap-2 px-3 py-2 text-sm text-neon-blue hover:bg-neon-blue/10 transition-colors"
+                            >
+                              <Shield className="h-4 w-4" aria-hidden="true" />
+                              Admin Panel
+                            </Link>
+                          )}
                           <button
                             onClick={handleSignOut}
                             role="menuitem"

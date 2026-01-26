@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useMemo, useEffect } from 'react'
+import { useState, useMemo, useEffect, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 import {
   Plus,
@@ -136,76 +136,76 @@ export default function AdminPage() {
   const hasAdminAccess = profile?.is_admin === true || isSuperAdmin
 
   // Fetch data
+  const fetchData = useCallback(async () => {
+    setIsLoading(true)
+
+    // Fetch games
+    const { data: gamesData } = await supabase
+      .from('games')
+      .select(`
+        *,
+        sport:sports(*),
+        home_team:schools!games_home_team_id_fkey(*),
+        away_team:schools!games_away_team_id_fkey(*)
+      `)
+      .order('scheduled_at', { ascending: false })
+      .limit(100)
+
+    if (gamesData) setGames(gamesData as GameWithTeams[])
+
+    // Fetch sports
+    const { data: sportsData } = await supabase
+      .from('sports')
+      .select('*')
+      .eq('active', true)
+      .order('sort_order')
+
+    if (sportsData) setSports(sportsData as Sport[])
+
+    // Fetch schools
+    const { data: schoolsData } = await supabase
+      .from('schools')
+      .select('*')
+      .order('name')
+
+    if (schoolsData) setSchools(schoolsData as School[])
+
+    // Fetch trusted reporter applications
+    const { data: applicationsData } = await supabase
+      .from('trusted_reporter_applications')
+      .select(`
+        *,
+        user:users(display_name, email, phone, reputation_score, submission_count, verified_count)
+      `)
+      .order('created_at', { ascending: false })
+
+    if (applicationsData) setApplications(applicationsData as TrustedReporterApplication[])
+
+    // Fetch trusted reporter codes
+    const { data: codesData } = await supabase
+      .from('trusted_reporter_codes')
+      .select('*')
+      .order('created_at', { ascending: false })
+
+    if (codesData) setCodes(codesData as TrustedReporterCode[])
+
+    // Fetch admin users (for super admin only)
+    const { data: usersData } = await supabase
+      .from('users')
+      .select('id, display_name, email, phone, is_super_admin, is_admin, is_trusted_reporter, tier, created_at')
+      .or('is_admin.eq.true,is_super_admin.eq.true,is_trusted_reporter.eq.true')
+      .order('created_at', { ascending: false })
+
+    if (usersData) setAdminUsers(usersData as AdminUser[])
+
+    setIsLoading(false)
+  }, [supabase])
+
   useEffect(() => {
-    const fetchData = async () => {
-      setIsLoading(true)
-
-      // Fetch games
-      const { data: gamesData } = await supabase
-        .from('games')
-        .select(`
-          *,
-          sport:sports(*),
-          home_team:schools!games_home_team_id_fkey(*),
-          away_team:schools!games_away_team_id_fkey(*)
-        `)
-        .order('scheduled_at', { ascending: false })
-        .limit(100)
-
-      if (gamesData) setGames(gamesData as GameWithTeams[])
-
-      // Fetch sports
-      const { data: sportsData } = await supabase
-        .from('sports')
-        .select('*')
-        .eq('active', true)
-        .order('sort_order')
-
-      if (sportsData) setSports(sportsData as Sport[])
-
-      // Fetch schools
-      const { data: schoolsData } = await supabase
-        .from('schools')
-        .select('*')
-        .order('name')
-
-      if (schoolsData) setSchools(schoolsData as School[])
-
-      // Fetch trusted reporter applications
-      const { data: applicationsData } = await supabase
-        .from('trusted_reporter_applications')
-        .select(`
-          *,
-          user:users(display_name, email, phone, reputation_score, submission_count, verified_count)
-        `)
-        .order('created_at', { ascending: false })
-
-      if (applicationsData) setApplications(applicationsData as TrustedReporterApplication[])
-
-      // Fetch trusted reporter codes
-      const { data: codesData } = await supabase
-        .from('trusted_reporter_codes')
-        .select('*')
-        .order('created_at', { ascending: false })
-
-      if (codesData) setCodes(codesData as TrustedReporterCode[])
-
-      // Fetch admin users (for super admin only)
-      const { data: usersData } = await supabase
-        .from('users')
-        .select('id, display_name, email, phone, is_super_admin, is_admin, is_trusted_reporter, tier, created_at')
-        .or('is_admin.eq.true,is_super_admin.eq.true,is_trusted_reporter.eq.true')
-        .order('created_at', { ascending: false })
-
-      if (usersData) setAdminUsers(usersData as AdminUser[])
-
-      setIsLoading(false)
-    }
-
     if (hasAdminAccess) {
       fetchData()
     }
-  }, [supabase, hasAdminAccess])
+  }, [hasAdminAccess, fetchData])
 
   // Filter games
   const filteredGames = useMemo(() => {
@@ -780,9 +780,11 @@ export default function AdminPage() {
               <Button
                 variant="outline"
                 size="icon"
-                onClick={() => window.location.reload()}
+                onClick={fetchData}
+                disabled={isLoading}
+                aria-label="Refresh data"
               >
-                <RefreshCw className="h-4 w-4" />
+                <RefreshCw className={cn("h-4 w-4", isLoading && "animate-spin")} />
               </Button>
             </div>
 
