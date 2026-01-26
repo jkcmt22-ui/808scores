@@ -69,7 +69,7 @@ export function GameChat({ gameId }: GameChatProps) {
       .from('chat_messages')
       .select(`
         *,
-        user:users(id, display_name, avatar_url, tier, is_trusted_reporter),
+        user:users(id, display_name, avatar_url, tier, is_trusted_reporter, is_admin, is_super_admin),
         reply_to:chat_messages!reply_to_id(
           id,
           content,
@@ -134,7 +134,7 @@ export function GameChat({ gameId }: GameChatProps) {
             .from('chat_messages')
             .select(`
               *,
-              user:users(id, display_name, avatar_url, tier, is_trusted_reporter),
+              user:users(id, display_name, avatar_url, tier, is_trusted_reporter, is_admin, is_super_admin),
               reply_to:chat_messages!reply_to_id(
                 id,
                 content,

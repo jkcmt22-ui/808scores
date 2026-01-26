@@ -18,6 +18,37 @@ interface ChatMessageProps {
   isHighlighted?: boolean
 }
 
+// Helper to get username color class based on user role
+function getUsernameColorClass(user?: ChatMessageWithUser['user']): string {
+  if (!user) return 'text-foreground'
+
+  // Priority order: Super Admin > Admin > School Manager > Trusted Reporter > Basic
+  if (user.is_super_admin) {
+    return 'text-neon-pink' // Hot pink for super admins
+  }
+  if (user.is_admin) {
+    return 'text-neon-purple' // Purple for admins
+  }
+  if (user.is_school_manager) {
+    return 'text-neon-green' // Green for school managers/owners
+  }
+  if (user.is_trusted_reporter) {
+    return 'text-neon-blue' // Cyan for trusted reporters
+  }
+  return 'text-foreground' // Default white for basic users
+}
+
+// Helper to get role badge text
+function getRoleBadge(user?: ChatMessageWithUser['user']): string | null {
+  if (!user) return null
+
+  if (user.is_super_admin) return 'Admin'
+  if (user.is_admin) return 'Staff'
+  if (user.is_school_manager) return 'Team Rep'
+  if (user.is_trusted_reporter) return 'Trusted'
+  return null
+}
+
 // Helper to render content with highlighted mentions
 function renderContentWithMentions(content: string) {
   // Match @username patterns
@@ -112,12 +143,21 @@ export function ChatMessageComponent({
         <div className="flex-1 min-w-0">
           {/* Header */}
           <div className="flex items-center gap-2">
-            <span className="font-medium text-sm text-foreground truncate">
+            <span className={cn('font-medium text-sm truncate', getUsernameColorClass(message.user))}>
               {message.user?.display_name || 'User'}
             </span>
-            {message.user?.is_trusted_reporter && (
-              <Badge variant="default" className="text-[10px] px-1.5 py-0">
-                Trusted
+            {getRoleBadge(message.user) && (
+              <Badge
+                variant="default"
+                className={cn(
+                  'text-[10px] px-1.5 py-0',
+                  message.user?.is_super_admin && 'bg-neon-pink/20 text-neon-pink border-neon-pink/30',
+                  message.user?.is_admin && !message.user?.is_super_admin && 'bg-neon-purple/20 text-neon-purple border-neon-purple/30',
+                  message.user?.is_school_manager && 'bg-neon-green/20 text-neon-green border-neon-green/30',
+                  message.user?.is_trusted_reporter && !message.user?.is_admin && !message.user?.is_school_manager && 'bg-neon-blue/20 text-neon-blue border-neon-blue/30'
+                )}
+              >
+                {getRoleBadge(message.user)}
               </Badge>
             )}
             <span className="text-xs text-foreground-subtle">

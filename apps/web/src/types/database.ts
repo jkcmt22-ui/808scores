@@ -782,6 +782,9 @@ export interface ChatMessageWithUser extends ChatMessage {
     avatar_url: string | null
     tier: string
     is_trusted_reporter: boolean
+    is_admin?: boolean
+    is_super_admin?: boolean
+    is_school_manager?: boolean // Computed from school_managers table
   }
   reply_to?: {
     id: string
@@ -848,4 +851,105 @@ export interface BracketRound {
 export interface TournamentBracket {
   tournament: TournamentWithDetails
   rounds: BracketRound[]
+}
+
+// School manager types
+export type SchoolManagerRole = 'owner' | 'manager' | 'assistant'
+
+export interface SchoolManager {
+  id: string
+  user_id: string
+  school_id: string
+  role: SchoolManagerRole
+  can_edit_info: boolean
+  can_manage_roster: boolean
+  can_manage_schedule: boolean
+  can_post_updates: boolean
+  granted_by: string | null
+  granted_at: string
+  is_active: boolean
+  created_at: string
+}
+
+export interface SchoolManagerWithUser extends SchoolManager {
+  user: Pick<User, 'id' | 'display_name' | 'avatar_url' | 'email'>
+  school: Pick<School, 'id' | 'name' | 'short_name'>
+}
+
+export interface SchoolUpdate {
+  id: string
+  school_id: string
+  posted_by: string | null
+  title: string
+  content: string
+  image_url: string | null
+  is_pinned: boolean
+  is_published: boolean
+  created_at: string
+  updated_at: string
+}
+
+export interface SchoolUpdateWithUser extends SchoolUpdate {
+  posted_by_user?: Pick<User, 'id' | 'display_name' | 'avatar_url'>
+}
+
+// Scholarship types
+export type ScholarshipStatus = 'upcoming' | 'voting' | 'closed' | 'announced'
+
+export interface Scholarship {
+  id: string
+  name: string
+  description: string | null
+  amount: number
+  school_year: string
+  sport_id: string | null
+  voting_starts_at: string
+  voting_ends_at: string
+  winner_announced_at: string | null
+  status: ScholarshipStatus
+  winner_player_id: string | null
+  created_at: string
+}
+
+export interface ScholarshipNominee {
+  id: string
+  scholarship_id: string
+  player_id: string
+  school_id: string
+  sport_id: string
+  nomination_reason: string | null
+  nominated_by: string | null
+  is_approved: boolean
+  stats_summary: Record<string, unknown>
+  created_at: string
+}
+
+export interface ScholarshipNomineeWithDetails extends ScholarshipNominee {
+  player: {
+    id: string
+    first_name: string
+    last_name: string
+  }
+  school: Pick<School, 'id' | 'name' | 'short_name'>
+  sport: Pick<Sport, 'id' | 'name' | 'code'>
+  vote_count?: number
+}
+
+export interface ScholarshipVote {
+  id: string
+  scholarship_id: string
+  nominee_id: string
+  user_id: string
+  created_at: string
+}
+
+export interface ScholarshipWithDetails extends Scholarship {
+  sport?: Pick<Sport, 'id' | 'name' | 'code'> | null
+  winner?: {
+    id: string
+    first_name: string
+    last_name: string
+    school: Pick<School, 'id' | 'name' | 'short_name'>
+  } | null
+  nominees?: ScholarshipNomineeWithDetails[]
 }

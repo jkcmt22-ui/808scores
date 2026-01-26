@@ -66,7 +66,7 @@ export function useGeneralChat(
         .from('general_chat_messages')
         .select(`
           *,
-          user:users(id, display_name, avatar_url, is_trusted_reporter)
+          user:users(id, display_name, avatar_url, is_trusted_reporter, is_admin, is_super_admin)
         `)
         .eq('is_hidden', false)
         .order('created_at', { ascending: false })
@@ -101,7 +101,7 @@ export function useGeneralChat(
           .from('general_chat_messages')
           .select(`
             *,
-            user:users(id, display_name, avatar_url)
+            user:users(id, display_name, avatar_url, is_admin, is_super_admin)
           `)
           .in('id', replyIds)
 
@@ -155,7 +155,7 @@ export function useGeneralChat(
             .from('general_chat_messages')
             .select(`
               *,
-              user:users(id, display_name, avatar_url, is_trusted_reporter)
+              user:users(id, display_name, avatar_url, is_trusted_reporter, is_admin, is_super_admin)
             `)
             .eq('id', payload.new.id)
             .single()
