@@ -5,7 +5,7 @@ import { Header } from '@/components/layout'
 import { GameCard, SportFilter } from '@/components/game'
 import { GameCardSkeleton } from '@/components/ui'
 import { FavoritesModal } from '@/components/onboarding'
-import { QuickAccess, TournamentBanner, ComingSoon } from '@/components/home'
+import { QuickAccess, TournamentBanner, ComingSoon, LiveHero, WelcomeBanner } from '@/components/home'
 import { GlobalSearch } from '@/components/search/global-search'
 import { useGames, useAuth, useFavoriteTeams, useFavoriteSports } from '@/hooks'
 import { formatFullDate, isScoreOverdue } from '@/lib/utils'
@@ -217,6 +217,16 @@ export default function HomePage() {
       )}
 
       <main className="px-4 pb-24 grid-bg">
+        {/* Welcome Banner for new/logged-out users */}
+        <div className="mt-4">
+          <WelcomeBanner />
+        </div>
+
+        {/* Live Hero - Featured live games at the top */}
+        {!isLoading && liveGames.length > 0 && (
+          <LiveHero games={liveGames.slice(0, 5)} />
+        )}
+
         {/* Date Navigation */}
         <div className="my-4 flex items-center justify-between">
           <div className="flex items-center gap-3">
@@ -349,48 +359,33 @@ export default function HomePage() {
           </section>
         )}
 
-        {/* Live Games Section */}
-        {!isLoading && liveGames.length > 0 && (
+        {/* Live Games Section - Only shows remaining games not in hero, or all in list format */}
+        {!isLoading && liveGames.length > 5 && (
           <section className="mb-6 animate-fade-in">
             <div className="mb-3 flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <span className="h-3 w-3 animate-live-pulse rounded-full bg-neon-pink" style={{ boxShadow: '0 0 10px var(--neon-pink)' }} />
-                <h3 className="font-display text-sm font-black neon-text-pink uppercase tracking-widest">Live Now</h3>
-                <span className="font-display text-xs text-foreground-muted">({liveGames.length})</span>
+                <h3 className="font-display text-sm font-black neon-text-pink uppercase tracking-widest">More Live Games</h3>
+                <span className="font-display text-xs text-foreground-muted">({liveGames.length - 5} more)</span>
               </div>
-              {liveGames.length > LIVE_GAMES_LIMIT && !expandedSections.live && (
+              {liveGames.length > 5 + LIVE_GAMES_LIMIT && !expandedSections.live && (
                 <button
                   onClick={() => toggleSection('live')}
                   className="font-display text-xs font-bold text-neon-pink uppercase tracking-wider hover:text-neon-blue transition-colors"
                 >
-                  See All ({liveGames.length})
+                  See All
                 </button>
               )}
             </div>
             <div className="space-y-3">
-              {/* Favorite live games */}
-              {hasFavorites && sortedLive.favorites.length > 0 && (
-                <>
-                  <div className="flex items-center gap-2 text-xs text-neon-yellow">
-                    <Star className="h-3 w-3 fill-current" />
-                    <span className="font-display uppercase tracking-wider">Your Teams</span>
-                  </div>
-                  {sortedLive.favorites.slice(0, expandedSections.live ? undefined : LIVE_GAMES_LIMIT).map((game) => (
-                    <GameCard key={game.id} game={game} showSport />
-                  ))}
-                  {sortedLive.others.length > 0 && (
-                    <div className="border-t border-border/50 pt-3 mt-3" />
-                  )}
-                </>
-              )}
-              {/* Other live games */}
-              {(hasFavorites ? sortedLive.others : liveGames)
-                .slice(0, expandedSections.live ? undefined : Math.max(0, LIVE_GAMES_LIMIT - (hasFavorites ? sortedLive.favorites.length : 0)))
+              {/* Show games beyond the first 5 (which are in the hero) */}
+              {liveGames
+                .slice(5, expandedSections.live ? undefined : 5 + LIVE_GAMES_LIMIT)
                 .map((game) => (
                   <GameCard key={game.id} game={game} showSport />
                 ))}
               {/* Show less button when expanded */}
-              {expandedSections.live && liveGames.length > LIVE_GAMES_LIMIT && (
+              {expandedSections.live && liveGames.length > 5 + LIVE_GAMES_LIMIT && (
                 <button
                   onClick={() => toggleSection('live')}
                   className="w-full py-2 font-display text-xs font-bold text-foreground-muted uppercase tracking-wider hover:text-neon-blue transition-colors border-t border-border/50 mt-2"
