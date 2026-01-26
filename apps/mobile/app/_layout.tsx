@@ -1,5 +1,5 @@
 import FontAwesome from '@expo/vector-icons/FontAwesome';
-import { DarkTheme, ThemeProvider } from '@react-navigation/native';
+import { DarkTheme, DefaultTheme, ThemeProvider as NavigationThemeProvider } from '@react-navigation/native';
 import { useFonts } from 'expo-font';
 import { Stack } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
@@ -7,6 +7,7 @@ import { useEffect } from 'react';
 import 'react-native-reanimated';
 
 import { SupabaseProvider } from '../contexts/SupabaseContext';
+import { ThemeProvider, useTheme } from '../contexts/ThemeContext';
 
 export {
   // Catch any errors thrown by the Layout component.
@@ -29,6 +30,20 @@ const customDarkTheme = {
     text: '#FFFFFF',
     border: '#2A2A35',
     notification: '#FF2A6D',
+  },
+};
+
+// Custom light theme for 808scores
+const customLightTheme = {
+  ...DefaultTheme,
+  colors: {
+    ...DefaultTheme.colors,
+    primary: '#d91a5a', // Darker pink for light mode
+    background: '#f5f0fa', // Light background
+    card: '#ffffff', // Card background
+    text: '#1a1a2e',
+    border: '#d0c8e0',
+    notification: '#d91a5a',
   },
 };
 
@@ -57,21 +72,26 @@ export default function RootLayout() {
   }
 
   return (
-    <SupabaseProvider>
-      <RootLayoutNav />
-    </SupabaseProvider>
+    <ThemeProvider>
+      <SupabaseProvider>
+        <RootLayoutNav />
+      </SupabaseProvider>
+    </ThemeProvider>
   );
 }
 
 function RootLayoutNav() {
+  const { isDark } = useTheme();
+  const navigationTheme = isDark ? customDarkTheme : customLightTheme;
+
   return (
-    <ThemeProvider value={customDarkTheme}>
+    <NavigationThemeProvider value={navigationTheme}>
       <Stack>
         <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
         <Stack.Screen name="game/[id]" options={{ presentation: 'card', headerShown: true, title: 'Game Details' }} />
         <Stack.Screen name="school/[id]" options={{ presentation: 'card', headerShown: true, title: 'School' }} />
         <Stack.Screen name="login" options={{ presentation: 'modal', headerShown: false }} />
       </Stack>
-    </ThemeProvider>
+    </NavigationThemeProvider>
   );
 }

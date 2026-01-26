@@ -1,7 +1,8 @@
 // Hawaii Sports Center - Retro 80s Neon Theme
 // Matching the web app's Blade Runner aesthetic
 
-export const colors = {
+// Dark theme colors (default)
+export const darkColors = {
   // Backgrounds
   background: '#0a0a12',
   backgroundSecondary: '#12121f',
@@ -30,6 +31,42 @@ export const colors = {
   warning: '#f9f002',       // Same as neonYellow
   error: '#ff2a6d',         // Same as neonPink
 }
+
+// Light theme colors
+export const lightColors = {
+  // Backgrounds
+  background: '#f5f0fa',
+  backgroundSecondary: '#ffffff',
+  backgroundTertiary: '#ebe5f0',
+
+  // Foreground
+  foreground: '#1a1a2e',
+  foregroundMuted: '#505070',
+  foregroundSubtle: '#707090',
+
+  // Borders
+  border: '#d0c8e0',
+  borderHover: '#b0a8c0',
+
+  // Neon Colors (Adjusted for light backgrounds)
+  neonPink: '#d91a5a',      // Darker pink for contrast
+  neonBlue: '#0099aa',      // Darker cyan for contrast
+  neonYellow: '#b8a000',    // Darker yellow/gold for contrast
+  neonPurple: '#a000a0',    // Darker purple for contrast
+  neonGreen: '#00aa00',     // Darker green for contrast
+  neonOrange: '#cc5020',    // Darker orange for contrast
+
+  // Aliases for specific uses
+  live: '#d91a5a',          // Same as neonPink
+  success: '#00aa00',       // Same as neonGreen
+  warning: '#b8a000',       // Same as neonYellow
+  error: '#d91a5a',         // Same as neonPink
+}
+
+// Default export for backward compatibility
+export const colors = darkColors
+
+export type ThemeColors = typeof darkColors
 
 // Score LED styles
 export const scoreLedStyles = {
