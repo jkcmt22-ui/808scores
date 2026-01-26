@@ -8,24 +8,16 @@ interface GamePageProps {
   params: Promise<{ id: string }>
 }
 
-export async function generateMetadata({ params }: GamePageProps): Promise<Metadata> {
-  const { id } = await params
-
-  // Create Supabase client inside function to avoid build-time errors
+// Helper to fetch game data
+async function getGame(id: string) {
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
   const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
 
-  if (!supabaseUrl || !supabaseKey) {
-    return {
-      title: 'Game | Hawaii Sports Center',
-      description: 'Hawaii high school sports scores and updates.',
-    }
-  }
+  if (!supabaseUrl || !supabaseKey) return null
 
   const supabase = createClient(supabaseUrl, supabaseKey)
 
-  // Fetch game data for metadata
-  const { data: game } = await supabase
+  const { data } = await supabase
     .from('games')
     .select(`
       *,
@@ -35,6 +27,70 @@ export async function generateMetadata({ params }: GamePageProps): Promise<Metad
     `)
     .eq('id', id)
     .single()
+
+  return data
+}
+
+// Generate JSON-LD structured data for SportsEvent
+function generateJsonLd(game: Awaited<ReturnType<typeof getGame>>, id: string) {
+  if (!game) return null
+
+  const sportName = game.sport.display_name || game.sport.name
+  const isLive = game.status === 'in_progress'
+  const isFinal = game.status === 'final'
+
+  // Determine event status
+  let eventStatus = 'https://schema.org/EventScheduled'
+  if (isLive) {
+    eventStatus = 'https://schema.org/EventScheduled' // No "in progress" status in schema.org
+  } else if (isFinal) {
+    eventStatus = 'https://schema.org/EventScheduled'
+  }
+
+  const jsonLd = {
+    '@context': 'https://schema.org',
+    '@type': 'SportsEvent',
+    name: `${game.away_team.name} vs ${game.home_team.name}`,
+    description: `${sportName} game between ${game.away_team.name} and ${game.home_team.name}`,
+    startDate: game.scheduled_at,
+    eventStatus,
+    eventAttendanceMode: 'https://schema.org/OfflineEventAttendanceMode',
+    location: game.venue ? {
+      '@type': 'Place',
+      name: game.venue,
+      address: {
+        '@type': 'PostalAddress',
+        addressRegion: 'HI',
+        addressCountry: 'US',
+      },
+    } : undefined,
+    competitor: [
+      {
+        '@type': 'SportsTeam',
+        name: game.away_team.name,
+        ...(isFinal || isLive ? { score: game.away_score } : {}),
+      },
+      {
+        '@type': 'SportsTeam',
+        name: game.home_team.name,
+        ...(isFinal || isLive ? { score: game.home_score } : {}),
+      },
+    ],
+    sport: sportName,
+    url: `${SITE_URL}/game/${id}`,
+    organizer: {
+      '@type': 'Organization',
+      name: 'Hawaii Sports Center',
+      url: SITE_URL,
+    },
+  }
+
+  return jsonLd
+}
+
+export async function generateMetadata({ params }: GamePageProps): Promise<Metadata> {
+  const { id } = await params
+  const game = await getGame(id)
 
   if (!game) {
     return {
@@ -95,6 +151,20 @@ export async function generateMetadata({ params }: GamePageProps): Promise<Metad
   }
 }
 
-export default function GamePage({ params }: GamePageProps) {
-  return <GameClient params={params} />
+export default async function GamePage({ params }: GamePageProps) {
+  const { id } = await params
+  const game = await getGame(id)
+  const jsonLd = generateJsonLd(game, id)
+
+  return (
+    <>
+      {jsonLd && (
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+        />
+      )}
+      <GameClient params={params} />
+    </>
+  )
 }

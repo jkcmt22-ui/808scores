@@ -16,7 +16,7 @@ export async function generateMetadata({ params }: SchoolPageProps): Promise<Met
 
   if (!supabaseUrl || !supabaseKey) {
     return {
-      title: 'School | 808 Scores',
+      title: 'School | Hawaii Sports Center',
       description: 'Hawaii high school sports scores and updates.',
     }
   }
@@ -31,14 +31,14 @@ export async function generateMetadata({ params }: SchoolPageProps): Promise<Met
 
   if (!school) {
     return {
-      title: 'School Not Found | 808 Scores',
+      title: 'School Not Found | Hawaii Sports Center',
       description: 'This school could not be found.',
     }
   }
 
   const title = school.mascot
-    ? `${school.name} ${school.mascot} | 808 Scores`
-    : `${school.name} | 808 Scores`
+    ? `${school.name} ${school.mascot} | Hawaii Sports Center`
+    : `${school.name} | Hawaii Sports Center`
 
   const description = `Follow ${school.name}${school.mascot ? ` ${school.mascot}` : ''} sports. Get live scores, schedules, and results for ${school.league || 'Hawaii'} high school athletics.`
 
@@ -50,7 +50,7 @@ export async function generateMetadata({ params }: SchoolPageProps): Promise<Met
       description,
       type: 'website',
       url: `${SITE_URL}/school/${id}`,
-      siteName: '808 Scores',
+      siteName: 'Hawaii Sports Center',
     },
     twitter: {
       card: 'summary',
