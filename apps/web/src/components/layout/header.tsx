@@ -164,6 +164,7 @@ export function Header({
                       <div
                         role="menu"
                         aria-label="User menu"
+                        aria-orientation="vertical"
                         className="absolute right-0 top-full mt-2 z-50 w-48 border-2 border-border bg-background-secondary shadow-lg"
                         onKeyDown={(e) => {
                           if (e.key === 'Escape') {

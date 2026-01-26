@@ -34,7 +34,12 @@ export default function SchoolDetailScreen() {
           <Text style={styles.placeholderSubtext}>
             School details and schedule coming soon!
           </Text>
-          <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
+          <TouchableOpacity
+            style={styles.backButton}
+            onPress={() => router.back()}
+            accessibilityLabel="Go back"
+            accessibilityRole="button"
+          >
             <Text style={styles.backButtonText}>Go Back</Text>
           </TouchableOpacity>
         </View>

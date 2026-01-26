@@ -104,6 +104,7 @@ export function ShareButtons({ title, text, url, className }: ShareButtonsProps)
           <div
             role="menu"
             aria-label="Share options"
+            aria-orientation="vertical"
             className="absolute right-0 top-full mt-2 z-50 w-48 border-2 border-border bg-background shadow-lg"
             onKeyDown={(e) => {
               if (e.key === 'Escape') {
