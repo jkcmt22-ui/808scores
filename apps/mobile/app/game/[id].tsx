@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { StyleSheet, View, Text, ScrollView, ActivityIndicator, TouchableOpacity } from 'react-native';
+import { StyleSheet, View, Text, ScrollView, ActivityIndicator, TouchableOpacity, Linking } from 'react-native';
 import { useLocalSearchParams, useRouter, Stack } from 'expo-router';
 import { format } from 'date-fns';
 import FontAwesome from '@expo/vector-icons/FontAwesome';
@@ -32,7 +32,12 @@ export default function GameDetailScreen() {
           <Text style={styles.errorScore}>!</Text>
         </View>
         <Text style={styles.errorText}>GAME NOT FOUND</Text>
-        <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
+        <TouchableOpacity
+          style={styles.backButton}
+          onPress={() => router.back()}
+          accessibilityLabel="Go back"
+          accessibilityRole="button"
+        >
           <Text style={styles.backButtonText}>GO BACK</Text>
         </TouchableOpacity>
       </View>
@@ -135,12 +140,22 @@ export default function GameDetailScreen() {
         {/* Submit Score Button */}
         {!isFinal && (
           user ? (
-            <TouchableOpacity style={styles.submitButton} onPress={handleSubmitScore}>
+            <TouchableOpacity
+              style={styles.submitButton}
+              onPress={handleSubmitScore}
+              accessibilityLabel="Submit score"
+              accessibilityRole="button"
+            >
               <FontAwesome name="plus-circle" size={20} color={colors.background} />
               <Text style={styles.submitButtonText}>SUBMIT SCORE</Text>
             </TouchableOpacity>
           ) : (
-            <TouchableOpacity style={styles.loginPromptButton} onPress={() => router.push('/login')}>
+            <TouchableOpacity
+              style={styles.loginPromptButton}
+              onPress={() => router.push('/login')}
+              accessibilityLabel="Sign in to submit scores"
+              accessibilityRole="button"
+            >
               <FontAwesome name="user" size={16} color={colors.neonBlue} />
               <Text style={styles.loginPromptText}>SIGN IN TO SUBMIT SCORES</Text>
             </TouchableOpacity>
@@ -152,6 +167,8 @@ export default function GameDetailScreen() {
           style={styles.chatSection}
           onPress={() => setShowChat(true)}
           activeOpacity={0.8}
+          accessibilityLabel={`Open game chat, ${game.message_count} messages`}
+          accessibilityRole="button"
         >
           <View style={styles.chatHeader}>
             <FontAwesome name="comments" size={18} color={colors.neonBlue} />
@@ -161,13 +178,36 @@ export default function GameDetailScreen() {
           </View>
         </TouchableOpacity>
 
+        {/* Watch Live Button */}
+        {(game as { streaming_url?: string | null }).streaming_url && (
+          <TouchableOpacity
+            style={styles.watchLiveButton}
+            onPress={() => Linking.openURL((game as { streaming_url?: string | null }).streaming_url!)}
+            accessibilityLabel="Watch live stream"
+            accessibilityRole="link"
+            accessibilityHint="Opens live stream in external app"
+          >
+            <FontAwesome name="play-circle" size={20} color={colors.background} />
+            <Text style={styles.watchLiveText}>WATCH LIVE</Text>
+            <FontAwesome name="external-link" size={14} color={colors.background} />
+          </TouchableOpacity>
+        )}
+
         {/* Actions */}
         <View style={styles.actionsSection}>
-          <TouchableOpacity style={styles.actionButton}>
+          <TouchableOpacity
+            style={styles.actionButton}
+            accessibilityLabel="Set game reminder"
+            accessibilityRole="button"
+          >
             <FontAwesome name="bell-o" size={16} color={colors.neonYellow} />
             <Text style={styles.actionButtonText}>REMINDER</Text>
           </TouchableOpacity>
-          <TouchableOpacity style={styles.actionButton}>
+          <TouchableOpacity
+            style={styles.actionButton}
+            accessibilityLabel="Share game"
+            accessibilityRole="button"
+          >
             <FontAwesome name="share-alt" size={16} color={colors.neonBlue} />
             <Text style={styles.actionButtonText}>SHARE</Text>
           </TouchableOpacity>
@@ -178,7 +218,12 @@ export default function GameDetailScreen() {
       {showChat && (
         <View style={styles.chatFullScreen}>
           <View style={styles.chatFullHeader}>
-            <TouchableOpacity style={styles.closeButton} onPress={() => setShowChat(false)}>
+            <TouchableOpacity
+              style={styles.closeButton}
+              onPress={() => setShowChat(false)}
+              accessibilityLabel="Close chat"
+              accessibilityRole="button"
+            >
               <FontAwesome name="chevron-down" size={20} color={colors.foreground} />
             </TouchableOpacity>
             <Text style={styles.chatFullTitle}>GAME CHAT</Text>
@@ -438,6 +483,21 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: '700',
     letterSpacing: 1,
+  },
+  watchLiveButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 10,
+    backgroundColor: colors.neonYellow,
+    paddingVertical: 14,
+    marginBottom: 16,
+  },
+  watchLiveText: {
+    color: colors.background,
+    fontSize: 14,
+    fontWeight: '900',
+    letterSpacing: 2,
   },
   chatSection: {
     backgroundColor: colors.backgroundSecondary,

@@ -20,11 +20,17 @@ function GameCard({ game, onPress }: { game: GameWithTeamsAndCount; onPress: () 
 
   const getAbbrev = (name: string) => name?.substring(0, 2).toUpperCase() || '??';
 
+  const statusText = isLive ? 'Live' : isFinal ? 'Final' : 'Scheduled';
+  const gameLabel = `${game.away_team?.short_name || game.away_team?.name} ${game.away_score} at ${game.home_team?.short_name || game.home_team?.name} ${game.home_score}, ${statusText}`;
+
   return (
     <TouchableOpacity
       style={[styles.gameCard, isLive && styles.gameCardLive]}
       onPress={onPress}
       activeOpacity={0.7}
+      accessibilityLabel={gameLabel}
+      accessibilityRole="button"
+      accessibilityHint="View game details"
     >
       <View style={styles.gameHeader}>
         <View style={styles.statusContainer}>
@@ -102,16 +108,31 @@ export default function GamesScreen() {
     <SafeAreaView style={styles.container} edges={['top']}>
       {/* Date Navigation */}
       <View style={styles.dateNav}>
-        <TouchableOpacity onPress={goToPreviousDay} style={styles.navButton}>
+        <TouchableOpacity
+          onPress={goToPreviousDay}
+          style={styles.navButton}
+          accessibilityLabel="Go to previous day"
+          accessibilityRole="button"
+        >
           <FontAwesome name="chevron-left" size={18} color={colors.foreground} />
         </TouchableOpacity>
 
-        <TouchableOpacity onPress={goToToday} style={styles.dateContainer}>
+        <TouchableOpacity
+          onPress={goToToday}
+          style={styles.dateContainer}
+          accessibilityLabel={`${format(selectedDate, 'EEEE, MMMM d')}${!isToday ? ', tap to go to today' : ''}`}
+          accessibilityRole="button"
+        >
           <Text style={styles.dateText}>{format(selectedDate, 'EEE, MMM d').toUpperCase()}</Text>
           {!isToday && <Text style={styles.todayHint}>TAP FOR TODAY</Text>}
         </TouchableOpacity>
 
-        <TouchableOpacity onPress={goToNextDay} style={styles.navButton}>
+        <TouchableOpacity
+          onPress={goToNextDay}
+          style={styles.navButton}
+          accessibilityLabel="Go to next day"
+          accessibilityRole="button"
+        >
           <FontAwesome name="chevron-right" size={18} color={colors.foreground} />
         </TouchableOpacity>
       </View>

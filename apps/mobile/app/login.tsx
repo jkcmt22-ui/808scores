@@ -60,6 +60,8 @@ export default function LoginScreen() {
             <TouchableOpacity
               style={styles.secondaryButton}
               onPress={() => setEmailSent(false)}
+              accessibilityLabel="Try a different email"
+              accessibilityRole="button"
             >
               <Text style={styles.secondaryButtonText}>TRY DIFFERENT EMAIL</Text>
             </TouchableOpacity>
@@ -76,7 +78,12 @@ export default function LoginScreen() {
         style={styles.container}
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
       >
-        <TouchableOpacity style={styles.closeButton} onPress={() => router.back()}>
+        <TouchableOpacity
+          style={styles.closeButton}
+          onPress={() => router.back()}
+          accessibilityLabel="Close login screen"
+          accessibilityRole="button"
+        >
           <FontAwesome name="times" size={24} color={colors.foregroundMuted} />
         </TouchableOpacity>
 
@@ -102,12 +109,17 @@ export default function LoginScreen() {
               autoCorrect={false}
               value={email}
               onChangeText={setEmail}
+              accessibilityLabel="Email address"
+              accessibilityHint="Enter your email to sign in"
             />
 
             <TouchableOpacity
               style={[styles.button, isLoading && styles.buttonDisabled]}
               onPress={handleLogin}
               disabled={isLoading}
+              accessibilityLabel={isLoading ? 'Sending magic link' : 'Continue with email'}
+              accessibilityRole="button"
+              accessibilityState={{ disabled: isLoading }}
             >
               <Text style={styles.buttonText}>
                 {isLoading ? 'SENDING...' : 'CONTINUE WITH EMAIL'}

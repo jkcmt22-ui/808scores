@@ -43,7 +43,7 @@ export function BottomNavigation() {
                   className="flex h-14 w-14 items-center justify-center rounded-full bg-neon-pink text-black font-bold transition-transform active:scale-95"
                   style={{ boxShadow: '0 0 15px var(--neon-pink), 0 0 30px var(--neon-pink)' }}
                 >
-                  <Icon className="h-7 w-7" />
+                  <Icon className="h-7 w-7" aria-hidden="true" />
                 </div>
                 <span className="mt-1 font-display text-[10px] font-bold text-neon-pink uppercase tracking-wider">{item.label}</span>
               </Link>
@@ -63,7 +63,7 @@ export function BottomNavigation() {
                   : 'text-foreground-muted hover:text-foreground'
               )}
             >
-              <Icon className="h-5 w-5" />
+              <Icon className="h-5 w-5" aria-hidden="true" />
               <span className="font-display text-[10px] font-bold uppercase tracking-wider">{item.label}</span>
             </Link>
           )
@@ -81,7 +81,7 @@ export function SubmitFAB() {
       className="fixed bottom-20 right-4 z-50 flex h-14 w-auto items-center justify-center gap-2 rounded-lg bg-score-green border-2 border-green-700 text-black transition-all active:scale-95 px-4 safe-bottom"
       style={{ boxShadow: '0 0 16px var(--score-green), inset 0 -2px 4px rgba(0,0,0,0.3)' }}
     >
-      <Plus className="h-6 w-6" />
+      <Plus className="h-6 w-6" aria-hidden="true" />
       <span className="font-display text-xs font-bold uppercase tracking-wider">Report</span>
     </Link>
   )

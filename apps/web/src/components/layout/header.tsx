@@ -74,11 +74,12 @@ export function Header({
             {showSearch && (
               <button
                 onClick={openSearch}
+                aria-label="Open search dialog (Cmd+K)"
                 className="flex items-center gap-2 px-3 py-1.5 rounded-lg border border-border bg-background-secondary text-foreground-muted hover:border-neon-blue hover:text-neon-blue transition-all"
               >
-                <Search className="h-4 w-4" />
+                <Search className="h-4 w-4" aria-hidden="true" />
                 <span className="hidden sm:inline text-sm">Search</span>
-                <kbd className="hidden sm:flex items-center gap-0.5 px-1.5 py-0.5 text-xs bg-background rounded border border-border">
+                <kbd className="hidden sm:flex items-center gap-0.5 px-1.5 py-0.5 text-xs bg-background rounded border border-border" aria-hidden="true">
                   <Command className="h-3 w-3" />
                   <span>K</span>
                 </kbd>
@@ -103,6 +104,14 @@ export function Header({
                 <div className="relative">
                   <button
                     onClick={() => setShowUserMenu(!showUserMenu)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Escape' && showUserMenu) {
+                        setShowUserMenu(false)
+                      }
+                    }}
+                    aria-label="Open user menu"
+                    aria-expanded={showUserMenu}
+                    aria-haspopup="menu"
                     className="flex items-center gap-1 rounded-lg px-2 py-1 hover:bg-background-secondary transition-colors"
                   >
                     <Avatar
@@ -115,7 +124,7 @@ export function Header({
                     <ChevronDown className={cn(
                       "h-3 w-3 text-foreground-muted transition-transform",
                       showUserMenu && "rotate-180"
-                    )} />
+                    )} aria-hidden="true" />
                   </button>
 
                   {showUserMenu && (
@@ -124,9 +133,19 @@ export function Header({
                       <div
                         className="fixed inset-0 z-40"
                         onClick={() => setShowUserMenu(false)}
+                        aria-hidden="true"
                       />
                       {/* Dropdown */}
-                      <div className="absolute right-0 top-full mt-2 z-50 w-48 border-2 border-border bg-background-secondary shadow-lg">
+                      <div
+                        role="menu"
+                        aria-label="User menu"
+                        className="absolute right-0 top-full mt-2 z-50 w-48 border-2 border-border bg-background-secondary shadow-lg"
+                        onKeyDown={(e) => {
+                          if (e.key === 'Escape') {
+                            setShowUserMenu(false)
+                          }
+                        }}
+                      >
                         <div className="p-3 border-b border-border">
                           <p className="font-display text-sm font-bold text-foreground truncate">
                             {profile?.display_name || 'User'}
@@ -138,25 +157,28 @@ export function Header({
                         <div className="py-1">
                           <Link
                             href="/profile"
+                            role="menuitem"
                             onClick={() => setShowUserMenu(false)}
                             className="flex items-center gap-2 px-3 py-2 text-sm text-foreground hover:bg-background-tertiary transition-colors"
                           >
-                            <User className="h-4 w-4" />
+                            <User className="h-4 w-4" aria-hidden="true" />
                             Profile
                           </Link>
                           <Link
                             href="/profile/settings"
+                            role="menuitem"
                             onClick={() => setShowUserMenu(false)}
                             className="flex items-center gap-2 px-3 py-2 text-sm text-foreground hover:bg-background-tertiary transition-colors"
                           >
-                            <Settings className="h-4 w-4" />
+                            <Settings className="h-4 w-4" aria-hidden="true" />
                             Settings
                           </Link>
                           <button
                             onClick={handleSignOut}
+                            role="menuitem"
                             className="flex w-full items-center gap-2 px-3 py-2 text-sm text-neon-pink hover:bg-neon-pink/10 transition-colors"
                           >
-                            <LogOut className="h-4 w-4" />
+                            <LogOut className="h-4 w-4" aria-hidden="true" />
                             Sign Out
                           </button>
                         </div>

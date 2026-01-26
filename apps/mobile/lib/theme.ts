@@ -10,7 +10,7 @@ export const colors = {
   // Foreground
   foreground: '#ffffff',
   foregroundMuted: '#a0a0b0',
-  foregroundSubtle: '#606070',
+  foregroundSubtle: '#8a8a9a',
 
   // Borders
   border: '#2a2a3e',

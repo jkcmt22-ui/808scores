@@ -45,7 +45,12 @@ export default function SubmitScoreScreen() {
     return (
       <View style={styles.errorContainer}>
         <Text style={styles.errorText}>UNABLE TO LOAD GAME</Text>
-        <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
+        <TouchableOpacity
+          style={styles.backButton}
+          onPress={() => router.back()}
+          accessibilityLabel="Go back"
+          accessibilityRole="button"
+        >
           <Text style={styles.backButtonText}>GO BACK</Text>
         </TouchableOpacity>
       </View>
@@ -142,6 +147,8 @@ export default function SubmitScoreScreen() {
             <TouchableOpacity
               style={styles.typeCard}
               onPress={() => handleSelectType('final_score')}
+              accessibilityLabel="Final score, game has ended, plus 10 points"
+              accessibilityRole="button"
             >
               <View style={styles.typeIconContainer}>
                 <FontAwesome name="flag-checkered" size={24} color={colors.neonGreen} />
@@ -158,6 +165,8 @@ export default function SubmitScoreScreen() {
             <TouchableOpacity
               style={styles.typeCard}
               onPress={() => handleSelectType('period_score')}
+              accessibilityLabel="Period score, end of quarter or half, plus 5 points"
+              accessibilityRole="button"
             >
               <View style={styles.typeIconContainer}>
                 <FontAwesome name="clock-o" size={24} color={colors.neonBlue} />
@@ -174,6 +183,8 @@ export default function SubmitScoreScreen() {
             <TouchableOpacity
               style={styles.typeCard}
               onPress={() => handleSelectType('live_update')}
+              accessibilityLabel="Live update, score during play, plus 5 points"
+              accessibilityRole="button"
             >
               <View style={styles.typeIconContainer}>
                 <FontAwesome name="bolt" size={24} color={colors.neonYellow} />
@@ -228,6 +239,8 @@ export default function SubmitScoreScreen() {
                       key={p}
                       style={[styles.periodButton, period === p && styles.periodButtonActive]}
                       onPress={() => setPeriod(p)}
+                      accessibilityLabel={`${p} period${period === p ? ', selected' : ''}`}
+                      accessibilityRole="button"
                     >
                       <Text style={[styles.periodButtonText, period === p && styles.periodButtonTextActive]}>
                         {p}
@@ -258,6 +271,7 @@ export default function SubmitScoreScreen() {
                   placeholder="0"
                   placeholderTextColor={colors.foregroundMuted}
                   maxLength={3}
+                  accessibilityLabel={`${game.away_team?.short_name || 'Away team'} score`}
                 />
               </View>
 
@@ -279,19 +293,28 @@ export default function SubmitScoreScreen() {
                   placeholder="0"
                   placeholderTextColor={colors.foregroundMuted}
                   maxLength={3}
+                  accessibilityLabel={`${game.home_team?.short_name || 'Home team'} score`}
                 />
               </View>
             </View>
 
             {/* Actions */}
             <View style={styles.actions}>
-              <TouchableOpacity style={styles.backActionButton} onPress={() => setStep(1)}>
+              <TouchableOpacity
+                style={styles.backActionButton}
+                onPress={() => setStep(1)}
+                accessibilityLabel="Go back"
+                accessibilityRole="button"
+              >
                 <Text style={styles.backActionText}>BACK</Text>
               </TouchableOpacity>
               <TouchableOpacity
                 style={[styles.submitActionButton, isSubmitting && styles.submitDisabled]}
                 onPress={handleSubmit}
                 disabled={isSubmitting}
+                accessibilityLabel={isSubmitting ? 'Submitting score' : 'Submit score'}
+                accessibilityRole="button"
+                accessibilityState={{ disabled: isSubmitting }}
               >
                 {isSubmitting ? (
                   <ActivityIndicator size="small" color={colors.background} />
@@ -337,12 +360,16 @@ export default function SubmitScoreScreen() {
             <TouchableOpacity
               style={styles.viewGameButton}
               onPress={() => router.replace(`/game/${gameId}`)}
+              accessibilityLabel="View game"
+              accessibilityRole="button"
             >
               <Text style={styles.viewGameText}>VIEW GAME</Text>
             </TouchableOpacity>
             <TouchableOpacity
               style={styles.goHomeButton}
               onPress={() => router.replace('/')}
+              accessibilityLabel="Go home"
+              accessibilityRole="button"
             >
               <Text style={styles.goHomeText}>GO HOME</Text>
             </TouchableOpacity>

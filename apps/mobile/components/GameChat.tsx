@@ -59,6 +59,8 @@ function MessageItem({ message, onLike, onUnlike, currentUserId }: MessageItemPr
             style={styles.likeButton}
             onPress={handleLikeToggle}
             disabled={!currentUserId}
+            accessibilityLabel={`${message.liked_by_me ? 'Unlike' : 'Like'} message${message.like_count > 0 ? `, ${message.like_count} likes` : ''}`}
+            accessibilityRole="button"
           >
             <FontAwesome
               name={message.liked_by_me ? 'heart' : 'heart-o'}
@@ -161,11 +163,16 @@ export function GameChat({ gameId }: GameChatProps) {
             maxLength={500}
             returnKeyType="send"
             onSubmitEditing={handleSend}
+            accessibilityLabel="Comment input"
+            accessibilityHint="Type your comment here"
           />
           <TouchableOpacity
             style={[styles.sendButton, (!inputText.trim() || isSending) && styles.sendButtonDisabled]}
             onPress={handleSend}
             disabled={!inputText.trim() || isSending}
+            accessibilityLabel={isSending ? 'Sending comment' : 'Send comment'}
+            accessibilityRole="button"
+            accessibilityState={{ disabled: !inputText.trim() || isSending }}
           >
             {isSending ? (
               <ActivityIndicator size="small" color={colors.background} />

@@ -309,7 +309,12 @@ export function GameChat({ gameId }: GameChatProps) {
       </div>
 
       {/* Messages */}
-      <div className="flex-1 overflow-y-auto p-4 space-y-4 custom-scrollbar">
+      <div
+        role="log"
+        aria-live="polite"
+        aria-label="Chat messages"
+        className="flex-1 overflow-y-auto p-4 space-y-4 custom-scrollbar"
+      >
         {isLoading ? (
           <>
             <ChatMessageSkeleton />
@@ -339,10 +344,13 @@ export function GameChat({ gameId }: GameChatProps) {
 
       {/* Error */}
       {error && (
-        <div className="px-4 py-2 bg-destructive/10 text-destructive text-xs flex items-center gap-2">
-          <AlertCircle className="h-3 w-3" />
+        <div
+          role="alert"
+          className="px-4 py-2 bg-destructive/10 text-destructive text-xs flex items-center gap-2"
+        >
+          <AlertCircle className="h-3 w-3" aria-hidden="true" />
           {error}
-          <button onClick={() => setError(null)} className="ml-auto text-xs underline">
+          <button onClick={() => setError(null)} className="ml-auto text-xs underline" aria-label="Dismiss error">
             Dismiss
           </button>
         </div>
@@ -357,9 +365,10 @@ export function GameChat({ gameId }: GameChatProps) {
           </span>
           <button
             onClick={cancelReply}
+            aria-label="Cancel reply"
             className="p-1 hover:bg-background-secondary rounded"
           >
-            <X className="h-3 w-3" />
+            <X className="h-3 w-3" aria-hidden="true" />
           </button>
         </div>
       )}
@@ -388,8 +397,9 @@ export function GameChat({ gameId }: GameChatProps) {
               size="icon"
               disabled={!newMessage.trim() || isSending}
               loading={isSending}
+              aria-label="Send message"
             >
-              {!isSending && <Send className="h-4 w-4" />}
+              {!isSending && <Send className="h-4 w-4" aria-hidden="true" />}
             </Button>
           </div>
           <p className="font-mono text-xs text-foreground-subtle mt-1.5">

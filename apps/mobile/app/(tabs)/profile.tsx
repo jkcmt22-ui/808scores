@@ -17,7 +17,12 @@ function StatCard({ label, value, color = colors.foreground }: { label: string; 
 
 function MenuButton({ icon, label, onPress }: { icon: string; label: string; onPress: () => void }) {
   return (
-    <TouchableOpacity style={styles.menuButton} onPress={onPress}>
+    <TouchableOpacity
+      style={styles.menuButton}
+      onPress={onPress}
+      accessibilityLabel={label}
+      accessibilityRole="button"
+    >
       <FontAwesome name={icon as any} size={20} color={colors.foregroundMuted} style={styles.menuIcon} />
       <Text style={styles.menuLabel}>{label}</Text>
       <FontAwesome name="chevron-right" size={14} color={colors.foregroundMuted} />
@@ -78,7 +83,12 @@ export default function ProfileScreen() {
           <Text style={styles.loginSubtext}>
             Track your favorite teams, earn points, and join the conversation
           </Text>
-          <TouchableOpacity style={styles.loginButton} onPress={handleLogin}>
+          <TouchableOpacity
+            style={styles.loginButton}
+            onPress={handleLogin}
+            accessibilityLabel="Sign in"
+            accessibilityRole="button"
+          >
             <Text style={styles.loginButtonText}>SIGN IN</Text>
           </TouchableOpacity>
         </View>
@@ -134,6 +144,8 @@ export default function ProfileScreen() {
               onValueChange={handleNotificationToggle}
               trackColor={{ false: colors.border, true: colors.neonPink }}
               thumbColor={colors.foreground}
+              accessibilityLabel={`Push notifications ${notificationsEnabled ? 'enabled' : 'disabled'}`}
+              accessibilityRole="switch"
             />
           )}
         </View>
@@ -142,7 +154,12 @@ export default function ProfileScreen() {
       </View>
 
       {/* Sign Out */}
-      <TouchableOpacity style={styles.signOutButton} onPress={handleSignOut}>
+      <TouchableOpacity
+        style={styles.signOutButton}
+        onPress={handleSignOut}
+        accessibilityLabel="Sign out"
+        accessibilityRole="button"
+      >
         <Text style={styles.signOutText}>Sign Out</Text>
       </TouchableOpacity>
     </ScrollView>

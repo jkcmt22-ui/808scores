@@ -81,9 +81,12 @@ export function ShareButtons({ title, text, url, className }: ShareButtonsProps)
       {/* Main Share Button */}
       <button
         onClick={handleNativeShare}
+        aria-label="Share this game"
+        aria-expanded={showOptions}
+        aria-haspopup="menu"
         className="flex items-center gap-2 px-3 py-2 border-2 border-border bg-background-secondary hover:border-neon-blue hover:text-neon-blue transition-colors"
       >
-        <Share2 className="h-4 w-4" />
+        <Share2 className="h-4 w-4" aria-hidden="true" />
         <span className="font-display text-xs font-bold uppercase tracking-wider">Share</span>
       </button>
 
@@ -94,10 +97,20 @@ export function ShareButtons({ title, text, url, className }: ShareButtonsProps)
           <div
             className="fixed inset-0 z-40"
             onClick={() => setShowOptions(false)}
+            aria-hidden="true"
           />
 
           {/* Dropdown */}
-          <div className="absolute right-0 top-full mt-2 z-50 w-48 border-2 border-border bg-background shadow-lg">
+          <div
+            role="menu"
+            aria-label="Share options"
+            className="absolute right-0 top-full mt-2 z-50 w-48 border-2 border-border bg-background shadow-lg"
+            onKeyDown={(e) => {
+              if (e.key === 'Escape') {
+                setShowOptions(false)
+              }
+            }}
+          >
             <div className="p-2 space-y-1">
               {shareLinks.map((link) => {
                 const Icon = link.icon
@@ -107,13 +120,15 @@ export function ShareButtons({ title, text, url, className }: ShareButtonsProps)
                     href={link.href}
                     target="_blank"
                     rel="noopener noreferrer"
+                    role="menuitem"
+                    aria-label={`Share on ${link.name}`}
                     onClick={() => setShowOptions(false)}
                     className={cn(
                       'flex items-center gap-3 px-3 py-2 border border-transparent transition-colors',
                       link.color
                     )}
                   >
-                    <Icon className="h-4 w-4" />
+                    <Icon className="h-4 w-4" aria-hidden="true" />
                     <span className="font-display text-sm">{link.name}</span>
                   </a>
                 )
@@ -124,16 +139,18 @@ export function ShareButtons({ title, text, url, className }: ShareButtonsProps)
                   handleCopyLink()
                   setShowOptions(false)
                 }}
+                role="menuitem"
+                aria-label={copied ? 'Link copied to clipboard' : 'Copy link to clipboard'}
                 className="w-full flex items-center gap-3 px-3 py-2 border border-transparent hover:bg-neon-yellow/10 hover:text-neon-yellow hover:border-neon-yellow transition-colors"
               >
                 {copied ? (
                   <>
-                    <Check className="h-4 w-4" />
+                    <Check className="h-4 w-4" aria-hidden="true" />
                     <span className="font-display text-sm">Copied!</span>
                   </>
                 ) : (
                   <>
-                    <Link2 className="h-4 w-4" />
+                    <Link2 className="h-4 w-4" aria-hidden="true" />
                     <span className="font-display text-sm">Copy Link</span>
                   </>
                 )}
@@ -166,24 +183,24 @@ export function InlineShareButtons({ title, text, url }: ShareButtonsProps) {
   }, [text, fullUrl])
 
   return (
-    <div className="flex items-center gap-1">
+    <div className="flex items-center gap-1" role="group" aria-label="Share options">
       <a
         href={`https://twitter.com/intent/tweet?text=${encodedText}&url=${encodedUrl}`}
         target="_blank"
         rel="noopener noreferrer"
         className="p-2 text-foreground-muted hover:text-[#1DA1F2] transition-colors"
-        title="Share on Twitter"
+        aria-label="Share on Twitter"
       >
-        <Twitter className="h-4 w-4" />
+        <Twitter className="h-4 w-4" aria-hidden="true" />
       </a>
       <a
         href={`https://www.facebook.com/sharer/sharer.php?u=${encodedUrl}`}
         target="_blank"
         rel="noopener noreferrer"
         className="p-2 text-foreground-muted hover:text-[#4267B2] transition-colors"
-        title="Share on Facebook"
+        aria-label="Share on Facebook"
       >
-        <Facebook className="h-4 w-4" />
+        <Facebook className="h-4 w-4" aria-hidden="true" />
       </a>
       <button
         onClick={handleCopyLink}
@@ -191,9 +208,9 @@ export function InlineShareButtons({ title, text, url }: ShareButtonsProps) {
           'p-2 transition-colors',
           copied ? 'text-neon-green' : 'text-foreground-muted hover:text-neon-yellow'
         )}
-        title={copied ? 'Copied!' : 'Copy link'}
+        aria-label={copied ? 'Link copied to clipboard' : 'Copy link to clipboard'}
       >
-        {copied ? <Check className="h-4 w-4" /> : <Link2 className="h-4 w-4" />}
+        {copied ? <Check className="h-4 w-4" aria-hidden="true" /> : <Link2 className="h-4 w-4" aria-hidden="true" />}
       </button>
     </div>
   )

@@ -22,11 +22,17 @@ function GameCard({ game, onPress }: { game: GameWithTeamsAndCount; onPress: () 
     return name?.substring(0, 2).toUpperCase() || '??';
   };
 
+  const statusText = isLive ? 'Live' : isFinal ? 'Final' : 'Scheduled';
+  const gameLabel = `${game.away_team?.short_name || game.away_team?.name} ${game.away_score} at ${game.home_team?.short_name || game.home_team?.name} ${game.home_score}, ${statusText}`;
+
   return (
     <TouchableOpacity
       style={[styles.gameCard, isLive && styles.gameCardLive]}
       onPress={onPress}
       activeOpacity={0.7}
+      accessibilityLabel={gameLabel}
+      accessibilityRole="button"
+      accessibilityHint="View game details"
     >
       {/* Header */}
       <View style={styles.gameHeader}>

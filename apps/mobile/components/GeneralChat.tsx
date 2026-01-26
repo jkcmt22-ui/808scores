@@ -69,6 +69,8 @@ function MessageItem({ message, onLike, onUnlike, currentUserId }: MessageItemPr
             style={styles.likeButton}
             onPress={handleLikeToggle}
             disabled={!currentUserId}
+            accessibilityLabel={`${message.liked_by_me ? 'Unlike' : 'Like'} message${message.like_count > 0 ? `, ${message.like_count} likes` : ''}`}
+            accessibilityRole="button"
           >
             <FontAwesome
               name={message.liked_by_me ? 'heart' : 'heart-o'}
@@ -142,7 +144,12 @@ export function GeneralChat() {
         contentContainerStyle={styles.messagesList}
         ListHeaderComponent={
           hasMore ? (
-            <TouchableOpacity style={styles.loadMoreButton} onPress={loadMore}>
+            <TouchableOpacity
+              style={styles.loadMoreButton}
+              onPress={loadMore}
+              accessibilityLabel="Load older messages"
+              accessibilityRole="button"
+            >
               <Text style={styles.loadMoreText}>LOAD OLDER MESSAGES</Text>
             </TouchableOpacity>
           ) : null
@@ -177,11 +184,16 @@ export function GeneralChat() {
             maxLength={500}
             returnKeyType="send"
             onSubmitEditing={handleSend}
+            accessibilityLabel="Message input"
+            accessibilityHint="Type your message here"
           />
           <TouchableOpacity
             style={[styles.sendButton, (!inputText.trim() || isSending) && styles.sendButtonDisabled]}
             onPress={handleSend}
             disabled={!inputText.trim() || isSending}
+            accessibilityLabel={isSending ? 'Sending message' : 'Send message'}
+            accessibilityRole="button"
+            accessibilityState={{ disabled: !inputText.trim() || isSending }}
           >
             {isSending ? (
               <ActivityIndicator size="small" color={colors.background} />

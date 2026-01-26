@@ -60,11 +60,14 @@ function SportPicker({
       <TouchableOpacity
         style={[styles.pickerButton, styles.pickerButtonActive]}
         onPress={() => setModalVisible(true)}
+        accessibilityLabel={`Select sport, currently ${selectedSportObj ? (selectedSportObj.display_name || selectedSportObj.name) : 'none selected'}`}
+        accessibilityRole="button"
+        accessibilityHint="Opens sport selection menu"
       >
         <Text style={[styles.pickerButtonText, styles.pickerButtonTextActive]}>
           {displayText}
         </Text>
-        <Text style={styles.pickerArrow}>▼</Text>
+        <Text style={styles.pickerArrow} accessibilityElementsHidden>▼</Text>
       </TouchableOpacity>
 
       <Modal
@@ -72,12 +75,17 @@ function SportPicker({
         transparent={true}
         visible={modalVisible}
         onRequestClose={() => setModalVisible(false)}
+        accessibilityViewIsModal={true}
       >
-        <Pressable style={styles.modalOverlay} onPress={() => setModalVisible(false)}>
+        <Pressable style={styles.modalOverlay} onPress={() => setModalVisible(false)} accessibilityLabel="Close sport selection">
           <View style={styles.modalContent}>
             <View style={styles.modalHeader}>
               <Text style={styles.modalTitle}>SELECT SPORT</Text>
-              <TouchableOpacity onPress={() => setModalVisible(false)}>
+              <TouchableOpacity
+                onPress={() => setModalVisible(false)}
+                accessibilityLabel="Close sport selection"
+                accessibilityRole="button"
+              >
                 <Text style={styles.modalClose}>✕</Text>
               </TouchableOpacity>
             </View>
@@ -99,6 +107,8 @@ function SportPicker({
                           onSelect(sport.code);
                           setModalVisible(false);
                         }}
+                        accessibilityLabel={`${sport.display_name || sport.name}${selectedSport === sport.code ? ', selected' : ''}`}
+                        accessibilityRole="button"
                       >
                         <Text style={[styles.modalOptionText, selectedSport === sport.code && styles.modalOptionTextActive]}>
                           {getSportEmoji(sport.code)} {(sport.display_name || sport.name).toUpperCase()}
@@ -219,7 +229,12 @@ export default function StandingsScreen() {
       {error ? (
         <View style={styles.errorContainer}>
           <Text style={styles.errorText}>ERROR LOADING STANDINGS</Text>
-          <TouchableOpacity style={styles.retryButton} onPress={refetch}>
+          <TouchableOpacity
+            style={styles.retryButton}
+            onPress={refetch}
+            accessibilityLabel="Retry loading standings"
+            accessibilityRole="button"
+          >
             <Text style={styles.retryButtonText}>RETRY</Text>
           </TouchableOpacity>
         </View>
