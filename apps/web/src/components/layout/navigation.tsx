@@ -36,7 +36,7 @@ export function BottomNavigation() {
               <Link
                 key={item.href}
                 href={item.href}
-                className="flex flex-col items-center justify-center"
+                className="flex flex-col items-center justify-center rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-neon-blue focus-visible:ring-offset-2 focus-visible:ring-offset-background"
                 aria-label={item.label}
               >
                 <div
@@ -57,7 +57,8 @@ export function BottomNavigation() {
               aria-label={item.label}
               aria-current={isActive ? 'page' : undefined}
               className={cn(
-                'flex flex-col items-center justify-center gap-1 px-3 py-2 transition-all min-w-[56px]',
+                'flex flex-col items-center justify-center gap-1 px-3 py-2 transition-all min-w-[56px] rounded-md',
+                'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-neon-blue',
                 isActive
                   ? 'neon-text-blue'
                   : 'text-foreground-muted hover:text-foreground'

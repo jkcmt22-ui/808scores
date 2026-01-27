@@ -4,8 +4,10 @@ import { Analytics } from "@vercel/analytics/next"
 import { SpeedInsights } from "@vercel/speed-insights/next"
 import "./globals.css"
 import { BottomNavigation } from "@/components/layout"
-import { AuthProvider, ThemeProvider } from "@/components/providers"
+import { AuthProvider, ThemeProvider, QueryProvider } from "@/components/providers"
 import { InstallPrompt } from "@/components/pwa"
+import { LiveRegionProvider } from "@/components/ui"
+import { OfflineIndicator } from "@/components/offline-indicator"
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -211,21 +213,26 @@ export default function RootLayout({
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
-        <ThemeProvider>
-        <AuthProvider>
-          <a
-            href="#main-content"
-            className="sr-only focus:not-sr-only focus:absolute focus:top-4 focus:left-4 focus:z-50 focus:px-4 focus:py-2 focus:bg-neon-blue focus:text-background focus:font-bold focus:outline-none"
-          >
-            Skip to main content
-          </a>
-          <main id="main-content" className="min-h-screen pb-20">
-            {children}
-          </main>
-          <InstallPrompt />
-          <BottomNavigation />
-        </AuthProvider>
-        </ThemeProvider>
+        <QueryProvider>
+          <ThemeProvider>
+            <AuthProvider>
+              <LiveRegionProvider>
+                <a
+                  href="#main-content"
+                  className="sr-only focus:not-sr-only focus:absolute focus:top-4 focus:left-4 focus:z-50 focus:px-4 focus:py-2 focus:bg-neon-blue focus:text-background focus:font-bold focus:outline-none"
+                >
+                  Skip to main content
+                </a>
+                <main id="main-content" className="min-h-screen pb-20">
+                  {children}
+                </main>
+                <InstallPrompt />
+                <OfflineIndicator />
+                <BottomNavigation />
+              </LiveRegionProvider>
+            </AuthProvider>
+          </ThemeProvider>
+        </QueryProvider>
         <Analytics />
         <SpeedInsights />
       </body>

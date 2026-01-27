@@ -52,6 +52,7 @@ export function FAB({
       aria-label={label}
       className={cn(
         'fixed bottom-24 right-4 z-50 flex items-center justify-center gap-2 rounded-lg border-2 transition-all active:scale-95 safe-bottom',
+        'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-neon-blue focus-visible:ring-offset-2 focus-visible:ring-offset-background',
         styles.bg,
         styles.border,
         styles.text,

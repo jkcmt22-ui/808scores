@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useRef, useEffect, useCallback } from 'react'
+import Image from 'next/image'
 import { ImageIcon } from 'lucide-react'
 import { Input } from '@/components/ui'
 import { EmojiPickerButton } from './emoji-picker-button'
@@ -263,12 +264,15 @@ export function MentionInput({
                     : 'hover:bg-background-tertiary text-foreground'
                 )}
               >
-                <div className="h-6 w-6 rounded-full bg-background-tertiary flex items-center justify-center text-xs font-medium">
+                <div className="h-6 w-6 rounded-full bg-background-tertiary flex items-center justify-center text-xs font-medium overflow-hidden">
                   {user.avatar_url ? (
-                    <img
+                    <Image
                       src={user.avatar_url}
                       alt=""
+                      width={24}
+                      height={24}
                       className="h-full w-full rounded-full object-cover"
+                      unoptimized={!user.avatar_url.includes('supabase')}
                     />
                   ) : (
                     user.display_name?.[0]?.toUpperCase() || '?'

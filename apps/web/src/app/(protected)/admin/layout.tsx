@@ -1,6 +1,6 @@
 'use client'
 
-import { ReactNode, useState } from 'react'
+import { ReactNode, useState, useMemo } from 'react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import {
@@ -17,12 +17,15 @@ import {
   ChevronRight,
   Menu,
   X,
+  BarChart3,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { Header } from '@/components/layout'
+import { useAuth } from '@/hooks'
 
 const adminNavItems = [
   { href: '/admin', label: 'Dashboard', icon: LayoutDashboard, exact: true },
+  { href: '/admin/analytics', label: 'Analytics', icon: BarChart3, superAdminOnly: true },
   { href: '/admin/tournaments', label: 'Tournaments', icon: Trophy },
   { href: '/admin/schools', label: 'Schools', icon: GraduationCap },
   { href: '/admin/school-managers', label: 'School Managers', icon: Users },
@@ -35,8 +38,19 @@ const adminNavItems = [
 
 export default function AdminLayout({ children }: { children: ReactNode }) {
   const pathname = usePathname()
+  const { profile } = useAuth()
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const [collapsed, setCollapsed] = useState(false)
+
+  const isSuperAdmin = profile?.is_super_admin === true
+
+  // Filter nav items based on user role
+  const visibleNavItems = useMemo(() => {
+    return adminNavItems.filter(item => {
+      if (item.superAdminOnly && !isSuperAdmin) return false
+      return true
+    })
+  }, [isSuperAdmin])
 
   const isActive = (href: string, exact?: boolean) => {
     if (exact) return pathname === href
@@ -76,7 +90,7 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
           </button>
 
           <nav className="p-2 space-y-1 overflow-y-auto h-full">
-            {adminNavItems.map((item) => {
+            {visibleNavItems.map((item) => {
               const Icon = item.icon
               const active = isActive(item.href, item.exact)
               return (

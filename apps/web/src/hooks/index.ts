@@ -26,3 +26,8 @@ export { useSecurity, useTrustScore } from './use-security'
 export { useNotifications, type Notification } from './use-notifications'
 export { useBadges, useUserBadges, type Badge, type UserBadge } from './use-badges'
 export { useOfflineQueue } from './use-offline-queue'
+export { useOnlineStatus } from './use-online-status'
+
+// React Query hooks (with caching)
+export { useQueryGames, useQueryLiveGames, useQueryGame } from './use-query-games'
+export { useQuerySchools, useQuerySchool, useQuerySchoolsByLeague } from './use-query-schools'

@@ -20,6 +20,15 @@ import { getSportEmoji } from '@/lib/sport-utils'
 import { validateUsername } from '@/lib/username-validation'
 import { createClient } from '@/lib/supabase/client'
 import { cn } from '@/lib/utils'
+import {
+  isPushSupported,
+  getNotificationPermission,
+  requestNotificationPermission,
+  subscribeToPush,
+  unsubscribeFromPush,
+  getCurrentSubscription,
+  extractSubscriptionData,
+} from '@/lib/push-notifications'
 import type { School, Sport } from '@/types/database'
 
 export default function ProfileSettingsPage() {
@@ -62,6 +71,13 @@ export default function ProfileSettingsPage() {
   const [isSavingNotifications, setIsSavingNotifications] = useState(false)
   const [notificationsSaved, setNotificationsSaved] = useState(false)
 
+  // Push notification browser state
+  const [pushSupported, setPushSupported] = useState(false)
+  const [pushPermission, setPushPermission] = useState<NotificationPermission | 'unsupported'>('default')
+  const [pushSubscribed, setPushSubscribed] = useState(false)
+  const [isTogglingPush, setIsTogglingPush] = useState(false)
+  const [pushError, setPushError] = useState<string | null>(null)
+
   const supabase = createClient()!
 
   // Initialize from profile
@@ -75,6 +91,28 @@ export default function ProfileSettingsPage() {
       setMarketingOptIn((profile as { marketing_opt_in?: boolean }).marketing_opt_in ?? false)
     }
   }, [profile])
+
+  // Check push notification status on mount
+  useEffect(() => {
+    const checkPushStatus = async () => {
+      const supported = isPushSupported()
+      setPushSupported(supported)
+
+      if (supported) {
+        setPushPermission(getNotificationPermission())
+
+        try {
+          const subscription = await getCurrentSubscription()
+          setPushSubscribed(!!subscription)
+        } catch {
+          // Service worker not yet registered
+          setPushSubscribed(false)
+        }
+      }
+    }
+
+    checkPushStatus()
+  }, [])
 
   // Validate username on change
   const handleUsernameChange = (value: string) => {
@@ -137,6 +175,71 @@ export default function ProfileSettingsPage() {
       console.error('Failed to save notification preferences:', err)
     } finally {
       setIsSavingNotifications(false)
+    }
+  }
+
+  // Toggle push notifications
+  const handleTogglePush = async () => {
+    if (!pushSupported || !user) return
+
+    setIsTogglingPush(true)
+    setPushError(null)
+
+    try {
+      if (pushSubscribed) {
+        // Unsubscribe
+        const success = await unsubscribeFromPush()
+        if (success) {
+          setPushSubscribed(false)
+
+          // Remove subscription from database
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          await (supabase as any)
+            .from('push_subscriptions')
+            .delete()
+            .eq('user_id', user.id)
+        }
+      } else {
+        // Request permission if needed
+        if (pushPermission === 'default') {
+          const permission = await requestNotificationPermission()
+          setPushPermission(permission)
+
+          if (permission !== 'granted') {
+            setPushError('Please allow notifications in your browser settings')
+            return
+          }
+        } else if (pushPermission === 'denied') {
+          setPushError('Notifications are blocked. Please enable them in your browser settings.')
+          return
+        }
+
+        // Subscribe
+        const subscription = await subscribeToPush()
+        if (subscription) {
+          setPushSubscribed(true)
+
+          // Save subscription to database
+          const subData = extractSubscriptionData(subscription)
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          await (supabase as any)
+            .from('push_subscriptions')
+            .upsert({
+              user_id: user.id,
+              endpoint: subData.endpoint,
+              p256dh: subData.p256dh,
+              auth: subData.auth,
+              updated_at: new Date().toISOString(),
+            }, {
+              onConflict: 'user_id,endpoint'
+            })
+        }
+      }
+    } catch (err) {
+      console.error('Failed to toggle push notifications:', err)
+      setPushError('Failed to update notification settings')
+    } finally {
+      setIsTogglingPush(false)
     }
   }
 
@@ -347,6 +450,84 @@ export default function ProfileSettingsPage() {
           </div>
         </Card>
 
+        {/* Push Notifications Section */}
+        <Card className="border-2 border-border">
+          <div className="p-6">
+            <h2 className="mb-4 font-display text-sm font-bold uppercase tracking-wider text-foreground-muted">
+              Push Notifications
+            </h2>
+
+            <div className="space-y-4">
+              {/* Browser push status */}
+              {!pushSupported ? (
+                <div className="flex items-center gap-3 rounded-lg bg-background-secondary p-4">
+                  <BellOff className="h-5 w-5 text-foreground-muted" />
+                  <div>
+                    <p className="font-medium text-foreground">Not Supported</p>
+                    <p className="text-xs text-foreground-muted">
+                      Your browser doesn&apos;t support push notifications
+                    </p>
+                  </div>
+                </div>
+              ) : pushPermission === 'denied' ? (
+                <div className="flex items-center gap-3 rounded-lg bg-neon-pink/10 border border-neon-pink/30 p-4">
+                  <AlertCircle className="h-5 w-5 text-neon-pink" />
+                  <div>
+                    <p className="font-medium text-foreground">Blocked</p>
+                    <p className="text-xs text-foreground-muted">
+                      Notifications are blocked. Enable them in your browser settings.
+                    </p>
+                  </div>
+                </div>
+              ) : (
+                <label className="flex items-center justify-between cursor-pointer">
+                  <div className="flex items-center gap-3">
+                    {pushSubscribed ? (
+                      <Bell className="h-5 w-5 text-neon-green" />
+                    ) : (
+                      <BellOff className="h-5 w-5 text-foreground-muted" />
+                    )}
+                    <div>
+                      <p className="font-medium text-foreground">Browser Notifications</p>
+                      <p className="text-xs text-foreground-muted">
+                        {pushSubscribed
+                          ? 'Receiving notifications on this device'
+                          : 'Enable to receive game alerts on this device'}
+                      </p>
+                    </div>
+                  </div>
+                  <button
+                    onClick={handleTogglePush}
+                    disabled={isTogglingPush}
+                    className={cn(
+                      'relative inline-flex h-6 w-11 items-center rounded-full transition-colors',
+                      pushSubscribed ? 'bg-neon-green' : 'bg-border'
+                    )}
+                  >
+                    {isTogglingPush ? (
+                      <Loader2 className="absolute left-1/2 -translate-x-1/2 h-4 w-4 animate-spin text-foreground" />
+                    ) : (
+                      <span
+                        className={cn(
+                          'inline-block h-4 w-4 transform rounded-full bg-white transition-transform',
+                          pushSubscribed ? 'translate-x-6' : 'translate-x-1'
+                        )}
+                      />
+                    )}
+                  </button>
+                </label>
+              )}
+
+              {pushError && (
+                <div className="flex items-center gap-2 text-sm text-neon-pink">
+                  <AlertCircle className="h-4 w-4" />
+                  <span>{pushError}</span>
+                </div>
+              )}
+            </div>
+          </div>
+        </Card>
+
         {/* Notification Preferences Section */}
         <Card className="border-2 border-border">
           <div className="p-6">
@@ -358,8 +539,8 @@ export default function ProfileSettingsPage() {
               {/* Global notifications toggle */}
               <label className="flex items-center justify-between cursor-pointer">
                 <div>
-                  <p className="font-medium text-foreground">Push Notifications</p>
-                  <p className="text-xs text-foreground-muted">Receive push notifications for game updates</p>
+                  <p className="font-medium text-foreground">Game Updates</p>
+                  <p className="text-xs text-foreground-muted">Receive updates for your favorite teams</p>
                 </div>
                 <button
                   onClick={() => setNotificationsEnabled(!notificationsEnabled)}

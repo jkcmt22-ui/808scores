@@ -76,7 +76,7 @@ export function EmptyState({
         <div className={`score-led text-4xl mb-3 ${colors.text} opacity-50`}>--</div>
 
         {/* Main icon */}
-        <Icon className={`h-12 w-12 mx-auto ${colors.text}`} />
+        <Icon className={`h-12 w-12 mx-auto ${colors.text}`} aria-hidden="true" />
 
         {/* Subtle animated pulse */}
         <div className={`absolute inset-0 ${colors.bg} animate-pulse opacity-30 pointer-events-none`} />

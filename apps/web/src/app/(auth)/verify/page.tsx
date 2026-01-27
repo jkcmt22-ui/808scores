@@ -6,6 +6,7 @@ import Link from 'next/link'
 import { ShieldCheck, ArrowLeft, Loader2, AlertCircle, CheckCircle } from 'lucide-react'
 import { Button, Card } from '@/components/ui'
 import { createClient } from '@/lib/supabase/client'
+import { getSafeRedirectUrl } from '@/lib/utils'
 
 export default function VerifyPage() {
   const router = useRouter()
@@ -31,7 +32,7 @@ export default function VerifyPage() {
     }
 
     setPhone(storedPhone)
-    if (storedRedirect) setRedirect(storedRedirect)
+    setRedirect(getSafeRedirectUrl(storedRedirect))
 
     // Start cooldown timer
     setResendCooldown(60)

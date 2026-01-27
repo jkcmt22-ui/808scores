@@ -1,5 +1,6 @@
 'use client'
 
+import Image from 'next/image'
 import { Gift, CreditCard, ShoppingBag, DollarSign, Sparkles } from 'lucide-react'
 import { Badge } from '@/components/ui'
 import { cn } from '@/lib/utils'
@@ -84,15 +85,18 @@ export function PrizeDisplay({
       {/* Prize Image or Icon */}
       <div className="flex-shrink-0">
         {prize.image_url ? (
-          <img
+          <Image
             src={prize.image_url}
             alt={prize.name}
+            width={size === 'sm' ? 48 : size === 'md' ? 64 : 80}
+            height={size === 'sm' ? 48 : size === 'md' ? 64 : 80}
             className={cn(
               'rounded-md object-cover',
               size === 'sm' && 'h-12 w-12',
               size === 'md' && 'h-16 w-16',
               size === 'lg' && 'h-20 w-20'
             )}
+            unoptimized={!prize.image_url.includes('supabase')}
           />
         ) : (
           <div

@@ -22,13 +22,17 @@ export function ErrorState({
   className,
 }: ErrorStateProps) {
   return (
-    <div className={`flex flex-col items-center justify-center py-12 px-4 text-center ${className || ''}`}>
+    <div
+      role="alert"
+      aria-live="polite"
+      className={`flex flex-col items-center justify-center py-12 px-4 text-center ${className || ''}`}
+    >
       <div className="scoreboard-panel p-6 mb-6">
         <div
           className="flex h-16 w-16 items-center justify-center mx-auto mb-4"
           style={{ boxShadow: '0 0 20px rgba(255, 42, 109, 0.3)' }}
         >
-          <AlertCircle className="h-12 w-12 text-neon-pink" />
+          <AlertCircle className="h-12 w-12 text-neon-pink" aria-hidden="true" />
         </div>
         <h3 className="font-display text-lg font-bold text-foreground uppercase tracking-wider mb-2">
           {title}
@@ -41,7 +45,7 @@ export function ErrorState({
       <div className="flex flex-wrap gap-3 justify-center">
         {onRetry && (
           <Button onClick={onRetry} variant="default">
-            <RefreshCw className="h-4 w-4 mr-2" />
+            <RefreshCw className="h-4 w-4 mr-2" aria-hidden="true" />
             Try Again
           </Button>
         )}
@@ -50,14 +54,14 @@ export function ErrorState({
             variant="outline"
             onClick={() => window.history.back()}
           >
-            <ArrowLeft className="h-4 w-4 mr-2" />
+            <ArrowLeft className="h-4 w-4 mr-2" aria-hidden="true" />
             Go Back
           </Button>
         )}
         {showHomeButton && (
           <Link href="/">
             <Button variant="secondary">
-              <Home className="h-4 w-4 mr-2" />
+              <Home className="h-4 w-4 mr-2" aria-hidden="true" />
               Go Home
             </Button>
           </Link>

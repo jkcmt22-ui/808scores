@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import Image from 'next/image'
 import { Flag, Reply } from 'lucide-react'
 import { Avatar, Badge } from '@/components/ui'
 import { LikeButton } from './like-button'
@@ -168,11 +169,13 @@ export function ChatMessageComponent({
           {/* Content - GIF or Text */}
           {isGifMessage ? (
             <div className="mt-1.5 max-w-[280px]">
-              <img
+              <Image
                 src={message.gif_url!}
                 alt="GIF"
-                className="rounded-lg border border-border max-h-[200px] w-auto"
-                loading="lazy"
+                width={280}
+                height={200}
+                className="rounded-lg border border-border max-h-[200px] w-auto h-auto"
+                unoptimized
               />
               <span className="text-[10px] text-foreground-subtle font-mono block mt-1">
                 via GIPHY

@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect, useCallback, useRef } from 'react'
+import Image from 'next/image'
 import { Search, X, Loader2 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
@@ -165,11 +166,13 @@ export function GifPicker({ isOpen, onClose, onSelect }: GifPickerProps) {
                 )}
                 title={gif.title}
               >
-                <img
+                <Image
                   src={gif.preview || gif.url}
                   alt={gif.title}
-                  className="w-full h-full object-cover"
-                  loading="lazy"
+                  fill
+                  sizes="(max-width: 640px) 50vw, 33vw"
+                  className="object-cover"
+                  unoptimized
                 />
               </button>
             ))}

@@ -6,14 +6,14 @@ import Link from 'next/link'
 import { Phone, Mail, ArrowRight, AlertCircle } from 'lucide-react'
 import { Button, Card, Input } from '@/components/ui'
 import { createClient } from '@/lib/supabase/client'
-import { cn } from '@/lib/utils'
+import { cn, getSafeRedirectUrl } from '@/lib/utils'
 
 type AuthMethod = 'email' | 'phone'
 
 function LoginForm() {
   const router = useRouter()
   const searchParams = useSearchParams()
-  const redirect = searchParams.get('redirect') || '/'
+  const redirect = getSafeRedirectUrl(searchParams.get('redirect'))
 
   const [authMethod, setAuthMethod] = useState<AuthMethod>('email')
   const [phone, setPhone] = useState('')
@@ -26,8 +26,21 @@ function LoginForm() {
   const [acceptedTerms, setAcceptedTerms] = useState(false)
   const [marketingOptIn, setMarketingOptIn] = useState(false)
 
+  const normalizePhoneDigits = (value: string) => {
+    let digits = value.replace(/\D/g, '')
+
+    // US area codes cannot start with 0 or 1
+    // If the number starts with 1, it's the country code - strip it
+    if (digits.startsWith('1') && digits.length >= 10) {
+      digits = digits.slice(1)
+    }
+
+    return digits.slice(0, 10) // Limit to 10 digits
+  }
+
   const formatPhoneNumber = (value: string) => {
-    const digits = value.replace(/\D/g, '')
+    const digits = normalizePhoneDigits(value)
+
     if (digits.length <= 3) {
       return digits
     } else if (digits.length <= 6) {
@@ -43,8 +56,14 @@ function LoginForm() {
     setError(null)
   }
 
+  const isValidPhoneLength = (value: string) => {
+    const digits = normalizePhoneDigits(value)
+    return digits.length === 10
+  }
+
   const getCleanPhoneNumber = () => {
-    const digits = phone.replace(/\D/g, '')
+    const digits = normalizePhoneDigits(phone)
+
     if (digits.length === 10) {
       return `+1${digits}`
     }
@@ -69,14 +88,22 @@ function LoginForm() {
         throw new Error('Unable to connect. Please try again.')
       }
 
-      const { error: signInError } = await supabase.auth.signInWithOtp({
+      const { data, error: signInError } = await supabase.auth.signInWithOtp({
         phone: cleanPhone,
         options: {
           channel: 'sms',
         },
       })
 
+      // Log the full response for debugging
+      console.log('OTP Response:', { data, error: signInError, phone: cleanPhone })
+
       if (signInError) {
+        console.error('OTP Error details:', {
+          message: signInError.message,
+          status: signInError.status,
+          name: signInError.name,
+        })
         throw signInError
       }
 
@@ -378,7 +405,7 @@ function LoginForm() {
             <Button
               type="submit"
               className="w-full"
-              disabled={isLoading || phone.replace(/\D/g, '').length !== 10 || !acceptedTerms}
+              disabled={isLoading || !isValidPhoneLength(phone) || !acceptedTerms}
               loading={isLoading}
             >
               {!isLoading && (

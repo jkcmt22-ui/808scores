@@ -9,19 +9,39 @@ function getSafeRedirectUrl(next: string | null, origin: string): string {
     return `${origin}${defaultPath}`
   }
 
+  // Trim whitespace
+  const trimmed = next.trim()
+
   // Only allow relative paths starting with /
   // Reject absolute URLs, protocol-relative URLs, or paths that could redirect elsewhere
   if (
-    !next.startsWith('/') ||        // Must start with /
-    next.startsWith('//') ||        // Reject protocol-relative URLs
-    next.startsWith('/\\') ||       // Reject backslash tricks
-    next.includes('://') ||         // Reject any URL with protocol
-    next.includes('\0')             // Reject null bytes
+    !trimmed.startsWith('/') ||        // Must start with /
+    trimmed.startsWith('//') ||        // Reject protocol-relative URLs
+    trimmed.startsWith('/\\') ||       // Reject backslash tricks
+    trimmed.includes('://') ||         // Reject any URL with protocol
+    trimmed.includes('\0')             // Reject null bytes
   ) {
     return `${origin}${defaultPath}`
   }
 
-  return `${origin}${next}`
+  // Block javascript: and data: URLs
+  const lowerTrimmed = trimmed.toLowerCase()
+  if (lowerTrimmed.includes('javascript:') || lowerTrimmed.includes('data:')) {
+    return `${origin}${defaultPath}`
+  }
+
+  // Validate decoded URL doesn't contain tricks
+  try {
+    const decoded = decodeURIComponent(trimmed)
+    if (decoded.startsWith('//') || decoded.includes('://')) {
+      return `${origin}${defaultPath}`
+    }
+  } catch {
+    // If decoding fails, the URL is malformed
+    return `${origin}${defaultPath}`
+  }
+
+  return `${origin}${trimmed}`
 }
 
 export async function GET(request: Request) {

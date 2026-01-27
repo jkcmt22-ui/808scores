@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect, useCallback } from 'react'
+import Image from 'next/image'
 import { Header } from '@/components/layout'
 import { Button, Input, Badge } from '@/components/ui'
 import {
@@ -356,9 +357,16 @@ export default function AdminPrizesPage() {
               return (
                 <div key={prize.id} className="scoreboard-panel p-4">
                   <div className="flex items-start gap-4">
-                    <div className="h-12 w-12 rounded-md bg-background-tertiary flex items-center justify-center flex-shrink-0">
+                    <div className="h-12 w-12 rounded-md bg-background-tertiary flex items-center justify-center flex-shrink-0 overflow-hidden">
                       {prize.image_url ? (
-                        <img src={prize.image_url} alt="" className="h-full w-full rounded-md object-cover" />
+                        <Image
+                          src={prize.image_url}
+                          alt={prize.name}
+                          width={48}
+                          height={48}
+                          className="h-full w-full rounded-md object-cover"
+                          unoptimized={!prize.image_url.includes('supabase')}
+                        />
                       ) : (
                         <Icon className="h-6 w-6 text-foreground-muted" />
                       )}

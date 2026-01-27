@@ -109,7 +109,10 @@ const initialFormData: GameFormData = {
 export default function AdminPage() {
   const router = useRouter()
   const { user, profile, isLoading: authLoading } = useAuth()
-  const supabase = useMemo(() => createClient()!, [])
+  const supabaseClient = useMemo(() => createClient(), [])
+
+  // We need to check this before using supabase
+  const supabase = supabaseClient!
 
   const [activeTab, setActiveTab] = useState<TabType>('games')
   const [games, setGames] = useState<GameWithTeams[]>([])
@@ -138,65 +141,96 @@ export default function AdminPage() {
   // Fetch data
   const fetchData = useCallback(async () => {
     setIsLoading(true)
+    setMessage(null)
 
-    // Fetch games
-    const { data: gamesData } = await supabase
-      .from('games')
-      .select(`
-        *,
-        sport:sports(*),
-        home_team:schools!games_home_team_id_fkey(*),
-        away_team:schools!games_away_team_id_fkey(*)
-      `)
-      .order('scheduled_at', { ascending: false })
-      .limit(100)
+    try {
+      // Fetch games
+      const { data: gamesData, error: gamesError } = await supabase
+        .from('games')
+        .select(`
+          *,
+          sport:sports(*),
+          home_team:schools!games_home_team_id_fkey(*),
+          away_team:schools!games_away_team_id_fkey(*)
+        `)
+        .order('scheduled_at', { ascending: false })
+        .limit(100)
 
-    if (gamesData) setGames(gamesData as GameWithTeams[])
+      if (gamesError) {
+        console.error('Games fetch error:', gamesError)
+        setMessage({ type: 'error', text: `Failed to load games: ${gamesError.message}` })
+      } else if (gamesData) {
+        setGames(gamesData as GameWithTeams[])
+      }
 
-    // Fetch sports
-    const { data: sportsData } = await supabase
-      .from('sports')
-      .select('*')
-      .eq('active', true)
-      .order('sort_order')
+      // Fetch sports
+      const { data: sportsData, error: sportsError } = await supabase
+        .from('sports')
+        .select('*')
+        .eq('active', true)
+        .order('sort_order')
 
-    if (sportsData) setSports(sportsData as Sport[])
+      if (sportsError) {
+        console.error('Sports fetch error:', sportsError)
+      } else if (sportsData) {
+        setSports(sportsData as Sport[])
+      }
 
-    // Fetch schools
-    const { data: schoolsData } = await supabase
-      .from('schools')
-      .select('*')
-      .order('name')
+      // Fetch schools
+      const { data: schoolsData, error: schoolsError } = await supabase
+        .from('schools')
+        .select('*')
+        .order('name')
 
-    if (schoolsData) setSchools(schoolsData as School[])
+      if (schoolsError) {
+        console.error('Schools fetch error:', schoolsError)
+      } else if (schoolsData) {
+        setSchools(schoolsData as School[])
+      }
 
-    // Fetch trusted reporter applications
-    const { data: applicationsData } = await supabase
-      .from('trusted_reporter_applications')
-      .select(`
-        *,
-        user:users(display_name, email, phone, reputation_score, submission_count, verified_count)
-      `)
-      .order('created_at', { ascending: false })
+      // Fetch trusted reporter applications
+      const { data: applicationsData, error: appsError } = await supabase
+        .from('trusted_reporter_applications')
+        .select(`
+          *,
+          user:users(display_name, email, phone, reputation_score, submission_count, verified_count)
+        `)
+        .order('created_at', { ascending: false })
 
-    if (applicationsData) setApplications(applicationsData as TrustedReporterApplication[])
+      if (appsError) {
+        console.error('Applications fetch error:', appsError)
+      } else if (applicationsData) {
+        setApplications(applicationsData as TrustedReporterApplication[])
+      }
 
-    // Fetch trusted reporter codes
-    const { data: codesData } = await supabase
-      .from('trusted_reporter_codes')
-      .select('*')
-      .order('created_at', { ascending: false })
+      // Fetch trusted reporter codes
+      const { data: codesData, error: codesError } = await supabase
+        .from('trusted_reporter_codes')
+        .select('*')
+        .order('created_at', { ascending: false })
 
-    if (codesData) setCodes(codesData as TrustedReporterCode[])
+      if (codesError) {
+        console.error('Codes fetch error:', codesError)
+      } else if (codesData) {
+        setCodes(codesData as TrustedReporterCode[])
+      }
 
-    // Fetch admin users (for super admin only)
-    const { data: usersData } = await supabase
-      .from('users')
-      .select('id, display_name, email, phone, is_super_admin, is_admin, is_trusted_reporter, tier, created_at')
-      .or('is_admin.eq.true,is_super_admin.eq.true,is_trusted_reporter.eq.true')
-      .order('created_at', { ascending: false })
+      // Fetch admin users (for super admin only)
+      const { data: usersData, error: usersError } = await supabase
+        .from('users')
+        .select('id, display_name, email, phone, is_super_admin, is_admin, is_trusted_reporter, tier, created_at')
+        .or('is_admin.eq.true,is_super_admin.eq.true,is_trusted_reporter.eq.true')
+        .order('created_at', { ascending: false })
 
-    if (usersData) setAdminUsers(usersData as AdminUser[])
+      if (usersError) {
+        console.error('Users fetch error:', usersError)
+      } else if (usersData) {
+        setAdminUsers(usersData as AdminUser[])
+      }
+    } catch (err) {
+      console.error('Unexpected error fetching data:', err)
+      setMessage({ type: 'error', text: 'Failed to load admin data. Check console for details.' })
+    }
 
     setIsLoading(false)
   }, [supabase])
@@ -597,6 +631,20 @@ export default function AdminPage() {
           You need admin privileges to access this area.
         </p>
         <Button onClick={() => router.push('/')}>Go Home</Button>
+      </div>
+    )
+  }
+
+  // Supabase client not available
+  if (!supabaseClient) {
+    return (
+      <div className="flex min-h-screen flex-col items-center justify-center p-4 bg-background">
+        <AlertCircle className="mb-4 h-12 w-12 text-neon-pink" />
+        <h1 className="mb-2 font-display text-xl font-bold text-foreground uppercase">Connection Error</h1>
+        <p className="mb-4 text-foreground-muted text-sm text-center">
+          Unable to connect to the database. Please refresh the page.
+        </p>
+        <Button onClick={() => window.location.reload()}>Refresh</Button>
       </div>
     )
   }

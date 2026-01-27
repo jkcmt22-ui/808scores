@@ -52,12 +52,15 @@ export function useAuth() {
 
     const initAuth = async () => {
       try {
+        console.log('[Auth Debug] Starting auth init...')
         const { data: { user } } = await supabase.auth.getUser()
+        console.log('[Auth Debug] Got user:', user?.id || 'none')
 
         if (!mounted) return
 
         if (user) {
           const profile = await fetchProfile(user.id)
+          console.log('[Auth Debug] Got profile:', profile ? { is_admin: profile.is_admin, is_super_admin: profile.is_super_admin } : 'null')
           if (!mounted) return
           setState({
             user,
@@ -66,6 +69,7 @@ export function useAuth() {
             isAuthenticated: true,
           })
         } else {
+          console.log('[Auth Debug] No user found')
           setState({
             user: null,
             profile: null,
@@ -74,7 +78,7 @@ export function useAuth() {
           })
         }
       } catch (err) {
-        console.error('Auth init error:', err)
+        console.error('[Auth Debug] Auth init error:', err)
         if (!mounted) return
         setState({
           user: null,

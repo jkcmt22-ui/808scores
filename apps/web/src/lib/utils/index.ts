@@ -202,3 +202,51 @@ export function getScoreDeadline(scheduledAt: string | Date): Date {
   // 5AM HST the next day = 15:00 UTC (HST is UTC-10)
   return new Date(Date.UTC(year, month - 1, day + 1, 15, 0, 0, 0))
 }
+
+/**
+ * Validate and sanitize a redirect URL to prevent open redirect attacks.
+ * Only allows relative paths that start with "/" and don't contain "//".
+ * Returns "/" if the URL is invalid or potentially malicious.
+ */
+export function getSafeRedirectUrl(url: string | null, fallback: string = '/'): string {
+  if (!url) {
+    return fallback
+  }
+
+  // Trim whitespace
+  const trimmed = url.trim()
+
+  // Must start with a single forward slash (relative path)
+  if (!trimmed.startsWith('/')) {
+    return fallback
+  }
+
+  // Block protocol-relative URLs (//evil.com)
+  if (trimmed.startsWith('//')) {
+    return fallback
+  }
+
+  // Block URLs with encoded slashes or other tricks
+  // Decode and check again
+  try {
+    const decoded = decodeURIComponent(trimmed)
+    if (decoded.startsWith('//') || decoded.includes('://')) {
+      return fallback
+    }
+  } catch {
+    // If decoding fails, the URL is malformed
+    return fallback
+  }
+
+  // Block javascript: URLs
+  if (trimmed.toLowerCase().includes('javascript:')) {
+    return fallback
+  }
+
+  // Block data: URLs
+  if (trimmed.toLowerCase().includes('data:')) {
+    return fallback
+  }
+
+  return trimmed
+}
