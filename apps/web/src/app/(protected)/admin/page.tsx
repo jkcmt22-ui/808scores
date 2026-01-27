@@ -138,18 +138,46 @@ export default function AdminPage() {
   const [adminUsers, setAdminUsers] = useState<AdminUser[]>([])
   const [userSearchTerm, setUserSearchTerm] = useState('')
   const [dateSortOrder, setDateSortOrder] = useState<'desc' | 'asc'>('desc')
+  const [loadedTabs, setLoadedTabs] = useState<Set<TabType>>(new Set())
 
   // Check if user has admin access (must be an admin or super admin)
   const isSuperAdmin = profile?.is_super_admin === true
   const hasAdminAccess = profile?.is_admin === true || isSuperAdmin
 
-  // Fetch data
-  const fetchData = useCallback(async () => {
+  // Fetch sports and schools (needed for forms)
+  const fetchCommonData = useCallback(async () => {
+    try {
+      // Fetch sports
+      const { data: sportsData, error: sportsError } = await supabase
+        .from('sports')
+        .select('*')
+        .eq('active', true)
+        .order('sort_order')
+
+      if (!sportsError && sportsData) {
+        setSports(sportsData as Sport[])
+      }
+
+      // Fetch schools
+      const { data: schoolsData, error: schoolsError } = await supabase
+        .from('schools')
+        .select('*')
+        .order('name')
+
+      if (!schoolsError && schoolsData) {
+        setSchools(schoolsData as School[])
+      }
+    } catch (err) {
+      console.error('Error fetching common data:', err)
+    }
+  }, [supabase])
+
+  // Fetch games
+  const fetchGames = useCallback(async () => {
     setIsLoading(true)
     setMessage(null)
 
     try {
-      // Fetch games
       const { data: gamesData, error: gamesError } = await supabase
         .from('games')
         .select(`
@@ -167,33 +195,20 @@ export default function AdminPage() {
       } else if (gamesData) {
         setGames(gamesData as GameWithTeams[])
       }
+    } catch (err) {
+      console.error('Error fetching games:', err)
+      setMessage({ type: 'error', text: 'Failed to load games' })
+    }
 
-      // Fetch sports
-      const { data: sportsData, error: sportsError } = await supabase
-        .from('sports')
-        .select('*')
-        .eq('active', true)
-        .order('sort_order')
+    setIsLoading(false)
+  }, [supabase])
 
-      if (sportsError) {
-        console.error('Sports fetch error:', sportsError)
-      } else if (sportsData) {
-        setSports(sportsData as Sport[])
-      }
+  // Fetch applications
+  const fetchApplications = useCallback(async () => {
+    setIsLoading(true)
+    setMessage(null)
 
-      // Fetch schools
-      const { data: schoolsData, error: schoolsError } = await supabase
-        .from('schools')
-        .select('*')
-        .order('name')
-
-      if (schoolsError) {
-        console.error('Schools fetch error:', schoolsError)
-      } else if (schoolsData) {
-        setSchools(schoolsData as School[])
-      }
-
-      // Fetch trusted reporter applications
+    try {
       const { data: applicationsData, error: appsError } = await supabase
         .from('trusted_reporter_applications')
         .select(`
@@ -204,11 +219,24 @@ export default function AdminPage() {
 
       if (appsError) {
         console.error('Applications fetch error:', appsError)
+        setMessage({ type: 'error', text: 'Failed to load applications' })
       } else if (applicationsData) {
         setApplications(applicationsData as TrustedReporterApplication[])
       }
+    } catch (err) {
+      console.error('Error fetching applications:', err)
+      setMessage({ type: 'error', text: 'Failed to load applications' })
+    }
 
-      // Fetch trusted reporter codes
+    setIsLoading(false)
+  }, [supabase])
+
+  // Fetch codes
+  const fetchCodes = useCallback(async () => {
+    setIsLoading(true)
+    setMessage(null)
+
+    try {
       const { data: codesData, error: codesError } = await supabase
         .from('trusted_reporter_codes')
         .select('*')
@@ -216,11 +244,24 @@ export default function AdminPage() {
 
       if (codesError) {
         console.error('Codes fetch error:', codesError)
+        setMessage({ type: 'error', text: 'Failed to load codes' })
       } else if (codesData) {
         setCodes(codesData as TrustedReporterCode[])
       }
+    } catch (err) {
+      console.error('Error fetching codes:', err)
+      setMessage({ type: 'error', text: 'Failed to load codes' })
+    }
 
-      // Fetch admin users (for super admin only)
+    setIsLoading(false)
+  }, [supabase])
+
+  // Fetch users
+  const fetchUsers = useCallback(async () => {
+    setIsLoading(true)
+    setMessage(null)
+
+    try {
       const { data: usersData, error: usersError } = await supabase
         .from('users')
         .select('id, display_name, email, phone, is_super_admin, is_admin, is_trusted_reporter, has_beta_access, tier, created_at')
@@ -229,22 +270,68 @@ export default function AdminPage() {
 
       if (usersError) {
         console.error('Users fetch error:', usersError)
+        setMessage({ type: 'error', text: 'Failed to load users' })
       } else if (usersData) {
         setAdminUsers(usersData as AdminUser[])
       }
     } catch (err) {
-      console.error('Unexpected error fetching data:', err)
-      setMessage({ type: 'error', text: 'Failed to load admin data. Check console for details.' })
+      console.error('Error fetching users:', err)
+      setMessage({ type: 'error', text: 'Failed to load users' })
     }
 
     setIsLoading(false)
   }, [supabase])
 
+  // Load data for active tab
   useEffect(() => {
-    if (hasAdminAccess && !authLoading) {
-      fetchData()
+    if (!hasAdminAccess || authLoading) return
+
+    // Always load common data (sports/schools)
+    if (sports.length === 0 || schools.length === 0) {
+      fetchCommonData()
     }
-  }, [hasAdminAccess, authLoading, fetchData])
+
+    // Load tab-specific data if not already loaded
+    if (!loadedTabs.has(activeTab)) {
+      setLoadedTabs(prev => new Set(prev).add(activeTab))
+
+      switch (activeTab) {
+        case 'games':
+          fetchGames()
+          break
+        case 'applications':
+          fetchApplications()
+          break
+        case 'codes':
+          fetchCodes()
+          break
+        case 'users':
+          fetchUsers()
+          break
+        case 'create':
+          // Create tab doesn't need data fetch
+          break
+      }
+    }
+  }, [hasAdminAccess, authLoading, activeTab, loadedTabs, sports.length, schools.length, fetchCommonData, fetchGames, fetchApplications, fetchCodes, fetchUsers])
+
+  // Refresh current tab data
+  const handleRefresh = useCallback(() => {
+    switch (activeTab) {
+      case 'games':
+        fetchGames()
+        break
+      case 'applications':
+        fetchApplications()
+        break
+      case 'codes':
+        fetchCodes()
+        break
+      case 'users':
+        fetchUsers()
+        break
+    }
+  }, [activeTab, fetchGames, fetchApplications, fetchCodes, fetchUsers])
 
   // Filter and sort games
   const filteredGames = useMemo(() => {
@@ -728,54 +815,66 @@ export default function AdminPage() {
         </div>
 
         {/* Tabs */}
-        <div className="flex gap-2 mb-6">
-          <Button
-            variant={activeTab === 'games' ? 'default' : 'outline'}
-            onClick={() => {
-              setActiveTab('games')
-              setEditingGame(null)
-            }}
-          >
-            Manage Games
-          </Button>
-          <Button
-            variant={activeTab === 'create' ? 'default' : 'outline'}
-            onClick={() => {
-              setActiveTab('create')
-              setEditingGame(null)
-              setFormData(initialFormData)
-            }}
-          >
-            <Plus className="mr-2 h-4 w-4" />
-            Create Game
-          </Button>
-          <Button
-            variant={activeTab === 'applications' ? 'default' : 'outline'}
-            onClick={() => setActiveTab('applications')}
-            className="relative"
-          >
-            <Shield className="mr-2 h-4 w-4" />
-            Applications
-            {applications.filter((a) => a.status === 'pending').length > 0 && (
-              <span className="absolute -top-1 -right-1 h-5 w-5 rounded-full bg-neon-pink text-[10px] font-bold flex items-center justify-center">
-                {applications.filter((a) => a.status === 'pending').length}
-              </span>
-            )}
-          </Button>
-          <Button
-            variant={activeTab === 'codes' ? 'default' : 'outline'}
-            onClick={() => setActiveTab('codes')}
-          >
-            <Key className="mr-2 h-4 w-4" />
-            Invite Codes
-          </Button>
-          {isSuperAdmin && (
+        <div className="flex items-center justify-between gap-2 mb-6">
+          <div className="flex gap-2 flex-wrap">
             <Button
-              variant={activeTab === 'users' ? 'default' : 'outline'}
-              onClick={() => setActiveTab('users')}
+              variant={activeTab === 'games' ? 'default' : 'outline'}
+              onClick={() => {
+                setActiveTab('games')
+                setEditingGame(null)
+              }}
+            >
+              Manage Games
+            </Button>
+            <Button
+              variant={activeTab === 'create' ? 'default' : 'outline'}
+              onClick={() => {
+                setActiveTab('create')
+                setEditingGame(null)
+                setFormData(initialFormData)
+              }}
+            >
+              <Plus className="mr-2 h-4 w-4" />
+              Create Game
+            </Button>
+            <Button
+              variant={activeTab === 'applications' ? 'default' : 'outline'}
+              onClick={() => setActiveTab('applications')}
+              className="relative"
             >
               <Shield className="mr-2 h-4 w-4" />
-              Manage Users
+              Applications
+              {applications.filter((a) => a.status === 'pending').length > 0 && (
+                <span className="absolute -top-1 -right-1 h-5 w-5 rounded-full bg-neon-pink text-[10px] font-bold flex items-center justify-center">
+                  {applications.filter((a) => a.status === 'pending').length}
+                </span>
+              )}
+            </Button>
+            <Button
+              variant={activeTab === 'codes' ? 'default' : 'outline'}
+              onClick={() => setActiveTab('codes')}
+            >
+              <Key className="mr-2 h-4 w-4" />
+              Invite Codes
+            </Button>
+            {isSuperAdmin && (
+              <Button
+                variant={activeTab === 'users' ? 'default' : 'outline'}
+                onClick={() => setActiveTab('users')}
+              >
+                <Shield className="mr-2 h-4 w-4" />
+                Manage Users
+              </Button>
+            )}
+          </div>
+          {activeTab !== 'create' && (
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={handleRefresh}
+              disabled={isLoading}
+            >
+              <RefreshCw className={cn("h-4 w-4", isLoading && "animate-spin")} />
             </Button>
           )}
         </div>
