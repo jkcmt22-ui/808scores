@@ -197,7 +197,7 @@ export const GameCard = React.memo(function GameCard({ game, showSport = false }
       </div>
     </Link>
   )
-}
+})
 
 // Compact version for lists
 export function GameCardCompact({ game }: { game: GameWithOptionalCount }) {
