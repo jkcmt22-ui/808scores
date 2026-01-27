@@ -40,44 +40,33 @@ function LoginForm() {
         if (!supabase) return
 
         const { data: { user } } = await supabase.auth.getUser()
-
         if (!user) return
 
-        // Verify and consume beta code
-        const { data: code } = await supabase
-          .from('beta_codes' as any)
-          .select('*')
-          .eq('code', betaCode)
-          .eq('is_active', true)
-          .single()
+        console.log('[Login] Redeeming beta code:', betaCode)
 
-        if (code) {
-          // Grant beta access
-          // @ts-expect-error - Beta tables not yet in generated types
-          await supabase.from('beta_access').insert({
-            user_id: user.id,
-            beta_code_id: (code as any).id,
-            granted_at: new Date().toISOString(),
-          })
+        // Call secure server-side function to redeem the code
+        const { data: result, error } = await (supabase as any)
+          .rpc('redeem_beta_code', { p_code: betaCode })
 
-          // Update user flag
-          // @ts-expect-error - Beta fields not yet in generated types
-          await supabase.from('users').update({
-            has_beta_access: true,
-            beta_granted_at: new Date().toISOString(),
-          }).eq('id', user.id)
+        console.log('[Login] Redemption result:', result, error)
 
-          // Increment code use count
-          // @ts-expect-error - Beta tables not yet in generated types
-          await supabase.from('beta_codes').update({
-            use_count: (code as any).use_count + 1
-          }).eq('id', (code as any).id)
+        if (error) {
+          console.error('Beta code redemption error:', error)
+          setError('Failed to redeem beta code. Please contact support.')
+          return
+        }
 
+        const redemption = result as { success: boolean; message?: string; error?: string }
+
+        if (redemption.success) {
           sessionStorage.removeItem('betaCode')
-          setMessage('Beta access granted! Welcome to Hawaii Sports Center.')
+          setMessage(redemption.message || 'Beta access granted! Welcome to Hawaii Sports Center.')
+        } else {
+          setError(redemption.error || 'Failed to redeem beta code')
         }
       } catch (err) {
         console.error('Beta code redemption error:', err)
+        setError('An unexpected error occurred. Please try again.')
       }
     }
 
