@@ -150,7 +150,7 @@ export function useGames(supabase: TypedSupabaseClient | null, options: UseGames
 
         try {
           // Try using RPC function if available (most efficient)
-          const { data: counts, error: rpcError } = await supabase
+          const { data: counts, error: rpcError } = await (supabase as any)
             .rpc('get_message_counts', { game_ids: gameIds })
 
           if (!rpcError && counts) {

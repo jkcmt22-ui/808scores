@@ -6,7 +6,6 @@ import { cn } from '@/lib/utils'
 
 // Lazy load emoji picker to reduce initial bundle size (~170KB)
 const Picker = lazy(() => import('@emoji-mart/react'))
-const data = lazy(() => import('@emoji-mart/data'))
 
 interface EmojiPickerButtonProps {
   onEmojiSelect: (emoji: string) => void
@@ -21,7 +20,7 @@ export function EmojiPickerButton({ onEmojiSelect, disabled }: EmojiPickerButton
 
   // Preload emoji data when component mounts (background load)
   useEffect(() => {
-    data.then((module) => setEmojiData(module.default))
+    import('@emoji-mart/data').then((module) => setEmojiData(module.default))
   }, [])
 
   // Close picker when clicking outside

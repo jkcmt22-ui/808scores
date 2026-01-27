@@ -974,7 +974,7 @@ export default function AdminPage() {
               <Button
                 variant="outline"
                 size="icon"
-                onClick={fetchData}
+                onClick={handleRefresh}
                 disabled={isLoading}
                 aria-label="Refresh data"
               >
