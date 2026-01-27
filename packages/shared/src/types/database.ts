@@ -169,6 +169,8 @@ export interface Database {
           notifications_enabled: boolean
           regular_season_notifications: boolean
           marketing_opt_in: boolean
+          has_beta_access: boolean
+          beta_granted_at: string | null
           created_at: string
         }
         Insert: {
@@ -213,6 +215,8 @@ export interface Database {
           notifications_enabled?: boolean
           regular_season_notifications?: boolean
           marketing_opt_in?: boolean
+          has_beta_access?: boolean
+          beta_granted_at?: string | null
         }
       }
       submissions: {
@@ -662,6 +666,90 @@ export interface Database {
         Insert: Omit<Database['public']['Tables']['tournament_teams']['Row'], 'id' | 'created_at' | 'eliminated' | 'wins' | 'losses' | 'points_for' | 'points_against'>
         Update: Partial<Database['public']['Tables']['tournament_teams']['Insert']>
       }
+      beta_codes: {
+        Row: {
+          id: string
+          code: string
+          name: string | null
+          description: string | null
+          max_uses: number
+          use_count: number
+          expires_at: string | null
+          created_by: string | null
+          created_at: string
+          is_active: boolean
+          notes: string | null
+        }
+        Insert: Omit<Database['public']['Tables']['beta_codes']['Row'], 'id' | 'created_at' | 'use_count'>
+        Update: Partial<Database['public']['Tables']['beta_codes']['Insert']>
+      }
+      beta_access: {
+        Row: {
+          id: string
+          user_id: string
+          beta_code_id: string | null
+          granted_by: string | null
+          granted_at: string
+          notes: string | null
+        }
+        Insert: Omit<Database['public']['Tables']['beta_access']['Row'], 'id' | 'granted_at'>
+        Update: Partial<Database['public']['Tables']['beta_access']['Insert']>
+      }
+      teams: {
+        Row: {
+          id: string
+          school_id: string
+          sport_id: string
+          gender: SportGender
+          division: string | null
+          league: string | null
+          season_year: string
+          is_active: boolean
+          is_beta: boolean
+          beta_features: Json
+          created_at: string
+          updated_at: string
+        }
+        Insert: Omit<Database['public']['Tables']['teams']['Row'], 'id' | 'created_at' | 'updated_at'>
+        Update: Partial<Database['public']['Tables']['teams']['Insert']>
+      }
+      team_managers: {
+        Row: {
+          id: string
+          user_id: string
+          team_id: string
+          role: 'owner' | 'head_coach' | 'assistant_coach' | 'manager' | 'assistant'
+          can_edit_roster: boolean
+          can_edit_schedule: boolean
+          can_submit_scores: boolean
+          can_post_updates: boolean
+          can_manage_coaches: boolean
+          granted_by: string | null
+          granted_at: string
+          is_active: boolean
+          created_at: string
+        }
+        Insert: Omit<Database['public']['Tables']['team_managers']['Row'], 'id' | 'granted_at' | 'created_at'>
+        Update: Partial<Database['public']['Tables']['team_managers']['Insert']>
+      }
+      team_rosters: {
+        Row: {
+          id: string
+          team_id: string
+          player_id: string
+          jersey_number: number | null
+          position: string | null
+          grade: string | null
+          is_captain: boolean
+          is_starter: boolean
+          season_year: string
+          is_active: boolean
+          created_at: string
+          updated_at: string
+        }
+        Insert: Omit<Database['public']['Tables']['team_rosters']['Row'], 'id' | 'created_at' | 'updated_at'>
+        Update: Partial<Database['public']['Tables']['team_rosters']['Insert']>
+      }
     }
   }
 }
@@ -687,6 +775,11 @@ export type UserStrike = Database['public']['Tables']['user_strikes']['Row']
 export type UserBan = Database['public']['Tables']['user_bans']['Row']
 export type ScrapedScore = Database['public']['Tables']['scraped_scores']['Row']
 export type ScheduleImport = Database['public']['Tables']['schedule_imports']['Row']
+export type BetaCode = Database['public']['Tables']['beta_codes']['Row']
+export type BetaAccess = Database['public']['Tables']['beta_access']['Row']
+export type Team = Database['public']['Tables']['teams']['Row']
+export type TeamManager = Database['public']['Tables']['team_managers']['Row']
+export type TeamRoster = Database['public']['Tables']['team_rosters']['Row']
 export type Prize = Database['public']['Tables']['prizes']['Row']
 export type Raffle = Database['public']['Tables']['raffles']['Row']
 export type RaffleEntry = Database['public']['Tables']['raffle_entries']['Row']

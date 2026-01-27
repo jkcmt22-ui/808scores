@@ -56,6 +56,46 @@ export async function updateSession(request: NextRequest) {
     data: { user },
   } = await supabase.auth.getUser()
 
+  const path = request.nextUrl.pathname
+
+  // Public routes that don't require beta access
+  const publicPaths = [
+    '/beta-landing',
+    '/login',
+    '/verify',
+    '/terms',
+    '/privacy',
+    '/terms/raffle',
+    '/terms/scholarship',
+    '/api/auth/callback',
+  ]
+
+  const isPublicPath = publicPaths.some(p => path.startsWith(p))
+
+  // Check beta access for authenticated users (skip if on public path)
+  if (!isPublicPath) {
+    if (user) {
+      // Check if user has beta access
+      const { data: userData } = await supabase
+        .from('users')
+        .select('has_beta_access, is_admin, is_super_admin')
+        .eq('id', user.id)
+        .single()
+
+      if (!userData?.has_beta_access && !userData?.is_admin && !userData?.is_super_admin) {
+        // User logged in but no beta access
+        const url = request.nextUrl.clone()
+        url.pathname = '/beta-landing'
+        return NextResponse.redirect(url)
+      }
+    } else {
+      // Not logged in at all - require beta code
+      const url = request.nextUrl.clone()
+      url.pathname = '/beta-landing'
+      return NextResponse.redirect(url)
+    }
+  }
+
   // Protected routes - require authentication
   const protectedPaths = ['/submit', '/profile', '/notifications', '/admin']
   const isProtectedPath = protectedPaths.some((path) =>

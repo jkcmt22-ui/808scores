@@ -47,6 +47,7 @@ interface AdminUser {
   is_super_admin: boolean
   is_admin: boolean
   is_trusted_reporter: boolean
+  has_beta_access: boolean
   tier: string
   created_at: string
 }
@@ -222,8 +223,8 @@ export default function AdminPage() {
       // Fetch admin users (for super admin only)
       const { data: usersData, error: usersError } = await supabase
         .from('users')
-        .select('id, display_name, email, phone, is_super_admin, is_admin, is_trusted_reporter, tier, created_at')
-        .or('is_admin.eq.true,is_super_admin.eq.true,is_trusted_reporter.eq.true')
+        .select('id, display_name, email, phone, is_super_admin, is_admin, is_trusted_reporter, has_beta_access, tier, created_at')
+        .or('is_admin.eq.true,is_super_admin.eq.true,is_trusted_reporter.eq.true,has_beta_access.eq.true')
         .order('created_at', { ascending: false })
 
       if (usersError) {
@@ -1160,6 +1161,27 @@ export default function AdminPage() {
                           })
                         }
                       }}
+                      onToggleBeta={async () => {
+                        const newValue = !adminUser.has_beta_access
+                        const { error } = await supabase
+                          .from('users')
+                          .update({
+                            has_beta_access: newValue,
+                            beta_granted_at: newValue ? new Date().toISOString() : null
+                          } as never)
+                          .eq('id', adminUser.id)
+                        if (!error) {
+                          setAdminUsers((prev) =>
+                            prev.map((u) =>
+                              u.id === adminUser.id ? { ...u, has_beta_access: newValue } : u
+                            )
+                          )
+                          setMessage({
+                            type: 'success',
+                            text: `Beta access ${newValue ? 'granted' : 'revoked'} for ${adminUser.display_name || 'user'}`
+                          })
+                        }
+                      }}
                       currentUserId={user?.id || ''}
                     />
                   ))}
@@ -1177,11 +1199,13 @@ function UserRow({
   adminUser,
   onToggleAdmin,
   onToggleTrusted,
+  onToggleBeta,
   currentUserId,
 }: {
   adminUser: AdminUser
   onToggleAdmin: () => void
   onToggleTrusted: () => void
+  onToggleBeta: () => void
   currentUserId: string
 }) {
   const isSelf = adminUser.id === currentUserId
@@ -1201,7 +1225,10 @@ function UserRow({
               <Badge variant="default" className="text-[10px]">Admin</Badge>
             )}
             {adminUser.is_trusted_reporter && (
-              <Badge variant="success" className="text-[10px]">Trusted</Badge>
+              <Badge variant="default" className="text-[10px] bg-neon-green/20 text-neon-green border-neon-green/30">Trusted</Badge>
+            )}
+            {adminUser.has_beta_access && (
+              <Badge variant="default" className="text-[10px] bg-neon-yellow/20 text-neon-yellow border-neon-yellow/30">Beta</Badge>
             )}
           </div>
           <div className="text-xs text-foreground-muted space-x-3">
@@ -1211,7 +1238,7 @@ function UserRow({
         </div>
 
         {!adminUser.is_super_admin && !isSelf && (
-          <div className="flex gap-2">
+          <div className="flex gap-2 flex-wrap">
             <Button
               variant={adminUser.is_admin ? 'destructive' : 'outline'}
               size="sm"
@@ -1225,6 +1252,13 @@ function UserRow({
               onClick={onToggleTrusted}
             >
               {adminUser.is_trusted_reporter ? 'Remove Trusted' : 'Make Trusted'}
+            </Button>
+            <Button
+              variant={adminUser.has_beta_access ? 'secondary' : 'outline'}
+              size="sm"
+              onClick={onToggleBeta}
+            >
+              {adminUser.has_beta_access ? 'Revoke Beta' : 'Grant Beta'}
             </Button>
           </div>
         )}

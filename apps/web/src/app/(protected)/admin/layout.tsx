@@ -18,6 +18,7 @@ import {
   Menu,
   X,
   BarChart3,
+  Key,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { Header } from '@/components/layout'
@@ -26,6 +27,7 @@ import { useAuth } from '@/hooks'
 const adminNavItems = [
   { href: '/admin', label: 'Dashboard', icon: LayoutDashboard, exact: true },
   { href: '/admin/analytics', label: 'Analytics', icon: BarChart3, superAdminOnly: true },
+  { href: '/admin/beta-codes', label: 'Beta Codes', icon: Key, superAdminOnly: true },
   { href: '/admin/tournaments', label: 'Tournaments', icon: Trophy },
   { href: '/admin/schools', label: 'Schools', icon: GraduationCap },
   { href: '/admin/school-managers', label: 'School Managers', icon: Users },

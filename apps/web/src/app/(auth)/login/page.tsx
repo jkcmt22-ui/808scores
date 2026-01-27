@@ -1,6 +1,6 @@
 'use client'
 
-import { Suspense, useState } from 'react'
+import { Suspense, useState, useEffect } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import { Phone, Mail, ArrowRight, AlertCircle } from 'lucide-react'
@@ -14,6 +14,7 @@ function LoginForm() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const redirect = getSafeRedirectUrl(searchParams.get('redirect'))
+  const isBeta = searchParams.get('beta') === 'true'
 
   const [authMethod, setAuthMethod] = useState<AuthMethod>('email')
   const [phone, setPhone] = useState('')
@@ -25,6 +26,64 @@ function LoginForm() {
   const [message, setMessage] = useState<string | null>(null)
   const [acceptedTerms, setAcceptedTerms] = useState(false)
   const [marketingOptIn, setMarketingOptIn] = useState(false)
+
+  // Handle beta code redemption after successful auth
+  useEffect(() => {
+    if (!isBeta) return
+
+    const redeemBetaCode = async () => {
+      const betaCode = sessionStorage.getItem('betaCode')
+      if (!betaCode) return
+
+      try {
+        const supabase = createClient()
+        const { data: { user } } = await supabase.auth.getUser()
+
+        if (!user) return
+
+        // Verify and consume beta code
+        const { data: code } = await supabase
+          .from('beta_codes')
+          .select('*')
+          .eq('code', betaCode)
+          .eq('is_active', true)
+          .single()
+
+        if (code) {
+          // Grant beta access
+          await supabase
+            .from('beta_access')
+            .insert({
+              user_id: user.id,
+              beta_code_id: code.id,
+              granted_at: new Date().toISOString(),
+            })
+
+          // Update user flag
+          await supabase
+            .from('users')
+            .update({
+              has_beta_access: true,
+              beta_granted_at: new Date().toISOString(),
+            })
+            .eq('id', user.id)
+
+          // Increment code use count
+          await supabase
+            .from('beta_codes')
+            .update({ use_count: code.use_count + 1 })
+            .eq('id', code.id)
+
+          sessionStorage.removeItem('betaCode')
+          setMessage('Beta access granted! Welcome to Hawaii Sports Center.')
+        }
+      } catch (err) {
+        console.error('Beta code redemption error:', err)
+      }
+    }
+
+    redeemBetaCode()
+  }, [isBeta])
 
   const normalizePhoneDigits = (value: string) => {
     let digits = value.replace(/\D/g, '')
@@ -171,6 +230,50 @@ function LoginForm() {
         })
 
         if (signInError) throw signInError
+
+        // Check for beta code redemption
+        const betaCode = sessionStorage.getItem('betaCode')
+        if (betaCode) {
+          const { data: { user } } = await supabase.auth.getUser()
+
+          if (user) {
+            // Verify and consume beta code
+            const { data: code } = await supabase
+              .from('beta_codes')
+              .select('*')
+              .eq('code', betaCode)
+              .eq('is_active', true)
+              .single()
+
+            if (code) {
+              // Grant beta access
+              await supabase
+                .from('beta_access')
+                .insert({
+                  user_id: user.id,
+                  beta_code_id: code.id,
+                  granted_at: new Date().toISOString(),
+                })
+
+              // Update user flag
+              await supabase
+                .from('users')
+                .update({
+                  has_beta_access: true,
+                  beta_granted_at: new Date().toISOString(),
+                })
+                .eq('id', user.id)
+
+              // Increment code use count
+              await supabase
+                .from('beta_codes')
+                .update({ use_count: code.use_count + 1 })
+                .eq('id', code.id)
+
+              sessionStorage.removeItem('betaCode')
+            }
+          }
+        }
 
         // Navigate and refresh to ensure server sees auth cookies
         router.push(redirect)
