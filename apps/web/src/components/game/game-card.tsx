@@ -235,4 +235,4 @@ export function GameCardCompact({ game }: { game: GameWithOptionalCount }) {
       </div>
     </Link>
   )
-})
+}
