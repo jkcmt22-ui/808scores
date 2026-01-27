@@ -58,6 +58,12 @@ export async function updateSession(request: NextRequest) {
 
   const path = request.nextUrl.pathname
 
+  console.log('[Middleware]', {
+    path,
+    hasUser: !!user,
+    userId: user?.id
+  })
+
   // Public routes that don't require beta access (using Set for O(1) lookup)
   const PUBLIC_PATHS = new Set([
     '/beta-landing',
@@ -84,29 +90,43 @@ export async function updateSession(request: NextRequest) {
   let userData: { has_beta_access: boolean; is_admin: boolean; is_super_admin: boolean } | null = null
 
   if (user && (!isPublicPath || isAdminPath)) {
-    const { data } = await supabase
+    const { data, error: userError } = await supabase
       .from('users')
       .select('has_beta_access, is_admin, is_super_admin')
       .eq('id', user.id)
       .single()
 
+    console.log('[Middleware] User data query:', { data, userError })
     userData = data
   }
 
   // Check beta access for non-public routes
   if (!isPublicPath) {
+    console.log('[Middleware] Beta access check:', {
+      hasUser: !!user,
+      hasUserData: !!userData,
+      betaAccess: userData?.has_beta_access,
+      isAdmin: userData?.is_admin,
+      isSuperAdmin: userData?.is_super_admin
+    })
+
     if (user && userData) {
       if (!userData.has_beta_access && !userData.is_admin && !userData.is_super_admin) {
         // User logged in but no beta access
+        console.log('[Middleware] Redirecting to beta-landing: no beta access')
         const url = request.nextUrl.clone()
         url.pathname = '/beta-landing'
         return NextResponse.redirect(url)
       }
     } else if (!user) {
       // Not logged in at all - require beta code
+      console.log('[Middleware] Redirecting to beta-landing: not logged in')
       const url = request.nextUrl.clone()
       url.pathname = '/beta-landing'
       return NextResponse.redirect(url)
+    } else if (user && !userData) {
+      // User exists but userData query failed - this might cause issues
+      console.log('[Middleware] WARNING: User exists but userData is null')
     }
   }
 
