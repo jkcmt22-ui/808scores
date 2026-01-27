@@ -262,22 +262,33 @@ export default function AdminPage() {
     setMessage(null)
 
     try {
-      const { data: usersData, error: usersError } = await supabase
+      // Add timeout to prevent infinite loading
+      const timeoutPromise = new Promise((_, reject) =>
+        setTimeout(() => reject(new Error('Query timeout')), 10000)
+      )
+
+      const queryPromise = supabase
         .from('users')
         .select('id, display_name, email, phone, is_super_admin, is_admin, is_trusted_reporter, has_beta_access, tier, created_at')
         .or('is_admin.eq.true,is_super_admin.eq.true,is_trusted_reporter.eq.true,has_beta_access.eq.true')
         .order('created_at', { ascending: false })
         .limit(100)
 
+      const { data: usersData, error: usersError } = await Promise.race([
+        queryPromise,
+        timeoutPromise,
+      ]) as any
+
       if (usersError) {
         console.error('Users fetch error:', usersError)
-        setMessage({ type: 'error', text: 'Failed to load users' })
+        setMessage({ type: 'error', text: `Failed to load users: ${usersError.message}` })
       } else if (usersData) {
         setAdminUsers(usersData as AdminUser[])
       }
     } catch (err) {
       console.error('Error fetching users:', err)
-      setMessage({ type: 'error', text: 'Failed to load users' })
+      const errorMessage = err instanceof Error ? err.message : 'Unknown error'
+      setMessage({ type: 'error', text: `Failed to load users: ${errorMessage}` })
     }
 
     setIsLoading(false)
