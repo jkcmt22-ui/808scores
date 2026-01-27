@@ -18,7 +18,7 @@ export default function PrivacyPage() {
           </div>
 
           <p className="text-sm text-foreground-muted leading-relaxed">
-            808scores (&quot;we,&quot; &quot;us,&quot; or &quot;our&quot;) respects your privacy and is committed to protecting your personal information. This Privacy Policy explains how we collect, use, disclose, and safeguard your information when you use our service.
+            Hawaii Sports Center (&quot;we,&quot; &quot;us,&quot; or &quot;our&quot;) respects your privacy and is committed to protecting your personal information. This Privacy Policy explains how we collect, use, disclose, and safeguard your information when you use our service.
           </p>
 
           <section className="space-y-4">
@@ -78,7 +78,7 @@ export default function PrivacyPage() {
             <ul className="list-disc list-inside text-sm text-foreground-muted space-y-2">
               <li><strong>Public Display:</strong> Your display name, avatar, and activity (submissions, chat messages, points, leaderboard rankings) are visible to other users as part of the service</li>
               <li><strong>Service Providers:</strong> We use third-party services for hosting, analytics, notifications, and other operational purposes. These providers are contractually obligated to protect your information</li>
-              <li><strong>Legal Requirements:</strong> When required by law, court order, or government request, or to protect the rights, property, or safety of 808scores, our users, or the public</li>
+              <li><strong>Legal Requirements:</strong> When required by law, court order, or government request, or to protect the rights, property, or safety of Hawaii Sports Center, our users, or the public</li>
               <li><strong>Business Transfers:</strong> In connection with a merger, acquisition, or sale of assets, your information may be transferred to the acquiring entity</li>
               <li><strong>With Your Consent:</strong> When you explicitly agree to sharing for a specific purpose</li>
             </ul>
@@ -90,10 +90,10 @@ export default function PrivacyPage() {
             </h2>
             <div className="bg-neon-pink/5 border border-neon-pink/20 p-4 space-y-3">
               <p className="text-sm text-foreground-muted leading-relaxed">
-                <strong>Users Under 13:</strong> 808scores is not directed to children under 13 years of age. We do not knowingly collect personal information from children under 13. If we learn that we have collected personal information from a child under 13, we will delete that information promptly. If you believe we have collected information from a child under 13, please contact us immediately at privacy@hawaiisportscenter.com.
+                <strong>Users Under 13:</strong> Hawaii Sports Center is not directed to children under 13 years of age. We do not knowingly collect personal information from children under 13. If we learn that we have collected personal information from a child under 13, we will delete that information promptly. If you believe we have collected information from a child under 13, please contact us immediately at privacy@hawaiisportscenter.com.
               </p>
               <p className="text-sm text-foreground-muted leading-relaxed">
-                <strong>Users Ages 13-17:</strong> Users between 13 and 17 years old may use 808scores with parental consent. By creating an account, users in this age range represent that a parent or legal guardian has reviewed and approved their use of the service and these policies. We encourage parents to supervise their children&apos;s online activities.
+                <strong>Users Ages 13-17:</strong> Users between 13 and 17 years old may use Hawaii Sports Center with parental consent. By creating an account, users in this age range represent that a parent or legal guardian has reviewed and approved their use of the service and these policies. We encourage parents to supervise their children&apos;s online activities.
               </p>
               <p className="text-sm text-foreground-muted leading-relaxed">
                 <strong>Parental Rights:</strong> Parents or guardians of users under 18 may:
@@ -112,7 +112,7 @@ export default function PrivacyPage() {
               5. Student Athlete Information
             </h2>
             <p className="text-sm text-foreground-muted leading-relaxed">
-              808scores displays publicly available information about Hawaii high school athletic events and participants. This information includes:
+              Hawaii Sports Center displays publicly available information about Hawaii high school athletic events and participants. This information includes:
             </p>
             <ul className="list-disc list-inside text-sm text-foreground-muted space-y-1">
               <li>Game schedules and scores</li>
@@ -123,7 +123,7 @@ export default function PrivacyPage() {
               <strong>FERPA Disclaimer:</strong> We do not obtain student information directly from schools or educational records. Information displayed is gathered from publicly available sources such as athletic association websites, news reports, and user submissions.
             </p>
             <p className="text-sm text-foreground-muted leading-relaxed mt-2">
-              <strong>Removal Requests:</strong> Student athletes, parents, or legal guardians who wish to have a student&apos;s information removed from 808scores may submit a request to privacy@hawaiisportscenter.com. We will process valid removal requests within 30 days.
+              <strong>Removal Requests:</strong> Student athletes, parents, or legal guardians who wish to have a student&apos;s information removed from Hawaii Sports Center may submit a request to privacy@hawaiisportscenter.com. We will process valid removal requests within 30 days.
             </p>
           </section>
 
@@ -227,7 +227,7 @@ export default function PrivacyPage() {
               11. International Users
             </h2>
             <p className="text-sm text-foreground-muted leading-relaxed">
-              808scores is operated from the United States. If you access our service from outside the United States, your information will be transferred to and processed in the United States, where data protection laws may differ from those in your country. By using the service, you consent to this transfer.
+              Hawaii Sports Center is operated from the United States. If you access our service from outside the United States, your information will be transferred to and processed in the United States, where data protection laws may differ from those in your country. By using the service, you consent to this transfer.
             </p>
           </section>
 

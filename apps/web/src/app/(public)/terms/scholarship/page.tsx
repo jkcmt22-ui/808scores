@@ -12,7 +12,7 @@ export default function ScholarshipTermsPage() {
         <div className="mt-4 scoreboard-panel p-6 space-y-6">
           <div>
             <h1 className="font-display text-2xl font-black text-foreground uppercase tracking-widest mb-2">
-              808scores Sportsman of the Year Scholarship
+              Hawaii Sports Center Sportsman of the Year Scholarship
             </h1>
             <h2 className="font-display text-lg text-neon-green uppercase tracking-wider mb-2">
               Official Rules
@@ -31,7 +31,7 @@ export default function ScholarshipTermsPage() {
               1. Sponsor & Administrator
             </h2>
             <p className="text-sm text-foreground-muted leading-relaxed">
-              The 808scores Sportsman of the Year Scholarship (&quot;Scholarship&quot;) is sponsored and administered by 808scores (&quot;Sponsor&quot;), with principal place of business in the State of Hawaii. This Scholarship is not sponsored, endorsed, or administered by, or associated with, any school, athletic league, or the Hawaii Department of Education.
+              The Hawaii Sports Center Sportsman of the Year Scholarship (&quot;Scholarship&quot;) is sponsored and administered by Hawaii Sports Center (&quot;Sponsor&quot;), with principal place of business in the State of Hawaii. This Scholarship is not sponsored, endorsed, or administered by, or associated with, any school, athletic league, or the Hawaii Department of Education.
             </p>
           </section>
 
@@ -61,7 +61,7 @@ export default function ScholarshipTermsPage() {
               <li>Be a legal resident of the State of Hawaii</li>
               <li>Be at least 14 years of age at the time of nomination</li>
               <li>Have remaining high school eligibility OR be a graduating senior in the current school year</li>
-              <li>Not be an immediate family member of any 808scores employee, officer, or director</li>
+              <li>Not be an immediate family member of any Hawaii Sports Center employee, officer, or director</li>
             </ul>
             <p className="text-sm text-foreground-muted leading-relaxed mt-4">
               <strong>NCAA/NAIA Eligibility Notice:</strong> Student-athletes considering collegiate athletics should consult with their school&apos;s athletic director or guidance counselor regarding how accepting this scholarship may affect their collegiate eligibility under NCAA, NAIA, or other governing body rules. Sponsor makes no representation regarding the impact on collegiate eligibility.
@@ -73,16 +73,16 @@ export default function ScholarshipTermsPage() {
               4. Nomination Process
             </h2>
             <p className="text-sm text-foreground-muted leading-relaxed">
-              Nominations may be submitted by any registered 808scores user during the nomination period. Self-nominations are permitted.
+              Nominations may be submitted by any registered Hawaii Sports Center user during the nomination period. Self-nominations are permitted.
             </p>
             <ul className="list-disc list-inside text-sm text-foreground-muted space-y-2">
               <li><strong>Nomination Period:</strong> As specified for each scholarship year (typically February-March)</li>
               <li><strong>Required Information:</strong> Nominee&apos;s name, school, sport(s), grade level, and reason for nomination</li>
-              <li><strong>Review Process:</strong> All nominations are reviewed by 808scores administrators for eligibility verification</li>
+              <li><strong>Review Process:</strong> All nominations are reviewed by Hawaii Sports Center administrators for eligibility verification</li>
               <li><strong>Approval:</strong> Only nominees who meet all eligibility requirements and whose information can be verified will be approved for the voting phase</li>
             </ul>
             <p className="text-sm text-foreground-muted leading-relaxed mt-4">
-              <strong>Alternative Nomination Method (No Account Required):</strong> Nominations may also be submitted by mail to: 808scores Scholarship Nomination, [Address to be provided], Honolulu, HI 96XXX. Include nominee&apos;s full name, school, sport, grade, and contact information for verification. Mailed nominations must be postmarked by the nomination deadline.
+              <strong>Alternative Nomination Method (No Account Required):</strong> Nominations may also be submitted by mail to: Hawaii Sports Center Scholarship Nomination, [Address to be provided], Honolulu, HI 96XXX. Include nominee&apos;s full name, school, sport, grade, and contact information for verification. Mailed nominations must be postmarked by the nomination deadline.
             </p>
           </section>
 
@@ -95,12 +95,12 @@ export default function ScholarshipTermsPage() {
             </p>
             <ul className="list-disc list-inside text-sm text-foreground-muted space-y-2">
               <li><strong>Voting Period:</strong> April 1 through May 15 (or as specified)</li>
-              <li><strong>Voter Eligibility:</strong> Any registered 808scores user may cast one (1) vote per scholarship</li>
+              <li><strong>Voter Eligibility:</strong> Any registered Hawaii Sports Center user may cast one (1) vote per scholarship</li>
               <li><strong>Vote Changing:</strong> Voters may change their vote at any time during the voting period</li>
-              <li><strong>No Points Required:</strong> Voting does not require or consume 808scores points</li>
+              <li><strong>No Points Required:</strong> Voting does not require or consume Hawaii Sports Center points</li>
             </ul>
             <p className="text-sm text-foreground-muted leading-relaxed mt-4">
-              <strong>Alternative Voting Method (No Account Required):</strong> Votes may be cast by mail to: 808scores Scholarship Vote, [Address to be provided], Honolulu, HI 96XXX. Include your full name, mailing address, email (optional), and the name of your chosen nominee. Limit one vote per person. Mailed votes must be postmarked by the voting deadline. Mail-in votes will be added to the electronic vote count.
+              <strong>Alternative Voting Method (No Account Required):</strong> Votes may be cast by mail to: Hawaii Sports Center Scholarship Vote, [Address to be provided], Honolulu, HI 96XXX. Include your full name, mailing address, email (optional), and the name of your chosen nominee. Limit one vote per person. Mailed votes must be postmarked by the voting deadline. Mail-in votes will be added to the electronic vote count.
             </p>
           </section>
 
@@ -233,7 +233,7 @@ export default function ScholarshipTermsPage() {
               15. Winner List
             </h2>
             <p className="text-sm text-foreground-muted leading-relaxed">
-              The name of the scholarship winner will be posted on the 808scores website within thirty (30) days of winner verification. A copy of the winner list may also be obtained by sending a self-addressed stamped envelope to: 808scores Scholarship Winner List, [Address], Honolulu, HI 96XXX.
+              The name of the scholarship winner will be posted on the Hawaii Sports Center website within thirty (30) days of winner verification. A copy of the winner list may also be obtained by sending a self-addressed stamped envelope to: Hawaii Sports Center Scholarship Winner List, [Address], Honolulu, HI 96XXX.
             </p>
           </section>
 
@@ -242,13 +242,13 @@ export default function ScholarshipTermsPage() {
               16. Conflict of Interest
             </h2>
             <p className="text-sm text-foreground-muted leading-relaxed">
-              Immediate family members (parent, child, sibling, spouse) and household members of 808scores employees, officers, directors, and administrators are not eligible to be nominated for or receive the Scholarship. 808scores employees and administrators will not vote in the Scholarship selection process.
+              Immediate family members (parent, child, sibling, spouse) and household members of Hawaii Sports Center employees, officers, directors, and administrators are not eligible to be nominated for or receive the Scholarship. Hawaii Sports Center employees and administrators will not vote in the Scholarship selection process.
             </p>
           </section>
 
           <div className="pt-4 border-t-2 border-border space-y-4">
             <p className="text-xs text-foreground-subtle text-center">
-              By nominating a student-athlete or voting in the 808scores Sportsman of the Year Scholarship, you acknowledge that you have read and agree to these Official Rules.
+              By nominating a student-athlete or voting in the Hawaii Sports Center Sportsman of the Year Scholarship, you acknowledge that you have read and agree to these Official Rules.
             </p>
             <p className="text-sm text-foreground-muted">
               Related:{' '}

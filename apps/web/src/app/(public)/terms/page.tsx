@@ -22,7 +22,7 @@ export default function TermsPage() {
               IMPORTANT: PLEASE READ CAREFULLY
             </p>
             <p className="text-xs text-foreground-muted">
-              These Terms include a binding arbitration agreement and class action waiver in Section 15, which affect your legal rights. By using 808scores, you agree to resolve disputes through individual arbitration rather than court proceedings or class actions.
+              These Terms include a binding arbitration agreement and class action waiver in Section 15, which affect your legal rights. By using Hawaii Sports Center, you agree to resolve disputes through individual arbitration rather than court proceedings or class actions.
             </p>
           </div>
 
@@ -31,10 +31,10 @@ export default function TermsPage() {
               1. Acceptance of Terms
             </h2>
             <p className="text-sm text-foreground-muted leading-relaxed">
-              By accessing or using 808scores (the &quot;Service&quot;), you agree to be bound by these Terms of Service (&quot;Terms&quot;), our Privacy Policy, and all applicable laws and regulations. If you do not agree to these Terms, you must not use the Service.
+              By accessing or using Hawaii Sports Center (the &quot;Service&quot;), you agree to be bound by these Terms of Service (&quot;Terms&quot;), our Privacy Policy, and all applicable laws and regulations. If you do not agree to these Terms, you must not use the Service.
             </p>
             <p className="text-sm text-foreground-muted leading-relaxed">
-              808scores is operated from the State of Hawaii, United States. We make no representation that the Service is appropriate or available for use in other locations. Those who access the Service from other jurisdictions do so at their own risk and are responsible for compliance with local laws.
+              Hawaii Sports Center is operated from the State of Hawaii, United States. We make no representation that the Service is appropriate or available for use in other locations. Those who access the Service from other jurisdictions do so at their own risk and are responsible for compliance with local laws.
             </p>
           </section>
 
@@ -62,7 +62,7 @@ export default function TermsPage() {
               3. User Conduct
             </h2>
             <p className="text-sm text-foreground-muted leading-relaxed">
-              You agree to use 808scores responsibly and in compliance with all applicable laws. The following are strictly prohibited:
+              You agree to use Hawaii Sports Center responsibly and in compliance with all applicable laws. The following are strictly prohibited:
             </p>
             <ul className="list-disc list-inside text-sm text-foreground-muted space-y-1">
               <li>Submitting false, misleading, or intentionally inaccurate score information</li>
@@ -85,7 +85,7 @@ export default function TermsPage() {
               4. User-Generated Content
             </h2>
             <p className="text-sm text-foreground-muted leading-relaxed">
-              You retain ownership of content you submit to 808scores. However, by submitting content (including score submissions, chat messages, comments, and any other user contributions), you grant 808scores a worldwide, non-exclusive, royalty-free, perpetual, irrevocable license to use, reproduce, modify, publish, distribute, and display such content in connection with the Service.
+              You retain ownership of content you submit to Hawaii Sports Center. However, by submitting content (including score submissions, chat messages, comments, and any other user contributions), you grant Hawaii Sports Center a worldwide, non-exclusive, royalty-free, perpetual, irrevocable license to use, reproduce, modify, publish, distribute, and display such content in connection with the Service.
             </p>
             <p className="text-sm text-foreground-muted leading-relaxed">
               You represent and warrant that: (a) you own or have the necessary rights to submit the content; (b) the content does not violate the rights of any third party; and (c) the content complies with these Terms and all applicable laws.
@@ -108,7 +108,7 @@ export default function TermsPage() {
               <li>You understand that false submissions may result in account penalties or termination</li>
             </ul>
             <p className="text-sm text-foreground-muted leading-relaxed mt-2">
-              808scores does not guarantee the accuracy of user-submitted scores. All game information is for entertainment and informational purposes only and should not be relied upon for official records.
+              Hawaii Sports Center does not guarantee the accuracy of user-submitted scores. All game information is for entertainment and informational purposes only and should not be relied upon for official records.
             </p>
           </section>
 
@@ -117,7 +117,7 @@ export default function TermsPage() {
               6. Points, Rewards & Raffles
             </h2>
             <p className="text-sm text-foreground-muted leading-relaxed">
-              808scores offers a points system for user engagement. Points are earned through activities including score submissions and chat participation.
+              Hawaii Sports Center offers a points system for user engagement. Points are earned through activities including score submissions and chat participation.
             </p>
             <ul className="list-disc list-inside text-sm text-foreground-muted space-y-1">
               <li>Points have no monetary value and cannot be exchanged for cash</li>
@@ -163,10 +163,10 @@ export default function TermsPage() {
               8. Intellectual Property
             </h2>
             <p className="text-sm text-foreground-muted leading-relaxed">
-              The 808scores name, logo, and all original content, features, and functionality are owned by 808scores and are protected by copyright, trademark, and other intellectual property laws.
+              The Hawaii Sports Center name, logo, and all original content, features, and functionality are owned by Hawaii Sports Center and are protected by copyright, trademark, and other intellectual property laws.
             </p>
             <p className="text-sm text-foreground-muted leading-relaxed">
-              <strong>Third-Party Trademarks:</strong> School names, team names, mascots, logos, and related marks displayed on 808scores are the property of their respective owners. 808scores is not affiliated with, endorsed by, or sponsored by any school, athletic league, or the Hawaii Department of Education. Use of such marks is for identification purposes only and does not imply any affiliation or endorsement.
+              <strong>Third-Party Trademarks:</strong> School names, team names, mascots, logos, and related marks displayed on Hawaii Sports Center are the property of their respective owners. Hawaii Sports Center is not affiliated with, endorsed by, or sponsored by any school, athletic league, or the Hawaii Department of Education. Use of such marks is for identification purposes only and does not imply any affiliation or endorsement.
             </p>
             <p className="text-sm text-foreground-muted leading-relaxed">
               <strong>GIPHY:</strong> GIF content is provided by GIPHY. GIPHY and all related marks are trademarks of GIPHY, Inc.
@@ -178,7 +178,7 @@ export default function TermsPage() {
               9. DMCA & Copyright Claims
             </h2>
             <p className="text-sm text-foreground-muted leading-relaxed">
-              We respect intellectual property rights and respond to valid DMCA takedown notices. If you believe content on 808scores infringes your copyright, please send a notice to: dmca@hawaiisportscenter.com containing:
+              We respect intellectual property rights and respond to valid DMCA takedown notices. If you believe content on Hawaii Sports Center infringes your copyright, please send a notice to: dmca@hawaiisportscenter.com containing:
             </p>
             <ul className="list-disc list-inside text-sm text-foreground-muted space-y-1">
               <li>Identification of the copyrighted work claimed to be infringed</li>
@@ -214,7 +214,7 @@ export default function TermsPage() {
               We do not warrant that: (a) the Service will be uninterrupted, secure, or error-free; (b) any defects will be corrected; (c) the Service or servers are free of viruses or harmful components; or (d) the results obtained from the Service will be accurate or reliable.
             </p>
             <p className="text-sm text-foreground-muted leading-relaxed mt-2">
-              <strong>Score Accuracy:</strong> Game scores and information displayed on 808scores are user-submitted and may not be accurate. We do not verify all submissions and make no guarantees regarding accuracy. Do not rely on 808scores for official scoring information.
+              <strong>Score Accuracy:</strong> Game scores and information displayed on Hawaii Sports Center are user-submitted and may not be accurate. We do not verify all submissions and make no guarantees regarding accuracy. Do not rely on Hawaii Sports Center for official scoring information.
             </p>
           </section>
 
@@ -223,10 +223,10 @@ export default function TermsPage() {
               12. Limitation of Liability
             </h2>
             <p className="text-sm text-foreground-muted leading-relaxed uppercase">
-              TO THE MAXIMUM EXTENT PERMITTED BY LAW, 808SCORES AND ITS OFFICERS, DIRECTORS, EMPLOYEES, AGENTS, AND AFFILIATES SHALL NOT BE LIABLE FOR ANY INDIRECT, INCIDENTAL, SPECIAL, CONSEQUENTIAL, OR PUNITIVE DAMAGES, INCLUDING BUT NOT LIMITED TO LOSS OF PROFITS, DATA, USE, OR GOODWILL, ARISING FROM OR RELATED TO YOUR USE OF OR INABILITY TO USE THE SERVICE.
+              TO THE MAXIMUM EXTENT PERMITTED BY LAW, HAWAII SPORTS CENTER AND ITS OFFICERS, DIRECTORS, EMPLOYEES, AGENTS, AND AFFILIATES SHALL NOT BE LIABLE FOR ANY INDIRECT, INCIDENTAL, SPECIAL, CONSEQUENTIAL, OR PUNITIVE DAMAGES, INCLUDING BUT NOT LIMITED TO LOSS OF PROFITS, DATA, USE, OR GOODWILL, ARISING FROM OR RELATED TO YOUR USE OF OR INABILITY TO USE THE SERVICE.
             </p>
             <p className="text-sm text-foreground-muted leading-relaxed mt-2 uppercase">
-              IN NO EVENT SHALL OUR TOTAL LIABILITY TO YOU FOR ALL CLAIMS EXCEED THE AMOUNT YOU HAVE PAID TO 808SCORES IN THE TWELVE (12) MONTHS PRECEDING THE CLAIM, OR ONE HUNDRED DOLLARS ($100), WHICHEVER IS GREATER.
+              IN NO EVENT SHALL OUR TOTAL LIABILITY TO YOU FOR ALL CLAIMS EXCEED THE AMOUNT YOU HAVE PAID TO HAWAII SPORTS CENTER IN THE TWELVE (12) MONTHS PRECEDING THE CLAIM, OR ONE HUNDRED DOLLARS ($100), WHICHEVER IS GREATER.
             </p>
             <p className="text-sm text-foreground-muted leading-relaxed mt-2">
               Some jurisdictions do not allow the exclusion or limitation of certain damages, so some of the above limitations may not apply to you.
@@ -238,7 +238,7 @@ export default function TermsPage() {
               13. Indemnification
             </h2>
             <p className="text-sm text-foreground-muted leading-relaxed">
-              You agree to indemnify, defend, and hold harmless 808scores and its officers, directors, employees, agents, and affiliates from and against any and all claims, damages, losses, liabilities, costs, and expenses (including reasonable attorneys&apos; fees) arising from or related to: (a) your use of the Service; (b) your violation of these Terms; (c) your violation of any rights of another party; (d) your user-generated content; or (e) any dispute between you and another user.
+              You agree to indemnify, defend, and hold harmless Hawaii Sports Center and its officers, directors, employees, agents, and affiliates from and against any and all claims, damages, losses, liabilities, costs, and expenses (including reasonable attorneys&apos; fees) arising from or related to: (a) your use of the Service; (b) your violation of these Terms; (c) your violation of any rights of another party; (d) your user-generated content; or (e) any dispute between you and another user.
             </p>
           </section>
 
@@ -266,7 +266,7 @@ export default function TermsPage() {
                 <strong>Binding Arbitration:</strong> If we cannot resolve a dispute informally, any controversy or claim arising out of or relating to these Terms or the Service shall be settled by binding arbitration administered by the American Arbitration Association (&quot;AAA&quot;) in accordance with its Consumer Arbitration Rules. The arbitration shall take place in Honolulu, Hawaii, or at another mutually agreed location, or via telephone/video conference.
               </p>
               <p className="text-sm text-foreground-muted leading-relaxed">
-                <strong>CLASS ACTION WAIVER:</strong> YOU AND 808SCORES AGREE THAT EACH MAY BRING CLAIMS AGAINST THE OTHER ONLY IN YOUR OR ITS INDIVIDUAL CAPACITY AND NOT AS A PLAINTIFF OR CLASS MEMBER IN ANY PURPORTED CLASS, CONSOLIDATED, OR REPRESENTATIVE ACTION. The arbitrator may not consolidate more than one person&apos;s claims and may not preside over any form of class or representative proceeding.
+                <strong>CLASS ACTION WAIVER:</strong> YOU AND HAWAII SPORTS CENTER AGREE THAT EACH MAY BRING CLAIMS AGAINST THE OTHER ONLY IN YOUR OR ITS INDIVIDUAL CAPACITY AND NOT AS A PLAINTIFF OR CLASS MEMBER IN ANY PURPORTED CLASS, CONSOLIDATED, OR REPRESENTATIVE ACTION. The arbitrator may not consolidate more than one person&apos;s claims and may not preside over any form of class or representative proceeding.
               </p>
               <p className="text-sm text-foreground-muted leading-relaxed">
                 <strong>Exceptions:</strong> This arbitration agreement does not preclude you from bringing issues to the attention of federal, state, or local agencies. Such agencies can, if the law allows, seek relief against us on your behalf. Additionally, either party may bring a claim in small claims court if it qualifies.
@@ -282,7 +282,7 @@ export default function TermsPage() {
               16. Force Majeure
             </h2>
             <p className="text-sm text-foreground-muted leading-relaxed">
-              808scores shall not be liable for any failure or delay in performing our obligations under these Terms due to circumstances beyond our reasonable control, including but not limited to: natural disasters, pandemic, war, terrorism, riots, government actions, power failures, internet or telecommunications failures, or any other event beyond our reasonable control.
+              Hawaii Sports Center shall not be liable for any failure or delay in performing our obligations under these Terms due to circumstances beyond our reasonable control, including but not limited to: natural disasters, pandemic, war, terrorism, riots, government actions, power failures, internet or telecommunications failures, or any other event beyond our reasonable control.
             </p>
           </section>
 
@@ -318,7 +318,7 @@ export default function TermsPage() {
               20. Entire Agreement
             </h2>
             <p className="text-sm text-foreground-muted leading-relaxed">
-              These Terms, together with our Privacy Policy, Raffle Terms, and Scholarship Official Rules (where applicable), constitute the entire agreement between you and 808scores regarding the Service and supersede all prior agreements and understandings.
+              These Terms, together with our Privacy Policy, Raffle Terms, and Scholarship Official Rules (where applicable), constitute the entire agreement between you and Hawaii Sports Center regarding the Service and supersede all prior agreements and understandings.
             </p>
           </section>
 

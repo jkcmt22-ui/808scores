@@ -20,7 +20,7 @@ import { GifPicker } from './GifPicker'
 import { colors } from '../lib/theme'
 import Constants from 'expo-constants'
 
-const API_BASE_URL = Constants.expoConfig?.extra?.apiBaseUrl || 'https://808scores.com'
+const API_BASE_URL = Constants.expoConfig?.extra?.apiBaseUrl || 'https://hawaiisportscenter.com'
 
 interface MessageItemProps {
   message: ChatMessage

@@ -1,11 +1,11 @@
 # Hawaii Sports Center - robots.txt
-# https://808scores.vercel.app
+# https://hawaiisportscenter.com
 
 User-agent: *
 Allow: /
 
 # Sitemap location
-Sitemap: https://808scores.vercel.app/sitemap.xml
+Sitemap: https://hawaiisportscenter.com/sitemap.xml
 
 # Disallow protected/admin routes
 Disallow: /admin

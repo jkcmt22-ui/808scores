@@ -28,7 +28,7 @@ export default function RaffleTermsPage() {
               1. Sponsor
             </h2>
             <p className="text-sm text-foreground-muted leading-relaxed">
-              The 808scores Sweepstakes (&quot;Sweepstakes&quot;) is sponsored by 808scores (&quot;Sponsor&quot;), with principal place of business in the State of Hawaii. This Sweepstakes is not sponsored, endorsed, or administered by, or associated with, any school, athletic league, or the Hawaii Department of Education.
+              The Hawaii Sports Center Sweepstakes (&quot;Sweepstakes&quot;) is sponsored by Hawaii Sports Center (&quot;Sponsor&quot;), with principal place of business in the State of Hawaii. This Sweepstakes is not sponsored, endorsed, or administered by, or associated with, any school, athletic league, or the Hawaii Department of Education.
             </p>
           </section>
 
@@ -39,8 +39,8 @@ export default function RaffleTermsPage() {
             <ul className="list-disc list-inside text-sm text-foreground-muted space-y-2">
               <li>You must be at least 18 years old at the time of entry</li>
               <li>You must be a legal resident of the State of Hawaii</li>
-              <li>Employees, officers, and directors of 808scores and their immediate family members (spouse, parent, child, sibling) and household members are not eligible</li>
-              <li>You must have a valid 808scores account in good standing (for online entries) or provide required information (for mail-in entries)</li>
+              <li>Employees, officers, and directors of Hawaii Sports Center and their immediate family members (spouse, parent, child, sibling) and household members are not eligible</li>
+              <li>You must have a valid Hawaii Sports Center account in good standing (for online entries) or provide required information (for mail-in entries)</li>
               <li>You must agree to these Official Rules before entering</li>
             </ul>
           </section>
@@ -58,7 +58,7 @@ export default function RaffleTermsPage() {
                 Method 1: Online Entry (Using Points)
               </h3>
               <ul className="list-disc list-inside text-sm text-foreground-muted space-y-1">
-                <li>Log in to your 808scores account</li>
+                <li>Log in to your Hawaii Sports Center account</li>
                 <li>Navigate to the active sweepstakes</li>
                 <li>Use your accumulated points to submit entries</li>
                 <li>Entry costs: As specified for each sweepstakes (e.g., 25 points per entry)</li>
@@ -84,7 +84,7 @@ export default function RaffleTermsPage() {
               </ul>
               <p className="text-sm text-foreground-muted leading-relaxed mt-3">
                 Mail your entry to:<br />
-                <strong>808scores Sweepstakes Entry<br />
+                <strong>Hawaii Sports Center Sweepstakes Entry<br />
                 [Address to be provided]<br />
                 Honolulu, HI 96XXX</strong>
               </p>
@@ -102,7 +102,7 @@ export default function RaffleTermsPage() {
               4. Earning Points (For Online Entries)
             </h2>
             <p className="text-sm text-foreground-muted leading-relaxed">
-              Points can be earned through legitimate participation on 808scores:
+              Points can be earned through legitimate participation on Hawaii Sports Center:
             </p>
             <ul className="list-disc list-inside text-sm text-foreground-muted space-y-2">
               <li>Submitting accurate game scores and updates</li>
@@ -156,7 +156,7 @@ export default function RaffleTermsPage() {
             <ul className="list-disc list-inside text-sm text-foreground-muted space-y-2">
               <li>Potential winners will be notified via email and/or phone within 7 days of the drawing</li>
               <li>Winners may also be notified via push notification and in-app message</li>
-              <li>Winner names may be publicly announced on 808scores and social media</li>
+              <li>Winner names may be publicly announced on Hawaii Sports Center and social media</li>
               <li>Potential winners must respond within 7 days of notification to claim their prize</li>
               <li>Failure to respond within 7 days may result in forfeiture and selection of an alternate winner</li>
               <li>Sponsor reserves the right to redraw if a winner is found ineligible or cannot be contacted</li>
@@ -196,7 +196,7 @@ export default function RaffleTermsPage() {
               All entries are subject to verification. Sponsor reserves the right to disqualify any entrant who:
             </p>
             <ul className="list-disc list-inside text-sm text-foreground-muted space-y-2">
-              <li>Violates these Official Rules or the 808scores Terms of Service</li>
+              <li>Violates these Official Rules or the Hawaii Sports Center Terms of Service</li>
               <li>Attempts to manipulate the sweepstakes or points system</li>
               <li>Uses multiple accounts, false identities, or automated means to enter</li>
               <li>Provides false or misleading information</li>
@@ -270,7 +270,7 @@ export default function RaffleTermsPage() {
               16. Winner List
             </h2>
             <p className="text-sm text-foreground-muted leading-relaxed">
-              A list of winners will be posted on the 808scores website within 30 days of the drawing. To receive a copy of the winner list by mail, send a self-addressed stamped envelope to: 808scores Winner List, [Address], Honolulu, HI 96XXX. Requests must be received within 60 days of the drawing date.
+              A list of winners will be posted on the Hawaii Sports Center website within 30 days of the drawing. To receive a copy of the winner list by mail, send a self-addressed stamped envelope to: Hawaii Sports Center Winner List, [Address], Honolulu, HI 96XXX. Requests must be received within 60 days of the drawing date.
             </p>
           </section>
 
@@ -279,7 +279,7 @@ export default function RaffleTermsPage() {
               17. General Terms
             </h2>
             <p className="text-sm text-foreground-muted leading-relaxed">
-              These Official Rules are supplemental to the 808scores{' '}
+              These Official Rules are supplemental to the Hawaii Sports Center{' '}
               <Link href="/terms" className="text-neon-blue hover:underline">
                 Terms of Service
               </Link>
@@ -289,7 +289,7 @@ export default function RaffleTermsPage() {
 
           <div className="pt-4 border-t-2 border-border space-y-4">
             <p className="text-xs text-foreground-subtle text-center">
-              By entering any 808scores Sweepstakes, you confirm that you have read, understood, and agree to these Official Rules.
+              By entering any Hawaii Sports Center Sweepstakes, you confirm that you have read, understood, and agree to these Official Rules.
             </p>
             <p className="text-sm text-foreground-muted">
               Related:{' '}
