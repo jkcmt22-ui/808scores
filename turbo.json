@@ -3,7 +3,18 @@
   "tasks": {
     "build": {
       "dependsOn": ["^build"],
-      "outputs": [".next/**", "!.next/cache/**", "dist/**"]
+      "outputs": [".next/**", "!.next/cache/**", "dist/**"],
+      "env": [
+        "SUPABASE_SERVICE_ROLE_KEY",
+        "CRPM_SECRET",
+        "VAPID_PRIVATE_KEY",
+        "WEBHOOK_SECRET",
+        "TURNSTILE_SECRET_KEY",
+        "CRON_SECRET",
+        "SENTRY_ORG",
+        "SENTRY_PROJECT",
+        "SENTRY_AUTH_TOKEN"
+      ]
     },
     "dev": {
       "cache": false,

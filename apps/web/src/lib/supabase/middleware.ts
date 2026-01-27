@@ -89,7 +89,7 @@ export async function updateSession(request: NextRequest) {
 
     if (!error && data) {
       // Handle both array and object responses
-      userData = Array.isArray(data) ? data[0] : data
+      userData = (Array.isArray(data) ? data[0] : data) as { has_beta_access: boolean; is_admin: boolean; is_super_admin: boolean }
     }
   }
 
