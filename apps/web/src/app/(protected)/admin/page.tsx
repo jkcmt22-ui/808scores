@@ -147,10 +147,10 @@ export default function AdminPage() {
   // Fetch sports and schools (needed for forms)
   const fetchCommonData = useCallback(async () => {
     try {
-      // Fetch sports
+      // Fetch sports - only fields needed for dropdowns
       const { data: sportsData, error: sportsError } = await supabase
         .from('sports')
-        .select('*')
+        .select('id, name, display_name, icon, code, sort_order')
         .eq('active', true)
         .order('sort_order')
 
@@ -158,10 +158,10 @@ export default function AdminPage() {
         setSports(sportsData as Sport[])
       }
 
-      // Fetch schools
+      // Fetch schools - only fields needed for dropdowns and display
       const { data: schoolsData, error: schoolsError } = await supabase
         .from('schools')
-        .select('*')
+        .select('id, name, short_name, mascot, logo_url')
         .order('name')
 
       if (!schoolsError && schoolsData) {
@@ -181,13 +181,31 @@ export default function AdminPage() {
       const { data: gamesData, error: gamesError } = await supabase
         .from('games')
         .select(`
-          *,
-          sport:sports(*),
-          home_team:schools!games_home_team_id_fkey(*),
-          away_team:schools!games_away_team_id_fkey(*)
+          id,
+          sport_id,
+          home_team_id,
+          away_team_id,
+          scheduled_at,
+          status,
+          game_type,
+          home_score,
+          away_score,
+          current_period,
+          time_remaining,
+          venue,
+          is_verified,
+          golden_game,
+          photos_url,
+          instagram_url,
+          streaming_url,
+          created_at,
+          updated_at,
+          sport:sports(id, name, display_name, icon, code),
+          home_team:schools!games_home_team_id_fkey(id, name, short_name, mascot, logo_url),
+          away_team:schools!games_away_team_id_fkey(id, name, short_name, mascot, logo_url)
         `)
         .order('scheduled_at', { ascending: false })
-        .limit(100)
+        .limit(50)
 
       if (gamesError) {
         console.error('Games fetch error:', gamesError)
@@ -267,6 +285,7 @@ export default function AdminPage() {
         .select('id, display_name, email, phone, is_super_admin, is_admin, is_trusted_reporter, has_beta_access, tier, created_at')
         .or('is_admin.eq.true,is_super_admin.eq.true,is_trusted_reporter.eq.true,has_beta_access.eq.true')
         .order('created_at', { ascending: false })
+        .limit(100)
 
       if (usersError) {
         console.error('Users fetch error:', usersError)
