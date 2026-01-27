@@ -147,10 +147,10 @@ export default function AdminPage() {
   // Fetch sports and schools (needed for forms)
   const fetchCommonData = useCallback(async () => {
     try {
-      // Fetch sports - only fields needed for dropdowns
+      // Fetch sports
       const { data: sportsData, error: sportsError } = await supabase
         .from('sports')
-        .select('id, name, display_name, icon, code, sort_order')
+        .select('*')
         .eq('active', true)
         .order('sort_order')
 
@@ -158,10 +158,10 @@ export default function AdminPage() {
         setSports(sportsData as Sport[])
       }
 
-      // Fetch schools - only fields needed for dropdowns and display
+      // Fetch schools
       const { data: schoolsData, error: schoolsError } = await supabase
         .from('schools')
-        .select('id, name, short_name, mascot, logo_url')
+        .select('*')
         .order('name')
 
       if (!schoolsError && schoolsData) {
@@ -181,31 +181,13 @@ export default function AdminPage() {
       const { data: gamesData, error: gamesError } = await supabase
         .from('games')
         .select(`
-          id,
-          sport_id,
-          home_team_id,
-          away_team_id,
-          scheduled_at,
-          status,
-          game_type,
-          home_score,
-          away_score,
-          current_period,
-          time_remaining,
-          venue,
-          is_verified,
-          golden_game,
-          photos_url,
-          instagram_url,
-          streaming_url,
-          created_at,
-          updated_at,
-          sport:sports(id, name, display_name, icon, code),
-          home_team:schools!games_home_team_id_fkey(id, name, short_name, mascot, logo_url),
-          away_team:schools!games_away_team_id_fkey(id, name, short_name, mascot, logo_url)
+          *,
+          sport:sports(*),
+          home_team:schools!games_home_team_id_fkey(*),
+          away_team:schools!games_away_team_id_fkey(*)
         `)
         .order('scheduled_at', { ascending: false })
-        .limit(150)
+        .limit(100)
 
       if (gamesError) {
         console.error('Games fetch error:', gamesError)
