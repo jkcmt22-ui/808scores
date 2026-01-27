@@ -68,13 +68,6 @@ export function useGames(supabase: TypedSupabaseClient | null, options: UseGames
         const startOfDay = new Date(`${dateStr}T00:00:00-10:00`)
         const endOfDay = new Date(`${dateStr}T23:59:59-10:00`)
 
-        console.log('[Games Debug] Date filter:', {
-          inputDate: options.date.toISOString(),
-          dateStr,
-          startOfDay: startOfDay.toISOString(),
-          endOfDay: endOfDay.toISOString(),
-        })
-
         query = query
           .gte('scheduled_at', startOfDay.toISOString())
           .lte('scheduled_at', endOfDay.toISOString())
@@ -144,13 +137,9 @@ export function useGames(supabase: TypedSupabaseClient | null, options: UseGames
 
       const { data, error: queryError } = await query
 
-      if (queryError) {
-        console.error('[Games Debug] Query error:', queryError)
-        throw queryError
-      }
+      if (queryError) throw queryError
 
       const gamesData = (data as GameWithTeams[]) || []
-      console.log('[Games Debug] Fetched games:', gamesData.length)
 
       // Fetch message counts for these games
       if (gamesData.length > 0) {
