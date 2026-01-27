@@ -75,7 +75,7 @@ export default function BetaLandingPage() {
       {/* Main Content */}
       <main className="flex flex-1 flex-col items-center justify-center p-4 relative overflow-hidden">
         {/* Pixel Football Field Background Video Effect */}
-        <div className="absolute inset-0 opacity-10 overflow-hidden">
+        <div className="absolute inset-0 opacity-30 overflow-hidden pointer-events-none">
           <div className="pixel-football-field">
             {/* Animated yard lines */}
             {[...Array(11)].map((_, i) => (
@@ -88,8 +88,22 @@ export default function BetaLandingPage() {
                 }}
               />
             ))}
-            {/* Animated football */}
-            <div className="pixel-football" />
+            {/* Hash marks */}
+            {[...Array(20)].map((_, i) => (
+              <div
+                key={`hash-${i}`}
+                className="hash-mark"
+                style={{
+                  top: `${(i + 1) * 5}%`,
+                  animationDelay: `${i * 0.05}s`
+                }}
+              />
+            ))}
+            {/* Animated football with trail */}
+            <div className="pixel-football">
+              <div className="football-laces" />
+            </div>
+            <div className="football-trail" />
           </div>
         </div>
 
@@ -247,64 +261,181 @@ export default function BetaLandingPage() {
         .pixel-football-field {
           position: absolute;
           inset: 0;
-          background: repeating-linear-gradient(
-            90deg,
-            transparent,
-            transparent 9%,
-            rgba(34, 197, 94, 0.1) 9%,
-            rgba(34, 197, 94, 0.1) 10%
-          );
+          background:
+            repeating-linear-gradient(
+              90deg,
+              transparent,
+              transparent 9%,
+              rgba(34, 197, 94, 0.3) 9%,
+              rgba(34, 197, 94, 0.3) 10%
+            ),
+            radial-gradient(
+              ellipse at center,
+              rgba(34, 197, 94, 0.05) 0%,
+              transparent 70%
+            );
         }
 
         .yard-line {
           position: absolute;
           top: 0;
           bottom: 0;
-          width: 2px;
-          background: rgba(34, 197, 94, 0.2);
+          width: 3px;
+          background: linear-gradient(
+            to bottom,
+            transparent,
+            rgba(34, 197, 94, 0.5) 20%,
+            rgba(34, 197, 94, 0.5) 80%,
+            transparent
+          );
           animation: yard-line-glow 3s ease-in-out infinite;
         }
 
         @keyframes yard-line-glow {
+          0%, 100% {
+            opacity: 0.3;
+            box-shadow: 0 0 5px rgba(34, 197, 94, 0.3);
+          }
+          50% {
+            opacity: 0.8;
+            box-shadow: 0 0 15px rgba(34, 197, 94, 0.6);
+          }
+        }
+
+        .hash-mark {
+          position: absolute;
+          left: 0;
+          right: 0;
+          height: 1px;
+          background: repeating-linear-gradient(
+            90deg,
+            transparent,
+            transparent 48%,
+            rgba(34, 197, 94, 0.3) 48%,
+            rgba(34, 197, 94, 0.3) 52%,
+            transparent 52%
+          );
+          animation: hash-glow 4s ease-in-out infinite;
+        }
+
+        @keyframes hash-glow {
           0%, 100% { opacity: 0.2; }
           50% { opacity: 0.5; }
         }
 
         .pixel-football {
           position: absolute;
-          width: 24px;
-          height: 12px;
-          background: rgba(251, 146, 60, 0.8);
+          width: 48px;
+          height: 24px;
+          background: linear-gradient(
+            135deg,
+            rgba(251, 146, 60, 1) 0%,
+            rgba(249, 115, 22, 1) 50%,
+            rgba(234, 88, 12, 1) 100%
+          );
           border-radius: 50%;
-          box-shadow: 0 0 10px rgba(251, 146, 60, 0.5);
-          animation: football-bounce 4s ease-in-out infinite;
+          box-shadow:
+            0 0 20px rgba(251, 146, 60, 0.8),
+            0 0 40px rgba(251, 146, 60, 0.4),
+            inset -5px -5px 10px rgba(0, 0, 0, 0.3);
+          animation: football-bounce 5s ease-in-out infinite;
+          z-index: 10;
+        }
+
+        .football-laces {
+          position: absolute;
+          top: 50%;
+          left: 50%;
+          transform: translate(-50%, -50%);
+          width: 4px;
+          height: 16px;
+          background: rgba(255, 255, 255, 0.9);
+          box-shadow:
+            -6px 0 0 rgba(255, 255, 255, 0.7),
+            6px 0 0 rgba(255, 255, 255, 0.7);
+        }
+
+        .football-trail {
+          position: absolute;
+          width: 48px;
+          height: 24px;
+          background: radial-gradient(
+            ellipse at center,
+            rgba(251, 146, 60, 0.4) 0%,
+            rgba(251, 146, 60, 0.2) 40%,
+            transparent 70%
+          );
+          border-radius: 50%;
+          filter: blur(8px);
+          animation: football-trail 5s ease-in-out infinite;
+          z-index: 9;
         }
 
         @keyframes football-bounce {
           0% {
-            left: 10%;
-            top: 20%;
-            transform: rotate(0deg);
+            left: 5%;
+            top: 15%;
+            transform: rotate(-45deg) scale(1);
           }
-          25% {
-            left: 30%;
-            top: 60%;
-            transform: rotate(180deg);
+          20% {
+            left: 25%;
+            top: 40%;
+            transform: rotate(90deg) scale(1.2);
           }
-          50% {
-            left: 50%;
+          40% {
+            left: 45%;
+            top: 25%;
+            transform: rotate(225deg) scale(1);
+          }
+          60% {
+            left: 65%;
+            top: 55%;
+            transform: rotate(360deg) scale(1.2);
+          }
+          80% {
+            left: 85%;
             top: 30%;
-            transform: rotate(360deg);
-          }
-          75% {
-            left: 70%;
-            top: 70%;
-            transform: rotate(540deg);
+            transform: rotate(495deg) scale(1);
           }
           100% {
-            left: 90%;
-            top: 20%;
-            transform: rotate(720deg);
+            left: 95%;
+            top: 15%;
+            transform: rotate(675deg) scale(0.8);
+          }
+        }
+
+        @keyframes football-trail {
+          0% {
+            left: 5%;
+            top: 15%;
+            opacity: 0;
+          }
+          10% {
+            opacity: 1;
+          }
+          20% {
+            left: 25%;
+            top: 40%;
+          }
+          40% {
+            left: 45%;
+            top: 25%;
+          }
+          60% {
+            left: 65%;
+            top: 55%;
+          }
+          80% {
+            left: 85%;
+            top: 30%;
+          }
+          90% {
+            opacity: 0.5;
+          }
+          100% {
+            left: 95%;
+            top: 15%;
+            opacity: 0;
           }
         }
 
