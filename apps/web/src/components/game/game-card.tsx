@@ -1,5 +1,6 @@
 'use client'
 
+import React from 'react'
 import Link from 'next/link'
 import { MapPin, Clock, Star, MessageCircle, Trophy, Swords, AlertTriangle } from 'lucide-react'
 import { Badge } from '@/components/ui'
@@ -42,7 +43,7 @@ function getOvertimeDisplay(overtimeCount: number): string | null {
   return `${overtimeCount}OT`
 }
 
-export function GameCard({ game, showSport = false }: GameCardProps) {
+export const GameCard = React.memo(function GameCard({ game, showSport = false }: GameCardProps) {
   const isLive = isGameLive(game.status)
   const isFinal = isGameFinal(game.status)
   const isScheduled = game.status === 'scheduled'
@@ -234,4 +235,4 @@ export function GameCardCompact({ game }: { game: GameWithOptionalCount }) {
       </div>
     </Link>
   )
-}
+})

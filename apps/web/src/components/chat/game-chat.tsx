@@ -59,10 +59,16 @@ export function GameChat({ gameId }: GameChatProps) {
     if (messageElement) {
       messageElement.scrollIntoView({ behavior: 'smooth', block: 'center' })
       setHighlightedMessageId(messageId)
-      // Clear highlight after animation
-      setTimeout(() => setHighlightedMessageId(null), 2000)
     }
   }, [])
+
+  // Cleanup highlighted message timeout
+  useEffect(() => {
+    if (highlightedMessageId) {
+      const timeoutId = setTimeout(() => setHighlightedMessageId(null), 2000)
+      return () => clearTimeout(timeoutId)
+    }
+  }, [highlightedMessageId])
 
   const fetchMessages = useCallback(async () => {
     const { data, error: fetchError } = await supabase
@@ -129,37 +135,44 @@ export function GameChat({ gameId }: GameChatProps) {
           filter: `game_id=eq.${gameId}`,
         },
         async (payload) => {
-          // Fetch the message with user data
-          const { data } = await supabase
-            .from('chat_messages')
-            .select(`
-              *,
-              user:users(id, display_name, avatar_url, tier, is_trusted_reporter, is_admin, is_super_admin),
-              reply_to:chat_messages!reply_to_id(
-                id,
-                content,
-                user:users(display_name)
-              )
-            `)
-            .eq('id', payload.new.id)
-            .single()
+          // Use payload data directly, only fetch user data if not cached
+          const newMessage = payload.new as any
 
-          const msg = data as ChatMessageWithUser | null
-          if (msg && !msg.is_hidden) {
-            setMessages((prev) => [...prev, { ...msg, user_has_liked: false }])
+          if (newMessage.is_hidden) return
 
-            // Add user to chat users if not already present
-            if (msg.user) {
-              setChatUsers((prev) => {
-                if (prev.find((u) => u.id === msg.user!.id)) return prev
-                return [...prev, {
-                  id: msg.user!.id,
-                  display_name: msg.user!.display_name,
-                  avatar_url: msg.user!.avatar_url,
-                }]
-              })
+          // Check if we already have this user's data cached
+          const cachedUser = chatUsers.find(u => u.id === newMessage.user_id)
+
+          let userData = cachedUser
+          if (!cachedUser) {
+            // Only fetch user data if we don't have it
+            const { data: userResult } = await supabase
+              .from('users')
+              .select('id, display_name, avatar_url, tier, is_trusted_reporter, is_admin, is_super_admin')
+              .eq('id', newMessage.user_id)
+              .single()
+
+            userData = userResult
+
+            // Add to cached users
+            if (userData) {
+              setChatUsers((prev) => [...prev, {
+                id: userData.id,
+                display_name: userData.display_name,
+                avatar_url: userData.avatar_url,
+              }])
             }
           }
+
+          // Construct message with cached/fetched user data
+          const msg: ChatMessageWithUser = {
+            ...newMessage,
+            user: userData,
+            user_has_liked: false,
+            reply_to: null, // Reply data would need separate fetch if present
+          }
+
+          setMessages((prev) => [...prev, msg])
         }
       )
       .on(

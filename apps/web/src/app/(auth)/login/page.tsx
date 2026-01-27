@@ -42,16 +42,11 @@ function LoginForm() {
         const { data: { user } } = await supabase.auth.getUser()
         if (!user) return
 
-        console.log('[Login] Redeeming beta code:', betaCode)
-
         // Call secure server-side function to redeem the code
         const { data: result, error } = await (supabase as any)
           .rpc('redeem_beta_code', { p_code: betaCode })
 
-        console.log('[Login] Redemption result:', result, error)
-
         if (error) {
-          console.error('Beta code redemption error:', error)
           setError('Failed to redeem beta code. Please contact support.')
           return
         }

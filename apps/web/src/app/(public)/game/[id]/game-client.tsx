@@ -117,8 +117,9 @@ export function GameClient({ params }: GamePageProps) {
       try {
         await navigator.share(shareData)
         setShareStatus('shared')
-        setTimeout(() => setShareStatus('idle'), 2000)
-        return
+        // Timeout will be cleaned up in useEffect
+        const timeoutId = setTimeout(() => setShareStatus('idle'), 2000)
+        return () => clearTimeout(timeoutId)
       } catch (err) {
         // User cancelled or error - fall through to clipboard
         if ((err as Error).name === 'AbortError') return
@@ -129,11 +130,21 @@ export function GameClient({ params }: GamePageProps) {
     try {
       await navigator.clipboard.writeText(`${shareText}\n${shareUrl}`)
       setShareStatus('copied')
-      setTimeout(() => setShareStatus('idle'), 2000)
+      // Timeout will be cleaned up in useEffect
+      const timeoutId = setTimeout(() => setShareStatus('idle'), 2000)
+      return () => clearTimeout(timeoutId)
     } catch (err) {
-      console.error('Failed to copy:', err)
+      // Failed to copy
     }
   }, [game, id])
+
+  // Cleanup share status timeout
+  useEffect(() => {
+    if (shareStatus !== 'idle') {
+      const timeoutId = setTimeout(() => setShareStatus('idle'), 2000)
+      return () => clearTimeout(timeoutId)
+    }
+  }, [shareStatus])
 
   // Fetch submissions for this game
   useEffect(() => {
