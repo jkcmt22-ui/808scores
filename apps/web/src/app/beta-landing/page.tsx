@@ -245,8 +245,19 @@ export default function BetaLandingPage() {
             ))}
           </div>
 
+          {/* Sign In Link for Existing Users */}
+          <div className="mt-8">
+            <Button
+              variant="outline"
+              onClick={() => router.push('/login')}
+              className="border-2 border-neon-blue/50 hover:border-neon-blue hover:bg-neon-blue/10"
+            >
+              Already have access? Sign In
+            </Button>
+          </div>
+
           {/* Footer */}
-          <div className="mt-12 pt-8 border-t-2 border-border">
+          <div className="mt-8 pt-8 border-t-2 border-border">
             <p className="text-foreground-muted text-xs">
               Don't have a beta code? Contact us to request access.
             </p>
