@@ -43,12 +43,23 @@ export default function BetaCodesPage() {
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null)
 
   // Only super admins can access
+  if (profile === undefined) {
+    // Still loading profile
+    return (
+      <div className="flex min-h-screen flex-col items-center justify-center p-4">
+        <Loader2 className="h-12 w-12 animate-spin text-neon-blue" />
+        <p className="mt-4 text-foreground-muted">Loading...</p>
+      </div>
+    )
+  }
+
   if (!profile?.is_super_admin) {
     return (
       <div className="flex min-h-screen flex-col items-center justify-center p-4">
         <AlertCircle className="mb-4 h-12 w-12 text-neon-pink" />
         <h1 className="font-display text-xl font-bold text-foreground">Access Denied</h1>
-        <Button onClick={() => router.push('/admin')}>Back to Admin</Button>
+        <p className="text-foreground-muted text-sm mt-2">Only super admins can access beta codes</p>
+        <Button onClick={() => router.push('/admin')} className="mt-4">Back to Admin</Button>
       </div>
     )
   }
@@ -56,15 +67,24 @@ export default function BetaCodesPage() {
   const fetchCodes = async () => {
     if (!supabase) return
     setIsLoading(true)
-    const { data, error } = await supabase
-      .from('beta_codes' as any)
-      .select('*')
-      .order('created_at', { ascending: false })
+    try {
+      const { data, error } = await supabase
+        .from('beta_codes' as any)
+        .select('*')
+        .order('created_at', { ascending: false })
 
-    if (!error && data) {
-      setCodes(data)
+      if (error) {
+        console.error('Error fetching beta codes:', error)
+        setMessage({ type: 'error', text: `Failed to load codes: ${error.message}` })
+      } else if (data) {
+        setCodes(data)
+      }
+    } catch (err) {
+      console.error('Unexpected error fetching codes:', err)
+      setMessage({ type: 'error', text: 'An unexpected error occurred' })
+    } finally {
+      setIsLoading(false)
     }
-    setIsLoading(false)
   }
 
   useEffect(() => {
