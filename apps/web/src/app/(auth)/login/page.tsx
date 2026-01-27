@@ -37,13 +37,15 @@ function LoginForm() {
 
       try {
         const supabase = createClient()
+        if (!supabase) return
+
         const { data: { user } } = await supabase.auth.getUser()
 
         if (!user) return
 
         // Verify and consume beta code
         const { data: code } = await supabase
-          .from('beta_codes')
+          .from('beta_codes' as any)
           .select('*')
           .eq('code', betaCode)
           .eq('is_active', true)
@@ -51,28 +53,25 @@ function LoginForm() {
 
         if (code) {
           // Grant beta access
-          await supabase
-            .from('beta_access')
-            .insert({
-              user_id: user.id,
-              beta_code_id: code.id,
-              granted_at: new Date().toISOString(),
-            })
+          // @ts-expect-error - Beta tables not yet in generated types
+          await supabase.from('beta_access').insert({
+            user_id: user.id,
+            beta_code_id: (code as any).id,
+            granted_at: new Date().toISOString(),
+          })
 
           // Update user flag
-          await supabase
-            .from('users')
-            .update({
-              has_beta_access: true,
-              beta_granted_at: new Date().toISOString(),
-            })
-            .eq('id', user.id)
+          // @ts-expect-error - Beta fields not yet in generated types
+          await supabase.from('users').update({
+            has_beta_access: true,
+            beta_granted_at: new Date().toISOString(),
+          }).eq('id', user.id)
 
           // Increment code use count
-          await supabase
-            .from('beta_codes')
-            .update({ use_count: code.use_count + 1 })
-            .eq('id', code.id)
+          // @ts-expect-error - Beta tables not yet in generated types
+          await supabase.from('beta_codes').update({
+            use_count: (code as any).use_count + 1
+          }).eq('id', (code as any).id)
 
           sessionStorage.removeItem('betaCode')
           setMessage('Beta access granted! Welcome to Hawaii Sports Center.')
@@ -239,7 +238,7 @@ function LoginForm() {
           if (user) {
             // Verify and consume beta code
             const { data: code } = await supabase
-              .from('beta_codes')
+              .from('beta_codes' as any)
               .select('*')
               .eq('code', betaCode)
               .eq('is_active', true)
@@ -247,28 +246,25 @@ function LoginForm() {
 
             if (code) {
               // Grant beta access
-              await supabase
-                .from('beta_access')
-                .insert({
-                  user_id: user.id,
-                  beta_code_id: code.id,
-                  granted_at: new Date().toISOString(),
-                })
+              // @ts-expect-error - Beta tables not yet in generated types
+              await supabase.from('beta_access').insert({
+                user_id: user.id,
+                beta_code_id: (code as any).id,
+                granted_at: new Date().toISOString(),
+              })
 
               // Update user flag
-              await supabase
-                .from('users')
-                .update({
-                  has_beta_access: true,
-                  beta_granted_at: new Date().toISOString(),
-                })
-                .eq('id', user.id)
+              // @ts-expect-error - Beta fields not yet in generated types
+              await supabase.from('users').update({
+                has_beta_access: true,
+                beta_granted_at: new Date().toISOString(),
+              }).eq('id', user.id)
 
               // Increment code use count
-              await supabase
-                .from('beta_codes')
-                .update({ use_count: code.use_count + 1 })
-                .eq('id', code.id)
+              // @ts-expect-error - Beta tables not yet in generated types
+              await supabase.from('beta_codes').update({
+                use_count: (code as any).use_count + 1
+              }).eq('id', (code as any).id)
 
               sessionStorage.removeItem('betaCode')
             }

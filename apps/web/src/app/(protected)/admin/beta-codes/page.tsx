@@ -54,9 +54,10 @@ export default function BetaCodesPage() {
   }
 
   const fetchCodes = async () => {
+    if (!supabase) return
     setIsLoading(true)
     const { data, error } = await supabase
-      .from('beta_codes')
+      .from('beta_codes' as any)
       .select('*')
       .order('created_at', { ascending: false })
 
@@ -80,6 +81,7 @@ export default function BetaCodesPage() {
   }
 
   const handleCreateCode = async () => {
+    if (!supabase) return
     setIsSaving(true)
     setMessage(null)
 
@@ -88,16 +90,14 @@ export default function BetaCodesPage() {
       const expiresAt = new Date()
       expiresAt.setDate(expiresAt.getDate() + formData.expires_days)
 
-      const { error } = await supabase
-        .from('beta_codes')
-        .insert({
-          code,
-          name: formData.name || null,
-          description: formData.description || null,
-          max_uses: formData.max_uses,
-          expires_at: expiresAt.toISOString(),
-          created_by: user?.id,
-        })
+      const { error } = await supabase.from('beta_codes' as any).insert({
+        code,
+        name: formData.name || null,
+        description: formData.description || null,
+        max_uses: formData.max_uses,
+        expires_at: expiresAt.toISOString(),
+        created_by: user?.id,
+      } as any)
 
       if (error) throw error
 
@@ -120,13 +120,12 @@ export default function BetaCodesPage() {
   }
 
   const handleDeactivateCode = async (codeId: string) => {
+    if (!supabase) return
     if (!confirm('Deactivate this beta code?')) return
 
     try {
-      const { error } = await supabase
-        .from('beta_codes')
-        .update({ is_active: false })
-        .eq('id', codeId)
+      // @ts-expect-error - Beta tables not yet in generated types
+      const { error } = await supabase.from('beta_codes').update({ is_active: false }).eq('id', codeId)
 
       if (error) throw error
 

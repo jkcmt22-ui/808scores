@@ -20,14 +20,14 @@ export default function BetaLandingPage() {
 
     try {
       const supabase = createClient()
+      if (!supabase) {
+        setError('Unable to connect. Please try again.')
+        setIsVerifying(false)
+        return
+      }
 
       // Verify beta code
-      const { data: betaCode, error: codeError } = await supabase
-        .from('beta_codes')
-        .select('*')
-        .eq('code', code.trim().toUpperCase())
-        .eq('is_active', true)
-        .single()
+      const { data: betaCode, error: codeError } = await supabase.from('beta_codes' as any).select('*').eq('code', code.trim().toUpperCase()).eq('is_active', true).single()
 
       if (codeError || !betaCode) {
         setError('Invalid beta code. Please check and try again.')
@@ -36,14 +36,14 @@ export default function BetaLandingPage() {
       }
 
       // Check if code is expired
-      if (betaCode.expires_at && new Date(betaCode.expires_at) < new Date()) {
+      if ((betaCode as any).expires_at && new Date((betaCode as any).expires_at) < new Date()) {
         setError('This beta code has expired.')
         setIsVerifying(false)
         return
       }
 
       // Check if code has uses remaining
-      if (betaCode.max_uses !== -1 && betaCode.use_count >= betaCode.max_uses) {
+      if ((betaCode as any).max_uses !== -1 && (betaCode as any).use_count >= (betaCode as any).max_uses) {
         setError('This beta code has reached its maximum uses.')
         setIsVerifying(false)
         return
