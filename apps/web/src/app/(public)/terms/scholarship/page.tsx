@@ -82,7 +82,7 @@ export default function ScholarshipTermsPage() {
               <li><strong>Approval:</strong> Only nominees who meet all eligibility requirements and whose information can be verified will be approved for the voting phase</li>
             </ul>
             <p className="text-sm text-foreground-muted leading-relaxed mt-4">
-              <strong>Alternative Nomination Method (No Account Required):</strong> Nominations may also be submitted by mail to: Hawaii Sports Center Scholarship Nomination, [Address to be provided], Honolulu, HI 96XXX. Include nominee&apos;s full name, school, sport, grade, and contact information for verification. Mailed nominations must be postmarked by the nomination deadline.
+              <strong>Alternative Nomination Method (No Account Required):</strong> Nominations may also be submitted by mail to: Hawaii Sports Center Scholarship Nomination, 1753 Bertram Street, Honolulu, HI 96816. Include nominee&apos;s full name, school, sport, grade, and contact information for verification. Mailed nominations must be postmarked by the nomination deadline.
             </p>
           </section>
 
@@ -100,7 +100,7 @@ export default function ScholarshipTermsPage() {
               <li><strong>No Points Required:</strong> Voting does not require or consume Hawaii Sports Center points</li>
             </ul>
             <p className="text-sm text-foreground-muted leading-relaxed mt-4">
-              <strong>Alternative Voting Method (No Account Required):</strong> Votes may be cast by mail to: Hawaii Sports Center Scholarship Vote, [Address to be provided], Honolulu, HI 96XXX. Include your full name, mailing address, email (optional), and the name of your chosen nominee. Limit one vote per person. Mailed votes must be postmarked by the voting deadline. Mail-in votes will be added to the electronic vote count.
+              <strong>Alternative Voting Method (No Account Required):</strong> Votes may be cast by mail to: Hawaii Sports Center Scholarship Vote, 1753 Bertram Street, Honolulu, HI 96816. Include your full name, mailing address, email (optional), and the name of your chosen nominee. Limit one vote per person. Mailed votes must be postmarked by the voting deadline. Mail-in votes will be added to the electronic vote count.
             </p>
           </section>
 
@@ -233,7 +233,7 @@ export default function ScholarshipTermsPage() {
               15. Winner List
             </h2>
             <p className="text-sm text-foreground-muted leading-relaxed">
-              The name of the scholarship winner will be posted on the Hawaii Sports Center website within thirty (30) days of winner verification. A copy of the winner list may also be obtained by sending a self-addressed stamped envelope to: Hawaii Sports Center Scholarship Winner List, [Address], Honolulu, HI 96XXX.
+              The name of the scholarship winner will be posted on the Hawaii Sports Center website within thirty (30) days of winner verification. A copy of the winner list may also be obtained by sending a self-addressed stamped envelope to: Hawaii Sports Center Scholarship Winner List, 1753 Bertram Street, Honolulu, HI 96816.
             </p>
           </section>
 

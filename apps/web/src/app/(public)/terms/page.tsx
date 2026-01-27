@@ -47,7 +47,7 @@ export default function TermsPage() {
             </p>
             <ul className="list-disc list-inside text-sm text-foreground-muted space-y-1">
               <li><strong>Minimum Age:</strong> You must be at least 13 years old to create an account</li>
-              <li><strong>Parental Consent:</strong> If you are between 13 and 17 years old, you represent that your parent or legal guardian has reviewed and agreed to these Terms on your behalf</li>
+              <li><strong>Parental Consent:</strong> If you are between 13 and 17 years old, you must provide a parent or guardian&apos;s email address during registration. Your account will have limited functionality until your parent/guardian confirms consent via email verification. See our Privacy Policy for details</li>
               <li><strong>Raffle Participation:</strong> You must be at least 18 years old and a Hawaii resident to enter raffles</li>
               <li><strong>One Account:</strong> Each person may maintain only one account</li>
               <li><strong>Account Security:</strong> You must not share your account credentials with others</li>

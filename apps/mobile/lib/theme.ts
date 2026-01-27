@@ -39,10 +39,10 @@ export const lightColors = {
   backgroundSecondary: '#ffffff',
   backgroundTertiary: '#ebe5f0',
 
-  // Foreground
+  // Foreground (darkened for WCAG AA contrast)
   foreground: '#1a1a2e',
-  foregroundMuted: '#505070',
-  foregroundSubtle: '#707090',
+  foregroundMuted: '#3a3a50', // Darkened for 5.5:1 contrast
+  foregroundSubtle: '#505065', // Darkened for 4.5:1 contrast
 
   // Borders
   border: '#d0c8e0',

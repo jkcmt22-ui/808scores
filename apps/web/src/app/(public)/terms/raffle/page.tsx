@@ -85,8 +85,8 @@ export default function RaffleTermsPage() {
               <p className="text-sm text-foreground-muted leading-relaxed mt-3">
                 Mail your entry to:<br />
                 <strong>Hawaii Sports Center Sweepstakes Entry<br />
-                [Address to be provided]<br />
-                Honolulu, HI 96XXX</strong>
+                1753 Bertram Street<br />
+                Honolulu, HI 96816</strong>
               </p>
               <p className="text-sm text-foreground-muted leading-relaxed mt-3">
                 <strong>Mail-in entries:</strong> One (1) entry per envelope. Multiple entries in a single envelope will be disqualified. Entries must be postmarked by the sweepstakes end date and received within 7 days of that date. Sponsor is not responsible for lost, late, misdirected, damaged, or illegible mail.
@@ -270,7 +270,7 @@ export default function RaffleTermsPage() {
               16. Winner List
             </h2>
             <p className="text-sm text-foreground-muted leading-relaxed">
-              A list of winners will be posted on the Hawaii Sports Center website within 30 days of the drawing. To receive a copy of the winner list by mail, send a self-addressed stamped envelope to: Hawaii Sports Center Winner List, [Address], Honolulu, HI 96XXX. Requests must be received within 60 days of the drawing date.
+              A list of winners will be posted on the Hawaii Sports Center website within 30 days of the drawing. To receive a copy of the winner list by mail, send a self-addressed stamped envelope to: Hawaii Sports Center Winner List, 1753 Bertram Street, Honolulu, HI 96816. Requests must be received within 60 days of the drawing date.
             </p>
           </section>
 

@@ -53,8 +53,8 @@
   --background-secondary: #ebe5f2;
   --background-tertiary: #e0d8ea;
   --foreground: #1a1a2e;
-  --foreground-muted: #4a4a5e;
-  --foreground-subtle: #6a6a7e;
+  --foreground-muted: #3a3a4e; /* Darkened for WCAG AA contrast (5.5:1) */
+  --foreground-subtle: #505062; /* Darkened for WCAG AA contrast (4.5:1) */
 
   --border: #c5bdd2;
   --border-hover: #a59db2;

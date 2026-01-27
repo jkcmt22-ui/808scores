@@ -93,7 +93,7 @@ export default function PrivacyPage() {
                 <strong>Users Under 13:</strong> Hawaii Sports Center is not directed to children under 13 years of age. We do not knowingly collect personal information from children under 13. If we learn that we have collected personal information from a child under 13, we will delete that information promptly. If you believe we have collected information from a child under 13, please contact us immediately at privacy@hawaiisportscenter.com.
               </p>
               <p className="text-sm text-foreground-muted leading-relaxed">
-                <strong>Users Ages 13-17:</strong> Users between 13 and 17 years old may use Hawaii Sports Center with parental consent. By creating an account, users in this age range represent that a parent or legal guardian has reviewed and approved their use of the service and these policies. We encourage parents to supervise their children&apos;s online activities.
+                <strong>Users Ages 13-17:</strong> Users between 13 and 17 years old may use Hawaii Sports Center with parental consent. During account registration, users under 18 must provide a parent or guardian&apos;s email address. We will send a verification email to the parent/guardian explaining that their child wishes to create an account. The account will have limited functionality until the parent/guardian confirms consent by clicking the verification link. Parents may revoke consent at any time by contacting privacy@hawaiisportscenter.com.
               </p>
               <p className="text-sm text-foreground-muted leading-relaxed">
                 <strong>Parental Rights:</strong> Parents or guardians of users under 18 may:

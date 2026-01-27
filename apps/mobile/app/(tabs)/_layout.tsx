@@ -45,6 +45,7 @@ export default function TabLayout() {
           title: 'Today',
           headerShown: false,
           tabBarIcon: ({ color }) => <TabBarIcon name="home" color={color} />,
+          tabBarAccessibilityLabel: "Today's games and live scores",
         }}
       />
       <Tabs.Screen
@@ -53,6 +54,7 @@ export default function TabLayout() {
           title: 'Games',
           headerShown: false,
           tabBarIcon: ({ color }) => <TabBarIcon name="calendar" color={color} />,
+          tabBarAccessibilityLabel: 'Browse games by date',
         }}
       />
       <Tabs.Screen
@@ -61,6 +63,7 @@ export default function TabLayout() {
           title: 'Standings',
           headerShown: false,
           tabBarIcon: ({ color }) => <TabBarIcon name="trophy" color={color} />,
+          tabBarAccessibilityLabel: 'View league standings and rankings',
         }}
       />
       <Tabs.Screen
@@ -69,6 +72,7 @@ export default function TabLayout() {
           title: 'Community',
           headerShown: false,
           tabBarIcon: ({ color }) => <TabBarIcon name="comments" color={color} />,
+          tabBarAccessibilityLabel: 'Community chat and discussions',
         }}
       />
       <Tabs.Screen
@@ -77,6 +81,7 @@ export default function TabLayout() {
           title: 'Profile',
           headerShown: false,
           tabBarIcon: ({ color }) => <TabBarIcon name="user" color={color} />,
+          tabBarAccessibilityLabel: 'Your profile and settings',
         }}
       />
     </Tabs>
