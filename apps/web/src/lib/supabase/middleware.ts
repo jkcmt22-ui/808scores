@@ -84,13 +84,13 @@ export async function updateSession(request: NextRequest) {
   let userData: { has_beta_access: boolean; is_admin: boolean; is_super_admin: boolean } | null = null
 
   if (user && (!isPublicPath || isAdminPath)) {
-    const { data } = await supabase
-      .from('users')
-      .select('has_beta_access, is_admin, is_super_admin')
-      .eq('id', user.id)
-      .single()
+    const { data, error } = await supabase
+      .rpc('get_user_permissions', { p_user_id: user.id })
 
-    userData = data
+    if (!error && data) {
+      // Handle both array and object responses
+      userData = Array.isArray(data) ? data[0] : data
+    }
   }
 
   // Check beta access for non-public routes
