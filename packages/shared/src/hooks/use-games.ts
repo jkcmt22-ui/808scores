@@ -163,16 +163,22 @@ export function useGames(supabase: TypedSupabaseClient | null, options: UseGames
         } catch (rpcError) {
           // Fallback: Use optimized query with count only (no full rows)
           // This fetches only game_id column instead of all message data
-          const { data: messageCounts } = await supabase
-            .from('chat_messages')
-            .select('game_id', { count: 'exact', head: false })
-            .in('game_id', gameIds)
+          try {
+            const { data: messageCounts } = await supabase
+              .from('chat_messages')
+              .select('game_id', { count: 'exact', head: false })
+              .in('game_id', gameIds)
 
-          // Count messages per game in JavaScript (fallback)
-          if (messageCounts) {
-            for (const msg of messageCounts as { game_id: string }[]) {
-              countMap[msg.game_id] = (countMap[msg.game_id] || 0) + 1
+            // Count messages per game in JavaScript (fallback)
+            if (messageCounts) {
+              for (const msg of messageCounts as { game_id: string }[]) {
+                countMap[msg.game_id] = (countMap[msg.game_id] || 0) + 1
+              }
             }
+          } catch (fallbackError) {
+            // If both methods fail, just skip message counts (non-critical)
+            // Don't block page load for message count feature
+            console.warn('Failed to fetch message counts, skipping:', fallbackError)
           }
         }
 
