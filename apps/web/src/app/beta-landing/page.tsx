@@ -27,27 +27,47 @@ export default function BetaLandingPage() {
       }
 
       // Verify beta code
-      const { data: betaCode, error: codeError } = await supabase.from('beta_codes' as any).select('*').eq('code', code.trim().toUpperCase()).eq('is_active', true).single()
+      const codeToCheck = code.trim().toUpperCase()
+      console.log('[Beta] Checking code:', codeToCheck)
+
+      const { data: betaCode, error: codeError } = await supabase.from('beta_codes' as any).select('*').eq('code', codeToCheck).eq('is_active', true).single()
+
+      console.log('[Beta] Query result:', { betaCode, codeError })
 
       if (codeError || !betaCode) {
+        console.error('[Beta] Code not found or error:', codeError)
         setError('Invalid beta code. Please check and try again.')
         setIsVerifying(false)
         return
       }
 
       // Check if code is expired
-      if ((betaCode as any).expires_at && new Date((betaCode as any).expires_at) < new Date()) {
+      const expiresAt = (betaCode as any).expires_at
+      const now = new Date()
+      const isExpired = expiresAt && new Date(expiresAt) < now
+
+      console.log('[Beta] Expiration check:', { expiresAt, now, isExpired })
+
+      if (isExpired) {
         setError('This beta code has expired.')
         setIsVerifying(false)
         return
       }
 
       // Check if code has uses remaining
-      if ((betaCode as any).max_uses !== -1 && (betaCode as any).use_count >= (betaCode as any).max_uses) {
+      const maxUses = (betaCode as any).max_uses
+      const useCount = (betaCode as any).use_count
+      const hasUsesRemaining = maxUses === -1 || useCount < maxUses
+
+      console.log('[Beta] Usage check:', { maxUses, useCount, hasUsesRemaining })
+
+      if (!hasUsesRemaining) {
         setError('This beta code has reached its maximum uses.')
         setIsVerifying(false)
         return
       }
+
+      console.log('[Beta] Code validated successfully!')
 
       // Store code in session for post-login
       sessionStorage.setItem('betaCode', code.trim().toUpperCase())
