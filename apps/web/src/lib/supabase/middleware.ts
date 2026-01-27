@@ -58,8 +58,8 @@ export async function updateSession(request: NextRequest) {
 
   const path = request.nextUrl.pathname
 
-  // Public routes that don't require beta access
-  const publicPaths = [
+  // Public routes that don't require beta access (using Set for O(1) lookup)
+  const PUBLIC_PATHS = new Set([
     '/beta-landing',
     '/login',
     '/verify',
@@ -68,27 +68,41 @@ export async function updateSession(request: NextRequest) {
     '/terms/raffle',
     '/terms/scholarship',
     '/api/auth/callback',
-  ]
+  ])
 
-  const isPublicPath = publicPaths.some(p => path.startsWith(p))
+  // Check if path starts with any public path
+  const isPublicPath = Array.from(PUBLIC_PATHS).some(p => path.startsWith(p))
 
-  // Check beta access for authenticated users (skip if on public path)
+  // Protected routes - require authentication
+  const PROTECTED_PATHS = new Set(['/submit', '/profile', '/notifications', '/admin'])
+  const isProtectedPath = Array.from(PROTECTED_PATHS).some(p => path.startsWith(p))
+
+  // Admin routes - require admin role
+  const isAdminPath = path.startsWith('/admin')
+
+  // Single database query for user permissions (consolidates 2 queries into 1)
+  let userData: { has_beta_access: boolean; is_admin: boolean; is_super_admin: boolean } | null = null
+
+  if (user && (!isPublicPath || isAdminPath)) {
+    const { data } = await supabase
+      .from('users')
+      .select('has_beta_access, is_admin, is_super_admin')
+      .eq('id', user.id)
+      .single()
+
+    userData = data
+  }
+
+  // Check beta access for non-public routes
   if (!isPublicPath) {
-    if (user) {
-      // Check if user has beta access
-      const { data: userData } = await supabase
-        .from('users')
-        .select('has_beta_access, is_admin, is_super_admin')
-        .eq('id', user.id)
-        .single()
-
-      if (!userData?.has_beta_access && !userData?.is_admin && !userData?.is_super_admin) {
+    if (user && userData) {
+      if (!userData.has_beta_access && !userData.is_admin && !userData.is_super_admin) {
         // User logged in but no beta access
         const url = request.nextUrl.clone()
         url.pathname = '/beta-landing'
         return NextResponse.redirect(url)
       }
-    } else {
+    } else if (!user) {
       // Not logged in at all - require beta code
       const url = request.nextUrl.clone()
       url.pathname = '/beta-landing'
@@ -96,12 +110,7 @@ export async function updateSession(request: NextRequest) {
     }
   }
 
-  // Protected routes - require authentication
-  const protectedPaths = ['/submit', '/profile', '/notifications', '/admin']
-  const isProtectedPath = protectedPaths.some((path) =>
-    request.nextUrl.pathname.startsWith(path)
-  )
-
+  // Check authentication for protected routes
   if (isProtectedPath && !user) {
     const url = request.nextUrl.clone()
     url.pathname = '/login'
@@ -109,21 +118,9 @@ export async function updateSession(request: NextRequest) {
     return NextResponse.redirect(url)
   }
 
-  // Admin routes - require admin role
-  const adminPaths = ['/admin']
-  const isAdminPath = adminPaths.some((path) =>
-    request.nextUrl.pathname.startsWith(path)
-  )
-
-  if (isAdminPath && user) {
-    // Fetch user profile to check admin status
-    const { data: profile } = await supabase
-      .from('users')
-      .select('is_admin, is_super_admin')
-      .eq('id', user.id)
-      .single()
-
-    const isAdmin = profile?.is_admin === true || profile?.is_super_admin === true
+  // Check admin access (using already-fetched userData)
+  if (isAdminPath && user && userData) {
+    const isAdmin = userData.is_admin || userData.is_super_admin
 
     if (!isAdmin) {
       // Not an admin - redirect to home

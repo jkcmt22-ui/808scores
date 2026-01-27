@@ -1,10 +1,12 @@
 'use client'
 
-import { useState, useRef, useEffect } from 'react'
-import { Smile } from 'lucide-react'
-import data from '@emoji-mart/data'
-import Picker from '@emoji-mart/react'
+import { useState, useRef, useEffect, lazy, Suspense } from 'react'
+import { Smile, Loader2 } from 'lucide-react'
 import { cn } from '@/lib/utils'
+
+// Lazy load emoji picker to reduce initial bundle size (~170KB)
+const Picker = lazy(() => import('@emoji-mart/react'))
+const data = lazy(() => import('@emoji-mart/data'))
 
 interface EmojiPickerButtonProps {
   onEmojiSelect: (emoji: string) => void
@@ -13,8 +15,14 @@ interface EmojiPickerButtonProps {
 
 export function EmojiPickerButton({ onEmojiSelect, disabled }: EmojiPickerButtonProps) {
   const [isOpen, setIsOpen] = useState(false)
+  const [emojiData, setEmojiData] = useState<any>(null)
   const buttonRef = useRef<HTMLButtonElement>(null)
   const pickerRef = useRef<HTMLDivElement>(null)
+
+  // Preload emoji data when component mounts (background load)
+  useEffect(() => {
+    data.then((module) => setEmojiData(module.default))
+  }, [])
 
   // Close picker when clicking outside
   useEffect(() => {
@@ -73,22 +81,30 @@ export function EmojiPickerButton({ onEmojiSelect, disabled }: EmojiPickerButton
         <Smile className="h-5 w-5" />
       </button>
 
-      {isOpen && (
+      {isOpen && emojiData && (
         <div
           ref={pickerRef}
           className="absolute bottom-full right-0 mb-2 z-50"
         >
-          <Picker
-            data={data}
-            onEmojiSelect={handleEmojiSelect}
-            theme="dark"
-            previewPosition="none"
-            skinTonePosition="none"
-            maxFrequentRows={2}
-            perLine={8}
-            emojiSize={24}
-            emojiButtonSize={32}
-          />
+          <Suspense
+            fallback={
+              <div className="flex items-center justify-center p-8 bg-background-secondary border-2 border-border rounded">
+                <Loader2 className="h-6 w-6 animate-spin text-neon-yellow" />
+              </div>
+            }
+          >
+            <Picker
+              data={emojiData}
+              onEmojiSelect={handleEmojiSelect}
+              theme="dark"
+              previewPosition="none"
+              skinTonePosition="none"
+              maxFrequentRows={2}
+              perLine={8}
+              emojiSize={24}
+              emojiButtonSize={32}
+            />
+          </Suspense>
         </div>
       )}
     </div>

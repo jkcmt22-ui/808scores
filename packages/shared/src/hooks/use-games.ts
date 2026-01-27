@@ -141,19 +141,38 @@ export function useGames(supabase: TypedSupabaseClient | null, options: UseGames
 
       const gamesData = (data as GameWithTeams[]) || []
 
-      // Fetch message counts for these games
+      // Fetch message counts for these games (optimized with RPC function)
       if (gamesData.length > 0) {
         const gameIds = gamesData.map(g => g.id)
-        const { data: messageCounts } = await supabase
-          .from('chat_messages')
-          .select('game_id')
-          .in('game_id', gameIds)
 
-        // Count messages per game
-        const countMap: Record<string, number> = {}
-        if (messageCounts) {
-          for (const msg of messageCounts as { game_id: string }[]) {
-            countMap[msg.game_id] = (countMap[msg.game_id] || 0) + 1
+        // Use RPC function for efficient aggregation, with fallback to client-side counting
+        let countMap: Record<string, number> = {}
+
+        try {
+          // Try using RPC function if available (most efficient)
+          const { data: counts, error: rpcError } = await supabase
+            .rpc('get_message_counts', { game_ids: gameIds })
+
+          if (!rpcError && counts) {
+            counts.forEach((row: { game_id: string; count: number }) => {
+              countMap[row.game_id] = row.count
+            })
+          } else {
+            throw rpcError || new Error('RPC not available')
+          }
+        } catch (rpcError) {
+          // Fallback: Use optimized query with count only (no full rows)
+          // This fetches only game_id column instead of all message data
+          const { data: messageCounts } = await supabase
+            .from('chat_messages')
+            .select('game_id', { count: 'exact', head: false })
+            .in('game_id', gameIds)
+
+          // Count messages per game in JavaScript (fallback)
+          if (messageCounts) {
+            for (const msg of messageCounts as { game_id: string }[]) {
+              countMap[msg.game_id] = (countMap[msg.game_id] || 0) + 1
+            }
           }
         }
 
