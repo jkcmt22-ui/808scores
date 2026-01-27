@@ -12,6 +12,7 @@ export function useQuerySchools() {
     queryKey: ['schools'],
     queryFn: async () => {
       const supabase = createClient()
+      if (!supabase) throw new Error('Supabase client not available')
       const { data, error } = await supabase
         .from('schools')
         .select('*')
@@ -32,6 +33,7 @@ export function useQuerySchool(schoolId: string) {
     queryKey: ['school', schoolId],
     queryFn: async () => {
       const supabase = createClient()
+      if (!supabase) throw new Error('Supabase client not available')
       const { data, error } = await supabase
         .from('schools')
         .select('*')
@@ -54,6 +56,7 @@ export function useQuerySchoolsByLeague(league: string) {
     queryKey: ['schools', 'league', league],
     queryFn: async () => {
       const supabase = createClient()
+      if (!supabase) throw new Error('Supabase client not available')
       const { data, error } = await supabase
         .from('schools')
         .select('*')

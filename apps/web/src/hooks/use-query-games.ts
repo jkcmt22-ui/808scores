@@ -20,6 +20,7 @@ export function useQueryGames(options: {
     queryKey: ['games', { date, sportId, status, limit }],
     queryFn: async () => {
       const supabase = createClient()
+      if (!supabase) throw new Error('Supabase client not available')
       let query = supabase
         .from('games')
         .select(`
@@ -62,6 +63,7 @@ export function useQueryLiveGames() {
     queryKey: ['games', 'live'],
     queryFn: async () => {
       const supabase = createClient()
+      if (!supabase) throw new Error('Supabase client not available')
       const { data, error } = await supabase
         .from('games')
         .select(`
@@ -89,6 +91,7 @@ export function useQueryGame(gameId: string) {
     queryKey: ['game', gameId],
     queryFn: async () => {
       const supabase = createClient()
+      if (!supabase) throw new Error('Supabase client not available')
       const { data, error } = await supabase
         .from('games')
         .select(`
