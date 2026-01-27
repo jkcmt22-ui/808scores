@@ -27,6 +27,9 @@ import {
   Minus,
   Save,
   X,
+  ArrowUpDown,
+  ArrowUp,
+  ArrowDown,
 } from 'lucide-react'
 import { Button, Badge, Input, Card } from '@/components/ui'
 import { useAuth } from '@/hooks'
@@ -133,6 +136,7 @@ export default function AdminPage() {
   const [copiedCode, setCopiedCode] = useState<string | null>(null)
   const [adminUsers, setAdminUsers] = useState<AdminUser[]>([])
   const [userSearchTerm, setUserSearchTerm] = useState('')
+  const [dateSortOrder, setDateSortOrder] = useState<'desc' | 'asc'>('desc')
 
   // Check if user has admin access (must be an admin or super admin)
   const isSuperAdmin = profile?.is_super_admin === true
@@ -241,9 +245,9 @@ export default function AdminPage() {
     }
   }, [hasAdminAccess, fetchData])
 
-  // Filter games
+  // Filter and sort games
   const filteredGames = useMemo(() => {
-    return games.filter((game) => {
+    const filtered = games.filter((game) => {
       const matchesSearch =
         searchTerm === '' ||
         game.home_team.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -255,7 +259,14 @@ export default function AdminPage() {
 
       return matchesSearch && matchesStatus
     })
-  }, [games, searchTerm, statusFilter])
+
+    // Sort by date
+    return filtered.sort((a, b) => {
+      const dateA = new Date(a.scheduled_at).getTime()
+      const dateB = new Date(b.scheduled_at).getTime()
+      return dateSortOrder === 'desc' ? dateB - dateA : dateA - dateB
+    })
+  }, [games, searchTerm, statusFilter, dateSortOrder])
 
   // Handle form changes
   const handleFormChange = (field: keyof GameFormData, value: string | number | boolean) => {
@@ -825,6 +836,22 @@ export default function AdminPage() {
                 <option value="postponed">Postponed</option>
                 <option value="canceled">Canceled</option>
               </select>
+              <Button
+                variant="outline"
+                onClick={() => setDateSortOrder(dateSortOrder === 'desc' ? 'asc' : 'desc')}
+                className="flex items-center gap-2"
+                title={dateSortOrder === 'desc' ? 'Newest first' : 'Oldest first'}
+              >
+                <Calendar className="h-4 w-4" />
+                {dateSortOrder === 'desc' ? (
+                  <ArrowDown className="h-4 w-4" />
+                ) : (
+                  <ArrowUp className="h-4 w-4" />
+                )}
+                <span className="hidden sm:inline text-xs">
+                  {dateSortOrder === 'desc' ? 'Newest' : 'Oldest'}
+                </span>
+              </Button>
               <Button
                 variant="outline"
                 size="icon"
