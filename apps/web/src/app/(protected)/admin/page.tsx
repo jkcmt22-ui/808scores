@@ -118,17 +118,6 @@ export default function AdminPage() {
   // We need to check this before using supabase
   const supabase = supabaseClient!
 
-  // Debug logging
-  useEffect(() => {
-    console.log('[Admin Page] Auth state:', {
-      authLoading,
-      hasUser: !!user,
-      profileExists: profile !== undefined,
-      isAdmin: profile?.is_admin,
-      isSuperAdmin: profile?.is_super_admin
-    })
-  }, [authLoading, user, profile])
-
   const [activeTab, setActiveTab] = useState<TabType>('games')
   const [games, setGames] = useState<GameWithTeams[]>([])
   const [sports, setSports] = useState<Sport[]>([])
@@ -185,12 +174,10 @@ export default function AdminPage() {
 
   // Fetch games
   const fetchGames = useCallback(async () => {
-    console.log('[Admin] fetchGames called')
     setIsLoading(true)
     setMessage(null)
 
     try {
-      console.log('[Admin] Starting games query...')
       const { data: gamesData, error: gamesError } = await supabase
         .from('games')
         .select(`
@@ -218,9 +205,7 @@ export default function AdminPage() {
           away_team:schools!games_away_team_id_fkey(id, name, short_name, mascot, logo_url)
         `)
         .order('scheduled_at', { ascending: false })
-        .limit(50)
-
-      console.log('[Admin] Games query completed:', { count: gamesData?.length, hasError: !!gamesError })
+        .limit(150)
 
       if (gamesError) {
         console.error('Games fetch error:', gamesError)
@@ -233,7 +218,6 @@ export default function AdminPage() {
       setMessage({ type: 'error', text: 'Failed to load games' })
     }
 
-    console.log('[Admin] fetchGames complete, setting isLoading to false')
     setIsLoading(false)
   }, [supabase])
 
@@ -319,29 +303,15 @@ export default function AdminPage() {
 
   // Load data for active tab
   useEffect(() => {
-    console.log('[Admin] Data loading useEffect fired:', {
-      hasAdminAccess,
-      authLoading,
-      activeTab,
-      loadedTabs: Array.from(loadedTabs),
-      sportsCount: sports.length,
-      schoolsCount: schools.length
-    })
-
-    if (!hasAdminAccess || authLoading) {
-      console.log('[Admin] Skipping data load - no access or still loading auth')
-      return
-    }
+    if (!hasAdminAccess || authLoading) return
 
     // Always load common data (sports/schools)
     if (sports.length === 0 || schools.length === 0) {
-      console.log('[Admin] Loading common data (sports/schools)...')
       fetchCommonData()
     }
 
     // Load tab-specific data if not already loaded
     if (!loadedTabs.has(activeTab)) {
-      console.log('[Admin] Loading tab data for:', activeTab)
       setLoadedTabs(prev => new Set(prev).add(activeTab))
 
       switch (activeTab) {
@@ -358,11 +328,9 @@ export default function AdminPage() {
           fetchUsers()
           break
         case 'create':
-          console.log('[Admin] Create tab - no data needed')
+          // Create tab doesn't need data fetch
           break
       }
-    } else {
-      console.log('[Admin] Tab already loaded:', activeTab)
     }
   }, [hasAdminAccess, authLoading, activeTab, loadedTabs, sports.length, schools.length, fetchCommonData, fetchGames, fetchApplications, fetchCodes, fetchUsers])
 
