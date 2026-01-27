@@ -241,10 +241,10 @@ export default function AdminPage() {
   }, [supabase])
 
   useEffect(() => {
-    if (hasAdminAccess) {
+    if (hasAdminAccess && !authLoading) {
       fetchData()
     }
-  }, [hasAdminAccess, fetchData])
+  }, [hasAdminAccess, authLoading, fetchData])
 
   // Filter and sort games
   const filteredGames = useMemo(() => {
@@ -617,8 +617,8 @@ export default function AdminPage() {
     })
   }
 
-  // Auth loading
-  if (authLoading) {
+  // Auth loading - check both authLoading and profile === undefined
+  if (authLoading || profile === undefined) {
     return (
       <div className="flex min-h-screen flex-col items-center justify-center bg-background">
         <Loader2 className="h-8 w-8 animate-spin text-neon-yellow" />
