@@ -42,28 +42,6 @@ export default function BetaCodesPage() {
   const [copiedCode, setCopiedCode] = useState<string | null>(null)
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null)
 
-  // Only super admins can access
-  if (profile === undefined) {
-    // Still loading profile
-    return (
-      <div className="flex min-h-screen flex-col items-center justify-center p-4">
-        <Loader2 className="h-12 w-12 animate-spin text-neon-blue" />
-        <p className="mt-4 text-foreground-muted">Loading...</p>
-      </div>
-    )
-  }
-
-  if (!profile?.is_super_admin) {
-    return (
-      <div className="flex min-h-screen flex-col items-center justify-center p-4">
-        <AlertCircle className="mb-4 h-12 w-12 text-neon-pink" />
-        <h1 className="font-display text-xl font-bold text-foreground">Access Denied</h1>
-        <p className="text-foreground-muted text-sm mt-2">Only super admins can access beta codes</p>
-        <Button onClick={() => router.push('/admin')} className="mt-4">Back to Admin</Button>
-      </div>
-    )
-  }
-
   const fetchCodes = async () => {
     if (!supabase) return
     setIsLoading(true)
@@ -88,8 +66,32 @@ export default function BetaCodesPage() {
   }
 
   useEffect(() => {
-    fetchCodes()
-  }, [])
+    if (profile?.is_super_admin) {
+      fetchCodes()
+    }
+  }, [profile?.is_super_admin])
+
+  // Only super admins can access - check AFTER all hooks
+  if (profile === undefined) {
+    // Still loading profile
+    return (
+      <div className="flex min-h-screen flex-col items-center justify-center p-4">
+        <Loader2 className="h-12 w-12 animate-spin text-neon-blue" />
+        <p className="mt-4 text-foreground-muted">Loading...</p>
+      </div>
+    )
+  }
+
+  if (!profile?.is_super_admin) {
+    return (
+      <div className="flex min-h-screen flex-col items-center justify-center p-4">
+        <AlertCircle className="mb-4 h-12 w-12 text-neon-pink" />
+        <h1 className="font-display text-xl font-bold text-foreground">Access Denied</h1>
+        <p className="text-foreground-muted text-sm mt-2">Only super admins can access beta codes</p>
+        <Button onClick={() => router.push('/admin')} className="mt-4">Back to Admin</Button>
+      </div>
+    )
+  }
 
   const generateCode = () => {
     const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'
