@@ -5,6 +5,12 @@ import { useRouter } from 'next/navigation'
 import type { User as SupabaseUser } from '@supabase/supabase-js'
 import { createClient } from '@/lib/supabase/client'
 import type { User } from '@/types/database'
+import {
+  trackAuthSubscription,
+  untrackAuthSubscription,
+  trackProfileFetch,
+  logAuthEvent,
+} from '@/lib/auth-debug'
 
 interface AuthState {
   user: SupabaseUser | null
@@ -12,6 +18,9 @@ interface AuthState {
   isLoading: boolean
   isAuthenticated: boolean
 }
+
+// Track unique instance IDs for debugging
+let instanceCounter = 0
 
 export function useAuth() {
   const router = useRouter()
@@ -25,6 +34,8 @@ export function useAuth() {
   // Use ref to ensure supabase client is stable
   const supabaseRef = useRef(createClient())
   const supabase = supabaseRef.current
+  const instanceIdRef = useRef(++instanceCounter)
+  const subscriptionIdRef = useRef<string>('')
 
   if (!supabase) {
     throw new Error('Supabase client not initialized. Check environment variables.')
@@ -33,9 +44,13 @@ export function useAuth() {
   // Initialize auth state - only run once on mount
   useEffect(() => {
     let mounted = true
+    const instanceId = instanceIdRef.current
+    const source = `useAuth#${instanceId}`
 
-    const fetchProfile = async (userId: string): Promise<User | null> => {
-      try {
+    const fetchProfile = async (userId: string, fetchSource: string): Promise<User | null> => {
+      const query = "select('*')" // TODO: Will be narrowed in Commit 3
+
+      return trackProfileFetch(`${source}.${fetchSource}`, userId, query, async () => {
         const { data, error } = await supabase
           .from('users')
           .select('*')
@@ -48,20 +63,18 @@ export function useAuth() {
         }
 
         return data as User
-      } catch (err) {
-        console.error('Profile fetch error:', err)
-        return null
-      }
+      })
     }
 
     const initAuth = async () => {
+      logAuthEvent('INIT_START', source)
       try {
         const { data: { user } } = await supabase.auth.getUser()
 
         if (!mounted) return
 
         if (user) {
-          const profile = await fetchProfile(user.id)
+          const profile = await fetchProfile(user.id, 'init')
           if (!mounted) return
           setState({
             user,
@@ -69,6 +82,7 @@ export function useAuth() {
             isLoading: false,
             isAuthenticated: true,
           })
+          logAuthEvent('INIT_COMPLETE', source, { hasUser: true, hasProfile: !!profile })
         } else {
           setState({
             user: null,
@@ -76,9 +90,11 @@ export function useAuth() {
             isLoading: false,
             isAuthenticated: false,
           })
+          logAuthEvent('INIT_COMPLETE', source, { hasUser: false })
         }
       } catch (err) {
         console.error('Auth init error:', err)
+        logAuthEvent('INIT_ERROR', source, { error: String(err) })
         if (!mounted) return
         setState({
           user: null,
@@ -91,13 +107,18 @@ export function useAuth() {
 
     initAuth()
 
+    // Track subscription creation
+    subscriptionIdRef.current = trackAuthSubscription(source)
+
     // Listen for auth changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
         if (!mounted) return
 
+        logAuthEvent(event, source, { hasSession: !!session })
+
         if (event === 'SIGNED_IN' && session?.user) {
-          const profile = await fetchProfile(session.user.id)
+          const profile = await fetchProfile(session.user.id, 'onAuthStateChange')
           if (!mounted) return
           setState({
             user: session.user,
@@ -118,6 +139,7 @@ export function useAuth() {
 
     return () => {
       mounted = false
+      untrackAuthSubscription(subscriptionIdRef.current)
       subscription.unsubscribe()
     }
   }, [supabase])
@@ -164,15 +186,23 @@ export function useAuth() {
   const refreshProfile = useCallback(async () => {
     if (!state.user) return
 
-    try {
-      const { data, error } = await supabase
-        .from('users')
-        .select('*')
-        .eq('id', state.user.id)
-        .single()
+    const query = "select('*')" // TODO: Will be narrowed in Commit 3
+    const source = `useAuth#${instanceIdRef.current}.refreshProfile`
 
-      if (!error && data) {
-        setState((prev) => ({ ...prev, profile: data as User }))
+    try {
+      const data = await trackProfileFetch(source, state.user.id, query, async () => {
+        const { data, error } = await supabase
+          .from('users')
+          .select('*')
+          .eq('id', state.user!.id)
+          .single()
+
+        if (error) throw error
+        return data as User
+      })
+
+      if (data) {
+        setState((prev) => ({ ...prev, profile: data }))
       }
     } catch (err) {
       console.error('Refresh profile error:', err)

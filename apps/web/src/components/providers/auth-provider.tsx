@@ -1,9 +1,15 @@
 'use client'
 
-import { createContext, useContext, useEffect, useState, type ReactNode } from 'react'
+import { createContext, useContext, useEffect, useState, useRef, type ReactNode } from 'react'
 import type { User as SupabaseUser } from '@supabase/supabase-js'
 import { createClient } from '@/lib/supabase/client'
 import type { User } from '@/types/database'
+import {
+  trackAuthSubscription,
+  untrackAuthSubscription,
+  trackProfileFetch,
+  logAuthEvent,
+} from '@/lib/auth-debug'
 
 interface AuthContextType {
   user: SupabaseUser | null
@@ -20,13 +26,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<SupabaseUser | null>(null)
   const [profile, setProfile] = useState<User | null>(null)
   const [isLoading, setIsLoading] = useState(true)
+  const subscriptionIdRef = useRef<string>('')
 
   const supabase = createClient()
 
-  // Fetch user profile
-  const fetchProfile = async (userId: string) => {
+  // Fetch user profile with instrumentation
+  const fetchProfile = async (userId: string, source: string) => {
     if (!supabase) return null
-    try {
+
+    const query = "select('*')" // TODO: Will be narrowed in Commit 3
+
+    return trackProfileFetch('AuthProvider.' + source, userId, query, async () => {
       const { data, error } = await supabase
         .from('users')
         .select('*')
@@ -39,10 +49,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
 
       return data as User
-    } catch (err) {
-      console.error('Profile fetch error:', err)
-      return null
-    }
+    })
   }
 
   // Initialize auth
@@ -54,16 +61,21 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
 
     const initAuth = async () => {
+      logAuthEvent('INIT_START', 'AuthProvider')
       try {
         const { data: { user: authUser } } = await supabase.auth.getUser()
 
         if (authUser) {
           setUser(authUser)
-          const userProfile = await fetchProfile(authUser.id)
+          const userProfile = await fetchProfile(authUser.id, 'init')
           setProfile(userProfile)
+          logAuthEvent('INIT_COMPLETE', 'AuthProvider', { hasUser: true, hasProfile: !!userProfile })
+        } else {
+          logAuthEvent('INIT_COMPLETE', 'AuthProvider', { hasUser: false })
         }
       } catch (err) {
         console.error('Auth init error:', err)
+        logAuthEvent('INIT_ERROR', 'AuthProvider', { error: String(err) })
       } finally {
         setIsLoading(false)
       }
@@ -71,12 +83,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     initAuth()
 
+    // Track subscription creation
+    subscriptionIdRef.current = trackAuthSubscription('AuthProvider')
+
     // Listen for auth changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
+        logAuthEvent(event, 'AuthProvider', { hasSession: !!session })
+
         if (event === 'SIGNED_IN' && session?.user) {
           setUser(session.user)
-          const userProfile = await fetchProfile(session.user.id)
+          const userProfile = await fetchProfile(session.user.id, 'onAuthStateChange')
           setProfile(userProfile)
         } else if (event === 'SIGNED_OUT') {
           setUser(null)
@@ -86,6 +103,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     )
 
     return () => {
+      untrackAuthSubscription(subscriptionIdRef.current)
       subscription.unsubscribe()
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -100,7 +118,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const refreshProfile = async () => {
     if (user) {
-      const userProfile = await fetchProfile(user.id)
+      const userProfile = await fetchProfile(user.id, 'refreshProfile')
       setProfile(userProfile)
     }
   }
