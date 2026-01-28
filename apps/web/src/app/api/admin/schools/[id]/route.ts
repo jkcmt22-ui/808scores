@@ -68,7 +68,7 @@ export async function PATCH(
     if (colorsJson) {
       try {
         colors = JSON.parse(colorsJson)
-      } catch (e) {
+      } catch {
         return NextResponse.json(
           { error: 'Invalid colors format', message: 'Colors must be valid JSON' },
           { status: 400 }

@@ -528,6 +528,7 @@ export default function SchoolsAdminPage() {
                   {/* Show current logo if editing */}
                   {editingSchool?.logo_url && !formData.logo && (
                     <div className="flex items-center gap-2">
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
                       <img
                         src={editingSchool.logo_url}
                         alt="Current logo"
@@ -540,6 +541,7 @@ export default function SchoolsAdminPage() {
                   {/* Show preview if new file selected */}
                   {formData.logo && logoPreviewUrl && (
                     <div className="flex items-center gap-2">
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
                       <img
                         src={logoPreviewUrl}
                         alt="Preview"
@@ -696,6 +698,7 @@ function SchoolRow({
         <div className="flex items-center gap-4 flex-1 min-w-0">
           {/* Logo or Color Badge */}
           {school.logo_url ? (
+            // eslint-disable-next-line @next/next/no-img-element
             <img
               src={school.logo_url}
               alt={`${school.name} logo`}

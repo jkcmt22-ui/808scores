@@ -245,7 +245,7 @@ export interface FraudCheckResult {
 export function checkForFraud(
   user: User,
   recentSubmissions: Submission[],
-  newSubmission: Submission
+  _newSubmission: Submission
 ): FraudCheckResult {
   const reasons: string[] = []
 

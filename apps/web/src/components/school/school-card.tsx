@@ -2,7 +2,6 @@
 
 import Link from 'next/link'
 import type { School } from '@/types/database'
-import { LEAGUES } from '@/lib/league-config'
 import { cn } from '@/lib/utils'
 
 interface SchoolCardProps {
