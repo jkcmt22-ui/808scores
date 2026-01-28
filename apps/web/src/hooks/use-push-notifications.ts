@@ -31,7 +31,7 @@ export function usePushNotifications(): UsePushNotificationsReturn {
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
-  const supabase = createClient()!
+  const supabase = createClient()
 
   // Check initial state
   useEffect(() => {
@@ -99,6 +99,11 @@ export function usePushNotifications(): UsePushNotificationsReturn {
       }
 
       // Save subscription to Supabase
+      if (!supabase) {
+        setError('Database connection not available')
+        return false
+      }
+
       const subscriptionData = extractSubscriptionData(subscription)
 
       const { error: dbError } = await supabase
@@ -139,7 +144,7 @@ export function usePushNotifications(): UsePushNotificationsReturn {
       // Get current subscription to delete from DB
       const subscription = await getCurrentSubscription()
 
-      if (subscription) {
+      if (subscription && supabase) {
         // Delete from Supabase
         const { error: dbError } = await supabase
           .from('push_subscriptions')

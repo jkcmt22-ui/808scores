@@ -27,9 +27,15 @@ export function useTournaments(options: UseTournamentsOptions = {}) {
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<Error | null>(null)
 
-  const supabase = useMemo(() => createClient()!, [])
+  const supabase = useMemo(() => createClient(), [])
 
   const fetchTournaments = useCallback(async () => {
+    if (!supabase) {
+      setError(new Error('Database connection not available'))
+      setIsLoading(false)
+      return
+    }
+
     setIsLoading(true)
     setError(null)
 
@@ -88,9 +94,15 @@ export function useTournament(tournamentId: string) {
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<Error | null>(null)
 
-  const supabase = useMemo(() => createClient()!, [])
+  const supabase = useMemo(() => createClient(), [])
 
   const fetchTournament = useCallback(async () => {
+    if (!supabase) {
+      setError(new Error('Database connection not available'))
+      setIsLoading(false)
+      return
+    }
+
     if (!tournamentId) return
 
     setIsLoading(true)
@@ -154,7 +166,7 @@ export function useTournament(tournamentId: string) {
 
   // Subscribe to tournament updates
   useEffect(() => {
-    if (!tournamentId) return
+    if (!supabase || !tournamentId) return
 
     const channel = supabase
       .channel(`tournament-${tournamentId}`)

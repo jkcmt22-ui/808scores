@@ -18,10 +18,15 @@ interface UseChatLikesReturn {
 export function useChatLikes({ gameId, userId }: UseChatLikesOptions): UseChatLikesReturn {
   const [likedMessageIds, setLikedMessageIds] = useState<Set<string>>(new Set())
   const [isLoading, setIsLoading] = useState(true)
-  const supabase = createClient()!
+  const supabase = createClient()
 
   // Fetch user's likes for this game's messages
   const fetchLikes = useCallback(async () => {
+    if (!supabase) {
+      setIsLoading(false)
+      return
+    }
+
     if (!userId) {
       setLikedMessageIds(new Set())
       setIsLoading(false)
@@ -52,7 +57,7 @@ export function useChatLikes({ gameId, userId }: UseChatLikesOptions): UseChatLi
 
   // Subscribe to realtime changes
   useEffect(() => {
-    if (!userId) return
+    if (!supabase || !userId) return
 
     const channel = supabase
       .channel(`chat-likes-${gameId}-${userId}`)
@@ -87,7 +92,7 @@ export function useChatLikes({ gameId, userId }: UseChatLikesOptions): UseChatLi
 
   const toggleLike = useCallback(
     async (messageId: string) => {
-      if (!userId) return
+      if (!supabase || !userId) return
 
       const isLiked = likedMessageIds.has(messageId)
 

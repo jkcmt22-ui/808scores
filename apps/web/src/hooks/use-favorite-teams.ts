@@ -26,7 +26,7 @@ export function useFavoriteTeams(userId: string | undefined): UseFavoriteTeamsRe
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
-  const supabase = createClient()!
+  const supabase = createClient()
 
   // Fetch favorite teams
   useEffect(() => {
@@ -37,6 +37,12 @@ export function useFavoriteTeams(userId: string | undefined): UseFavoriteTeamsRe
     }
 
     const fetchFavorites = async () => {
+      if (!supabase) {
+        setError('Database connection not available')
+        setIsLoading(false)
+        return
+      }
+
       try {
         const { data, error: fetchError } = await supabase
           .from('team_follows')
@@ -78,7 +84,7 @@ export function useFavoriteTeams(userId: string | undefined): UseFavoriteTeamsRe
 
   // Add favorite team
   const addFavorite = useCallback(async (schoolId: string, notify = true): Promise<boolean> => {
-    if (!userId) return false
+    if (!supabase || !userId) return false
 
     try {
       const { error: insertError } = await supabase
@@ -120,7 +126,7 @@ export function useFavoriteTeams(userId: string | undefined): UseFavoriteTeamsRe
 
   // Remove favorite team
   const removeFavorite = useCallback(async (schoolId: string): Promise<boolean> => {
-    if (!userId) return false
+    if (!supabase || !userId) return false
 
     try {
       const { error: deleteError } = await supabase
@@ -142,7 +148,7 @@ export function useFavoriteTeams(userId: string | undefined): UseFavoriteTeamsRe
 
   // Toggle notifications for a team
   const toggleNotify = useCallback(async (schoolId: string, notify: boolean): Promise<boolean> => {
-    if (!userId) return false
+    if (!supabase || !userId) return false
 
     try {
       const { error: updateError } = await supabase

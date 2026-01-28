@@ -26,7 +26,7 @@ export function useFavoriteSports(userId: string | undefined): UseFavoriteSports
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
-  const supabase = createClient()!
+  const supabase = createClient()
 
   // Fetch favorite sports
   useEffect(() => {
@@ -37,6 +37,12 @@ export function useFavoriteSports(userId: string | undefined): UseFavoriteSports
     }
 
     const fetchFavorites = async () => {
+      if (!supabase) {
+        setError('Database connection not available')
+        setIsLoading(false)
+        return
+      }
+
       try {
         const { data, error: fetchError } = await supabase
           .from('sport_follows')
@@ -78,7 +84,7 @@ export function useFavoriteSports(userId: string | undefined): UseFavoriteSports
 
   // Add favorite sport
   const addFavorite = useCallback(async (sportId: string, notify = true): Promise<boolean> => {
-    if (!userId) return false
+    if (!supabase || !userId) return false
 
     try {
       const { error: insertError } = await supabase
@@ -120,7 +126,7 @@ export function useFavoriteSports(userId: string | undefined): UseFavoriteSports
 
   // Remove favorite sport
   const removeFavorite = useCallback(async (sportId: string): Promise<boolean> => {
-    if (!userId) return false
+    if (!supabase || !userId) return false
 
     try {
       const { error: deleteError } = await supabase
@@ -142,7 +148,7 @@ export function useFavoriteSports(userId: string | undefined): UseFavoriteSports
 
   // Toggle notifications for a sport
   const toggleNotify = useCallback(async (sportId: string, notify: boolean): Promise<boolean> => {
-    if (!userId) return false
+    if (!supabase || !userId) return false
 
     try {
       const { error: updateError } = await supabase

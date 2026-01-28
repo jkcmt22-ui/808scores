@@ -45,7 +45,13 @@ export function useLeaderboard(options: UseLeaderboardOptions = {}): UseLeaderbo
       setError(null)
 
       try {
-        const supabase = createClient()!
+        const supabase = createClient()
+
+        if (!supabase) {
+          setError(new Error('Database connection not available'))
+          setIsLoading(false)
+          return
+        }
 
         // Get current user for rank calculation
         const { data: { user } } = await supabase.auth.getUser()

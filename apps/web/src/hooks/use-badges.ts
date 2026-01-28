@@ -23,10 +23,15 @@ export function useBadges() {
   const [badges, setBadges] = useState<Badge[]>([])
   const [isLoading, setIsLoading] = useState(true)
 
-  const supabase = useMemo(() => createClient()!, [])
+  const supabase = useMemo(() => createClient(), [])
 
   useEffect(() => {
     const fetchBadges = async () => {
+      if (!supabase) {
+        setIsLoading(false)
+        return
+      }
+
       setIsLoading(true)
 
       const { data, error } = await supabase
@@ -51,9 +56,14 @@ export function useUserBadges(userId: string | undefined) {
   const [userBadges, setUserBadges] = useState<UserBadge[]>([])
   const [isLoading, setIsLoading] = useState(true)
 
-  const supabase = useMemo(() => createClient()!, [])
+  const supabase = useMemo(() => createClient(), [])
 
   const fetchUserBadges = useCallback(async () => {
+    if (!supabase) {
+      setIsLoading(false)
+      return
+    }
+
     if (!userId) {
       setUserBadges([])
       setIsLoading(false)
@@ -95,7 +105,7 @@ export function useUserBadges(userId: string | undefined) {
 
   // Subscribe to new badge earnings
   useEffect(() => {
-    if (!userId) return
+    if (!supabase || !userId) return
 
     const channel = supabase
       .channel(`user-badges-${userId}`)
