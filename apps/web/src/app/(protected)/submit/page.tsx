@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useMemo } from 'react'
 import { useRouter } from 'next/navigation'
 import { ArrowLeft, Search, Loader2, Radio } from 'lucide-react'
 // Header not used - using GameSelectPage component instead
@@ -11,7 +11,9 @@ import { useGames } from '@/hooks'
 export default function SelectGamePage() {
   const router = useRouter()
   const [search, setSearch] = useState('')
-  const { games, isLoading, error } = useGames({ date: new Date() })
+  // Memoize the date to prevent infinite re-renders
+  const today = useMemo(() => new Date(), [])
+  const { games, isLoading, error } = useGames({ date: today })
 
   const filteredGames = games.filter(
     (game) =>
