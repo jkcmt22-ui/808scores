@@ -222,15 +222,15 @@ export default function AdminRaffleDetailPage() {
           <div className="grid grid-cols-3 gap-4 text-xs text-foreground-muted mb-4">
             <div>
               <Calendar className="h-3.5 w-3.5 inline mr-1" />
-              Opens: {new Date(raffle.entries_open_at).toLocaleString()}
+              Opens: {raffle.entries_open_at ? new Date(raffle.entries_open_at).toLocaleString() : 'Not set'}
             </div>
             <div>
               <Clock className="h-3.5 w-3.5 inline mr-1" />
-              Closes: {new Date(raffle.entries_close_at).toLocaleString()}
+              Closes: {raffle.entries_close_at ? new Date(raffle.entries_close_at).toLocaleString() : 'Not set'}
             </div>
             <div>
               <Trophy className="h-3.5 w-3.5 inline mr-1" />
-              Drawing: {new Date(raffle.drawing_at).toLocaleString()}
+              Drawing: {raffle.drawing_at ? new Date(raffle.drawing_at).toLocaleString() : 'Not set'}
             </div>
           </div>
 
@@ -348,13 +348,13 @@ export default function AdminRaffleDetailPage() {
                     #{winner.position}
                   </span>
                   <Avatar
-                    src={winner.user.avatar_url}
-                    fallback={winner.user.display_name || 'W'}
+                    src={winner.user?.avatar_url}
+                    fallback={winner.user?.display_name || 'W'}
                     size="default"
                   />
                   <div className="flex-1">
                     <p className="font-display font-bold text-foreground">
-                      {winner.user.display_name || 'Winner'}
+                      {winner.user?.display_name || 'Winner'}
                     </p>
                     {winner.winning_entry_number && (
                       <p className="text-xs text-foreground-subtle">
@@ -406,13 +406,13 @@ export default function AdminRaffleDetailPage() {
                     {index + 1}.
                   </span>
                   <Avatar
-                    src={entry.user.avatar_url}
-                    fallback={entry.user.display_name || 'U'}
+                    src={entry.user?.avatar_url}
+                    fallback={entry.user?.display_name || 'U'}
                     size="sm"
                   />
                   <div className="flex-1">
                     <p className="font-medium text-foreground">
-                      {entry.user.display_name || 'User'}
+                      {entry.user?.display_name || 'User'}
                     </p>
                   </div>
                   <div className="text-right">
