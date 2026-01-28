@@ -143,7 +143,7 @@ export function GameChat({ gameId }: GameChatProps) {
           // Check if we already have this user's data cached
           const cachedUser = chatUsers.find(u => u.id === newMessage.user_id)
 
-          let userData = cachedUser
+          let userData: any = cachedUser
           if (!cachedUser) {
             // Only fetch user data if we don't have it
             const { data: userResult } = await supabase
