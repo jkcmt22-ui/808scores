@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useRef, useEffect } from 'react'
-import { MessageSquare, Send, Heart, Reply, Flag, ChevronUp, LogIn } from 'lucide-react'
+import { MessageSquare, Send, Heart, Reply, Flag, Trash2, ChevronUp, LogIn } from 'lucide-react'
 import { useAuth } from '@/hooks/use-auth'
 import { useGeneralChat, type GeneralChatMessage } from '@/hooks/use-general-chat'
 import { Avatar, Badge, Button, Input } from '@/components/ui'
@@ -14,6 +14,7 @@ function MessageItem({
   isAuthenticated,
   onReply,
   onReport,
+  onDelete,
   onToggleLike,
 }: {
   message: GeneralChatMessage
@@ -21,10 +22,26 @@ function MessageItem({
   isAuthenticated: boolean
   onReply: (message: GeneralChatMessage) => void
   onReport: (messageId: string) => void
+  onDelete?: (messageId: string) => void
   onToggleLike: (messageId: string) => Promise<void>
 }) {
   const [isHovered, setIsHovered] = useState(false)
+  const [isDeleting, setIsDeleting] = useState(false)
   const isOwnMessage = currentUserId === message.user_id
+
+  const handleDelete = async () => {
+    if (!onDelete) return
+
+    if (window.confirm('Delete this message? This cannot be undone.')) {
+      setIsDeleting(true)
+      try {
+        await onDelete(message.id)
+      } catch (err) {
+        console.error('Failed to delete message:', err)
+        setIsDeleting(false)
+      }
+    }
+  }
 
   // Helper to render content with highlighted mentions
   const renderContentWithMentions = (content: string) => {
@@ -119,10 +136,26 @@ function MessageItem({
           </div>
         </div>
 
-        {/* Report button */}
+        {/* Delete button (own messages only) */}
+        {isAuthenticated && isOwnMessage && onDelete && (
+          <button
+            onClick={handleDelete}
+            disabled={isDeleting}
+            aria-label="Delete message"
+            className={cn(
+              'p-2 min-w-[44px] min-h-[44px] flex items-center justify-center text-foreground-subtle hover:text-destructive transition-opacity disabled:opacity-50',
+              isHovered ? 'opacity-100' : 'opacity-0 md:opacity-0'
+            )}
+          >
+            <Trash2 className="h-4 w-4" />
+          </button>
+        )}
+
+        {/* Report button (other users' messages only) */}
         {isAuthenticated && !isOwnMessage && (
           <button
             onClick={() => onReport(message.id)}
+            aria-label="Report message"
             className={cn(
               'p-2 min-w-[44px] min-h-[44px] flex items-center justify-center text-foreground-subtle hover:text-destructive transition-opacity',
               isHovered ? 'opacity-100' : 'opacity-0 md:opacity-0'
@@ -144,6 +177,7 @@ export default function CommunityPage() {
     sendMessage,
     toggleLike,
     reportMessage,
+    deleteMessage,
     loadMore,
     hasMore,
     isSending,
@@ -187,6 +221,10 @@ export default function CommunityPage() {
     if (window.confirm('Report this message for inappropriate content?')) {
       await reportMessage(messageId)
     }
+  }
+
+  const handleDelete = async (messageId: string) => {
+    await deleteMessage(messageId)
   }
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
@@ -266,6 +304,7 @@ export default function CommunityPage() {
               isAuthenticated={!!user}
               onReply={handleReply}
               onReport={handleReport}
+              onDelete={handleDelete}
               onToggleLike={toggleLike}
             />
           ))

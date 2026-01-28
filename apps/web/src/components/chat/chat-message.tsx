@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import Image from 'next/image'
-import { Flag, Reply } from 'lucide-react'
+import { Flag, Reply, Trash2 } from 'lucide-react'
 import { Avatar, Badge } from '@/components/ui'
 import { LikeButton } from './like-button'
 import { formatRelativeTime, cn } from '@/lib/utils'
@@ -14,6 +14,7 @@ interface ChatMessageProps {
   isAuthenticated: boolean
   onReply: (message: ChatMessageWithUser) => void
   onReport: (messageId: string) => void
+  onDelete?: (messageId: string) => void
   onToggleLike: (messageId: string) => Promise<void>
   onScrollToMessage?: (messageId: string) => void
   isHighlighted?: boolean
@@ -77,13 +78,29 @@ export function ChatMessageComponent({
   isAuthenticated,
   onReply,
   onReport,
+  onDelete,
   onToggleLike,
   onScrollToMessage,
   isHighlighted,
 }: ChatMessageProps) {
   const [isHovered, setIsHovered] = useState(false)
+  const [isDeleting, setIsDeleting] = useState(false)
   const isOwnMessage = currentUserId === message.user_id
   const isGifMessage = message.message_type === 'gif' && message.gif_url
+
+  const handleDelete = async () => {
+    if (!onDelete) return
+
+    if (window.confirm('Delete this message? This cannot be undone.')) {
+      setIsDeleting(true)
+      try {
+        await onDelete(message.id)
+      } catch (err) {
+        console.error('Failed to delete message:', err)
+        setIsDeleting(false)
+      }
+    }
+  }
 
   const handleReplyClick = () => {
     if (message.reply_to?.id && onScrollToMessage) {
@@ -210,7 +227,22 @@ export function ChatMessageComponent({
           </div>
         </div>
 
-        {/* Report button */}
+        {/* Delete button (own messages only) */}
+        {isAuthenticated && isOwnMessage && onDelete && (
+          <button
+            onClick={handleDelete}
+            disabled={isDeleting}
+            aria-label="Delete message"
+            className={cn(
+              'p-2 min-w-[44px] min-h-[44px] flex items-center justify-center text-foreground-subtle hover:text-destructive transition-opacity disabled:opacity-50',
+              isHovered ? 'opacity-100' : 'opacity-0 md:opacity-0'
+            )}
+          >
+            <Trash2 className="h-4 w-4" />
+          </button>
+        )}
+
+        {/* Report button (other users' messages only) */}
         {isAuthenticated && !isOwnMessage && (
           <button
             onClick={() => onReport(message.id)}

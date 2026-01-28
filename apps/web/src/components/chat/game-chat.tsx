@@ -353,6 +353,26 @@ export function GameChat({ gameId }: GameChatProps) {
     }
   }
 
+  const handleDelete = async (messageId: string) => {
+    if (!user) return
+
+    // Soft delete by setting is_hidden = true
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const { error: deleteError } = await (supabase as any)
+      .from('chat_messages')
+      .update({ is_hidden: true })
+      .eq('id', messageId)
+      .eq('user_id', user.id) // Security: Only allow deleting own messages
+
+    if (deleteError) {
+      console.error('Error deleting message:', deleteError)
+      setError('Failed to delete message')
+    } else {
+      // Remove from local state immediately
+      setMessages((prev) => prev.filter((m) => m.id !== messageId))
+    }
+  }
+
   const handleToggleLike = async (messageId: string) => {
     if (!user) return
 
@@ -416,6 +436,7 @@ export function GameChat({ gameId }: GameChatProps) {
               isAuthenticated={isAuthenticated}
               onReply={handleReply}
               onReport={handleReport}
+              onDelete={handleDelete}
               onToggleLike={handleToggleLike}
               onScrollToMessage={scrollToMessage}
               isHighlighted={highlightedMessageId === msg.id}

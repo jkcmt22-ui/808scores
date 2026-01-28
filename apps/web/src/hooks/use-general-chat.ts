@@ -40,6 +40,7 @@ interface UseGeneralChatReturn {
   sendGif: (gif: { id: string; url: string }, replyToId?: string | null) => Promise<boolean>
   toggleLike: (messageId: string) => Promise<void>
   reportMessage: (messageId: string) => Promise<boolean>
+  deleteMessage: (messageId: string) => Promise<boolean>
   loadMore: () => Promise<void>
   hasMore: boolean
   isSending: boolean
@@ -354,6 +355,29 @@ export function useGeneralChat(
     }
   }, [supabase, user, messages])
 
+  // Delete message (soft delete by setting is_hidden)
+  const deleteMessage = useCallback(async (messageId: string): Promise<boolean> => {
+    if (!user || !supabase) return false
+
+    try {
+      const { error } = await (supabase as any)
+        .from('general_chat_messages')
+        .update({ is_hidden: true })
+        .eq('id', messageId)
+        .eq('user_id', user.id) // Security: only allow deleting own messages
+
+      if (error) throw error
+
+      // Remove from local state immediately
+      setMessages(prev => prev.filter(m => m.id !== messageId))
+
+      return true
+    } catch (err) {
+      console.error('Error deleting message:', err)
+      return false
+    }
+  }, [supabase, user])
+
   // Load more messages
   const loadMore = useCallback(async () => {
     if (!hasMore || isLoading) return
@@ -368,6 +392,7 @@ export function useGeneralChat(
     sendGif,
     toggleLike,
     reportMessage,
+    deleteMessage,
     loadMore,
     hasMore,
     isSending,
