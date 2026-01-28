@@ -1,6 +1,6 @@
 'use client'
 
-import { createContext, useContext, useState, useRef, useCallback, Children, isValidElement, cloneElement } from 'react'
+import { createContext, useContext, useState, useRef, useCallback } from 'react'
 import { cn } from '@/lib/utils'
 
 interface TabsContextValue {

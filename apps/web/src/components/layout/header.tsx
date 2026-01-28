@@ -26,7 +26,7 @@ export function Header({
   const { unreadCount } = useNotifications(profile?.id)
   const [showUserMenu, setShowUserMenu] = useState(false)
   const [searchOpen, setSearchOpen] = useState(false)
-  const { theme, setTheme, resolvedTheme } = useTheme()
+  const { setTheme, resolvedTheme } = useTheme()
   const [mounted, setMounted] = useState(false)
 
   // Prevent hydration mismatch

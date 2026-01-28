@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useMemo, useCallback } from 'react'
 import { createClient } from '@/lib/supabase/client'
-import type { Player, PlayerSeason, Sport, School } from '@/types/database'
+import type { Player, PlayerSeason, Sport } from '@/types/database'
 
 export interface RosterPlayer {
   player: Player

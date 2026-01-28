@@ -3,7 +3,6 @@
 import { useEffect, useState, useCallback } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import type { GameWithTeams, Submission } from '@/types/database'
-import type { RealtimeChannel } from '@supabase/supabase-js'
 
 /**
  * Hook for subscribing to real-time game updates

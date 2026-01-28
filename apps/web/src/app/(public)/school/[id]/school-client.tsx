@@ -575,7 +575,7 @@ interface GameCardProps {
   result: boolean | null // true = win, false = loss, null = not final
 }
 
-function GameCard({ game, schoolId, isHomeTeam, opponent, result }: GameCardProps) {
+function GameCard({ game, isHomeTeam, opponent, result }: GameCardProps) {
   const isLive = game.status === 'in_progress'
   const isFinal = game.status === 'final'
 

@@ -12,7 +12,6 @@ import type {
   BracketRound,
   TournamentBracket,
   TournamentRound,
-  Sport,
 } from '@/types/database'
 
 interface UseTournamentsOptions {

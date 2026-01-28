@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useMemo, useCallback, useRef } from 'react'
 import { createClient } from '@/lib/supabase/client'
-import type { School, Player, GameWithTeams } from '@/types/database'
+import type { School, Player } from '@/types/database'
 
 export type SearchResultType = 'school' | 'player' | 'game'
 

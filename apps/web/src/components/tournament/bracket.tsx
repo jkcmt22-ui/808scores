@@ -173,7 +173,7 @@ interface BracketRoundColumnProps {
   totalRounds: number
 }
 
-function BracketRoundColumn({ round, roundIndex, totalRounds }: BracketRoundColumnProps) {
+function BracketRoundColumn({ round, roundIndex }: BracketRoundColumnProps) {
   // Calculate spacing between games based on round depth
   // Later rounds have more vertical spacing to align with earlier rounds
   const spacingMultiplier = Math.pow(2, roundIndex)

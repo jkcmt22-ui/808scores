@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useCallback, useMemo } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { usePushNotifications } from './use-push-notifications'
 
 const REMINDERS_KEY = '808scores_game_reminders'

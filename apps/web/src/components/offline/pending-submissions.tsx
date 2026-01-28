@@ -60,7 +60,7 @@ export function PendingSubmissionsBanner() {
 }
 
 function PendingSubmissionsList() {
-  const { pendingSubmissions, removePending, isOnline } = useOfflineQueue()
+  const { pendingSubmissions, removePending } = useOfflineQueue()
 
   if (pendingSubmissions.length === 0) {
     return (

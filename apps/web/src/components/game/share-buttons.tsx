@@ -164,7 +164,7 @@ export function ShareButtons({ title, text, url, className }: ShareButtonsProps)
 }
 
 // Compact inline share buttons for use in cards
-export function InlineShareButtons({ title, text, url }: ShareButtonsProps) {
+export function InlineShareButtons({ text, url }: ShareButtonsProps) {
   const [copied, setCopied] = useState(false)
 
   const fullUrl = url.startsWith('http') ? url : `https://www.hawaiisportscenter.com${url}`

@@ -1,7 +1,6 @@
 'use client'
 
 import { useRoster, type SportRoster, type RosterPlayer } from '@/hooks/use-roster'
-import { cn } from '@/lib/utils'
 import { getSportEmoji } from '@/lib/sport-utils'
 import { Users, Star, Loader2 } from 'lucide-react'
 

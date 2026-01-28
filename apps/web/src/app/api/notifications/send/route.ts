@@ -203,7 +203,7 @@ export async function POST(request: NextRequest) {
     }
 
     const body: SendNotificationBody = await request.json()
-    const { gameId, homeTeamId, awayTeamId, gameType, notificationType } = body
+    const { gameId, homeTeamId, awayTeamId, gameType } = body
 
     if (!gameId) {
       return NextResponse.json({ error: 'gameId is required' }, { status: 400 })

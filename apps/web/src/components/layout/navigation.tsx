@@ -7,7 +7,6 @@ import {
   Radio,
   User,
   Plus,
-  Compass,
   MessageSquare,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'

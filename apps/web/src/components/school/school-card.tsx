@@ -13,7 +13,6 @@ interface SchoolCardProps {
 export function SchoolCard({ school, showIsland = true }: SchoolCardProps) {
   const colors = school.colors as { primary?: string; secondary?: string } | null
   const primaryColor = colors?.primary || '#374151'
-  const league = school.league ? LEAGUES[school.league] : null
 
   return (
     <Link href={`/school/${school.id}`}>

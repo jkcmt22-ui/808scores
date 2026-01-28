@@ -2,7 +2,6 @@
 
 import { useEffect, useState, useCallback } from 'react'
 import { X, Download, Smartphone } from 'lucide-react'
-import { cn } from '@/lib/utils'
 
 interface BeforeInstallPromptEvent extends Event {
   prompt: () => Promise<void>
