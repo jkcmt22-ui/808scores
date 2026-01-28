@@ -14,16 +14,14 @@ import {
   Search,
   X,
   Save,
-  Clock,
   MapPin,
-  Filter,
   Copy,
   Trash2,
 } from 'lucide-react'
 import { Button, Badge, Input, Card } from '@/components/ui'
 import { useAuth } from '@/hooks'
 import { createClient } from '@/lib/supabase/client'
-import { cn, formatGameTime } from '@/lib/utils'
+import { cn } from '@/lib/utils'
 import type { GameWithTeams, Sport, School, GameStatus, GameType } from '@/types/database'
 
 interface GameFormData {

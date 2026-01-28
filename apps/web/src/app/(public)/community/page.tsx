@@ -170,7 +170,7 @@ function MessageItem({
 }
 
 export default function CommunityPage() {
-  const { user, isLoading: authLoading } = useAuth()
+  const { user } = useAuth()
   const {
     messages,
     isLoading,

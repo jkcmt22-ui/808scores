@@ -17,7 +17,6 @@ import {
   Swords,
   User,
   Check,
-  Copy,
   Building2,
   BarChart3,
   ChevronRight,
@@ -133,7 +132,7 @@ export function GameClient({ params }: GamePageProps) {
       // Timeout will be cleaned up in useEffect
       const timeoutId = setTimeout(() => setShareStatus('idle'), 2000)
       return () => clearTimeout(timeoutId)
-    } catch (err) {
+    } catch {
       // Failed to copy
     }
   }, [game, id])

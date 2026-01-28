@@ -156,7 +156,7 @@ export default function SchoolsAdminPage() {
         try {
           const error = await response.json()
           errorMessage = error.message || errorMessage
-        } catch (e) {
+        } catch {
           // Response is not JSON, use default message
         }
         throw new Error(errorMessage)
@@ -211,7 +211,7 @@ export default function SchoolsAdminPage() {
         try {
           const error = await response.json()
           errorMessage = error.message || errorMessage
-        } catch (e) {
+        } catch {
           // Response is not JSON, use default message
         }
         throw new Error(errorMessage)

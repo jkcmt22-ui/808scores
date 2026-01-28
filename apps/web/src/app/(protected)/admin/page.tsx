@@ -27,7 +27,6 @@ import {
   Minus,
   Save,
   X,
-  ArrowUpDown,
   ArrowUp,
   ArrowDown,
 } from 'lucide-react'

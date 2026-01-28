@@ -153,7 +153,7 @@ export default function BetaCodesPage() {
 
       setMessage({ type: 'success', text: 'Code deactivated' })
       fetchCodes()
-    } catch (err) {
+    } catch {
       setMessage({ type: 'error', text: 'Failed to deactivate code' })
     }
   }
