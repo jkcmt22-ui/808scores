@@ -412,9 +412,10 @@ export default function AdminPage() {
         time_remaining: formData.time_remaining || null,
         is_verified: formData.is_verified,
         golden_game: formData.golden_game,
-        photos_url: formData.photos_url || null,
-        instagram_url: formData.instagram_url || null,
-        streaming_url: formData.streaming_url || null,
+        // Temporarily commented out until migration is applied:
+        // photos_url: formData.photos_url || null,
+        // instagram_url: formData.instagram_url || null,
+        // streaming_url: formData.streaming_url || null,
       }
 
       console.log('Creating game with data:', gameData)
@@ -470,9 +471,10 @@ export default function AdminPage() {
         is_verified: formData.is_verified,
         golden_game: formData.golden_game,
         venue: formData.venue || null,
-        photos_url: formData.photos_url || null,
-        instagram_url: formData.instagram_url || null,
-        streaming_url: formData.streaming_url || null,
+        // Temporarily commented out until migration is applied:
+        // photos_url: formData.photos_url || null,
+        // instagram_url: formData.instagram_url || null,
+        // streaming_url: formData.streaming_url || null,
       }
 
       const { data: updatedGame, error } = await supabase
