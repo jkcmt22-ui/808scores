@@ -29,6 +29,8 @@ import {
   X,
   ArrowUp,
   ArrowDown,
+  ChevronLeft,
+  ChevronRight,
 } from 'lucide-react'
 import { Button, Badge, Input, Card } from '@/components/ui'
 import { useAuth } from '@/hooks'
@@ -130,6 +132,7 @@ export default function AdminPage() {
   })
   const [searchTerm, setSearchTerm] = useState('')
   const [statusFilter, setStatusFilter] = useState<string>('all')
+  const [gamesPage, setGamesPage] = useState(1)
   const [editingGame, setEditingGame] = useState<GameWithTeams | null>(null)
   const [formData, setFormData] = useState<GameFormData>(initialFormData)
   const [isSaving, setIsSaving] = useState(false)
@@ -371,6 +374,19 @@ export default function AdminPage() {
       return dateSortOrder === 'desc' ? dateB - dateA : dateA - dateB
     })
   }, [games, searchTerm, statusFilter, dateSortOrder])
+
+  // Paginate games
+  const GAMES_PER_PAGE = 20
+  const totalGamePages = Math.ceil(filteredGames.length / GAMES_PER_PAGE)
+  const paginatedGames = useMemo(() => {
+    const startIndex = (gamesPage - 1) * GAMES_PER_PAGE
+    return filteredGames.slice(startIndex, startIndex + GAMES_PER_PAGE)
+  }, [filteredGames, gamesPage])
+
+  // Reset to page 1 when filters change
+  useEffect(() => {
+    setGamesPage(1)
+  }, [searchTerm, statusFilter, dateSortOrder])
 
   // Handle form changes
   const handleFormChange = (field: keyof GameFormData, value: string | number | boolean) => {
@@ -1012,17 +1028,74 @@ export default function AdminPage() {
                 <p className="text-foreground-muted font-display">No games found</p>
               </div>
             ) : (
-              <div className="space-y-3">
-                {filteredGames.map((game) => (
-                  <GameRow
-                    key={game.id}
-                    game={game}
-                    onEdit={() => startEditing(game)}
-                    onDelete={() => handleDeleteGame(game.id)}
-                    onQuickUpdate={handleQuickUpdate}
-                  />
-                ))}
-              </div>
+              <>
+                <div className="space-y-3">
+                  {paginatedGames.map((game) => (
+                    <GameRow
+                      key={game.id}
+                      game={game}
+                      onEdit={() => startEditing(game)}
+                      onDelete={() => handleDeleteGame(game.id)}
+                      onQuickUpdate={handleQuickUpdate}
+                    />
+                  ))}
+                </div>
+
+                {/* Pagination Controls */}
+                {totalGamePages > 1 && (
+                  <div className="flex items-center justify-between mt-6 p-4 border-2 border-border bg-background-secondary">
+                    <div className="text-sm text-foreground-muted">
+                      Showing {(gamesPage - 1) * GAMES_PER_PAGE + 1}-{Math.min(gamesPage * GAMES_PER_PAGE, filteredGames.length)} of {filteredGames.length} games
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setGamesPage(p => Math.max(1, p - 1))}
+                        disabled={gamesPage === 1}
+                      >
+                        <ChevronLeft className="h-4 w-4" />
+                      </Button>
+                      <div className="flex items-center gap-1">
+                        {Array.from({ length: totalGamePages }, (_, i) => i + 1).map((page) => {
+                          // Show first, last, current, and neighbors
+                          if (
+                            page === 1 ||
+                            page === totalGamePages ||
+                            Math.abs(page - gamesPage) <= 1
+                          ) {
+                            return (
+                              <Button
+                                key={page}
+                                variant={page === gamesPage ? 'default' : 'outline'}
+                                size="sm"
+                                onClick={() => setGamesPage(page)}
+                                className="min-w-[2.5rem]"
+                              >
+                                {page}
+                              </Button>
+                            )
+                          } else if (
+                            page === gamesPage - 2 ||
+                            page === gamesPage + 2
+                          ) {
+                            return <span key={page} className="px-1">...</span>
+                          }
+                          return null
+                        })}
+                      </div>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setGamesPage(p => Math.min(totalGamePages, p + 1))}
+                        disabled={gamesPage === totalGamePages}
+                      >
+                        <ChevronRight className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  </div>
+                )}
+              </>
             )}
           </div>
         )}
