@@ -663,6 +663,86 @@ export interface Database {
         Insert: Omit<Database['public']['Tables']['tournament_teams']['Row'], 'id' | 'created_at' | 'eliminated' | 'wins' | 'losses' | 'points_for' | 'points_against'>
         Update: Partial<Database['public']['Tables']['tournament_teams']['Insert']>
       }
+      player_game_stats: {
+        Row: {
+          id: string
+          game_id: string
+          player_id: string
+          school_id: string
+          // Common stats
+          minutes_played: number | null
+          points: number
+          is_starter: boolean
+          // Basketball stats
+          field_goals_made: number | null
+          field_goals_attempted: number | null
+          three_pointers_made: number | null
+          three_pointers_attempted: number | null
+          free_throws_made: number | null
+          free_throws_attempted: number | null
+          rebounds_offensive: number | null
+          rebounds_defensive: number | null
+          assists: number | null
+          steals: number | null
+          blocks: number | null
+          turnovers: number | null
+          fouls: number | null
+          // Football stats
+          passing_yards: number | null
+          passing_tds: number | null
+          passing_ints: number | null
+          completions: number | null
+          pass_attempts: number | null
+          rushing_yards: number | null
+          rushing_tds: number | null
+          rushing_attempts: number | null
+          receiving_yards: number | null
+          receiving_tds: number | null
+          receptions: number | null
+          tackles: number | null
+          sacks: number | null
+          interceptions: number | null
+          // Soccer stats
+          goals: number | null
+          assists_soccer: number | null
+          shots: number | null
+          shots_on_target: number | null
+          saves: number | null
+          yellow_cards: number | null
+          red_cards: number | null
+          // Volleyball stats
+          kills: number | null
+          errors_attack: number | null
+          attack_attempts: number | null
+          aces: number | null
+          serve_errors: number | null
+          digs: number | null
+          blocks_solo: number | null
+          blocks_assist: number | null
+          // Baseball/Softball stats
+          at_bats: number | null
+          hits: number | null
+          runs: number | null
+          rbis: number | null
+          doubles: number | null
+          triples: number | null
+          home_runs: number | null
+          walks: number | null
+          strikeouts_batting: number | null
+          stolen_bases: number | null
+          innings_pitched: number | null
+          hits_allowed: number | null
+          runs_allowed: number | null
+          earned_runs: number | null
+          strikeouts_pitching: number | null
+          walks_pitching: number | null
+          // Timestamps
+          created_at: string
+          updated_at: string
+        }
+        Insert: Omit<Database['public']['Tables']['player_game_stats']['Row'], 'id' | 'created_at' | 'updated_at' | 'points' | 'is_starter'> & { points?: number; is_starter?: boolean }
+        Update: Partial<Database['public']['Tables']['player_game_stats']['Insert']>
+      }
     }
   }
 }
@@ -697,6 +777,7 @@ export type SportFollow = Database['public']['Tables']['sport_follows']['Row']
 export type TrustedReporterCode = Database['public']['Tables']['trusted_reporter_codes']['Row']
 export type Tournament = Database['public']['Tables']['tournaments']['Row']
 export type TournamentTeam = Database['public']['Tables']['tournament_teams']['Row']
+export type PlayerGameStats = Database['public']['Tables']['player_game_stats']['Row']
 
 // Extended types with relations
 export interface GameWithTeams extends Game {

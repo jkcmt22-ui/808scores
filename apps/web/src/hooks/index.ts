@@ -31,3 +31,12 @@ export { useOnlineStatus } from './use-online-status'
 // React Query hooks (with caching)
 export { useQueryGames, useQueryLiveGames, useQueryGame } from './use-query-games'
 export { useQuerySchools, useQuerySchool, useQuerySchoolsByLeague } from './use-query-schools'
+
+// Admin stat entry
+export {
+  useGameStats,
+  useGameStatsMutations,
+  type GameWithDetails,
+  type PlayerWithStats,
+  type TeamRosterWithStats,
+} from './use-game-stats'

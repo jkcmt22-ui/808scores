@@ -31,6 +31,7 @@ import {
   ArrowDown,
   ChevronLeft,
   ChevronRight,
+  BarChart2,
 } from 'lucide-react'
 import { Button, Badge, Input, Card } from '@/components/ui'
 import { useAuth } from '@/hooks'
@@ -1043,6 +1044,7 @@ export default function AdminPage() {
                       onEdit={() => startEditing(game)}
                       onDelete={() => handleDeleteGame(game.id)}
                       onQuickUpdate={handleQuickUpdate}
+                      onEnterStats={() => router.push(`/admin/games/${game.id}/stats`)}
                     />
                   ))}
                 </div>
@@ -1498,11 +1500,13 @@ function GameRow({
   onEdit,
   onDelete,
   onQuickUpdate,
+  onEnterStats,
 }: {
   game: GameWithTeams
   onEdit: () => void
   onDelete: () => void
   onQuickUpdate: (gameId: string, updates: { home_score?: number; away_score?: number; status?: GameStatus }) => Promise<void>
+  onEnterStats: () => void
 }) {
   const isLive = isGameLive(game.status)
   const isFinal = isGameFinal(game.status)
@@ -1695,6 +1699,11 @@ function GameRow({
             </>
           ) : (
             <>
+              {isFinal && (
+                <Button variant="outline" size="icon" onClick={onEnterStats} title="Enter Stats">
+                  <BarChart2 className="h-4 w-4" />
+                </Button>
+              )}
               <Button variant="outline" size="icon" onClick={onEdit}>
                 <Edit2 className="h-4 w-4" />
               </Button>
