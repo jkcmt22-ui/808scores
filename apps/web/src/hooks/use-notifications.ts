@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState, useCallback, useMemo } from 'react'
+import { useEffect, useState, useCallback, useMemo, useRef } from 'react'
 import { createClient } from '@/lib/supabase/client'
 
 export interface Notification {
@@ -18,6 +18,8 @@ export function useNotifications(userId: string | undefined) {
   const [notifications, setNotifications] = useState<Notification[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<Error | null>(null)
+  const hasFetchedRef = useRef(false)
+  const isSubscribedRef = useRef(false)
 
   const supabase = useMemo(() => createClient(), [])
 
@@ -57,12 +59,19 @@ export function useNotifications(userId: string | undefined) {
   }, [supabase, userId])
 
   useEffect(() => {
+    // Prevent double-fetch on mount (React StrictMode)
+    if (hasFetchedRef.current && !userId) return
+    hasFetchedRef.current = true
     fetchNotifications()
-  }, [fetchNotifications])
+  }, [fetchNotifications, userId])
 
   // Subscribe to new notifications
   useEffect(() => {
     if (!supabase || !userId) return
+
+    // Prevent duplicate subscriptions
+    if (isSubscribedRef.current) return
+    isSubscribedRef.current = true
 
     const channel = supabase
       .channel(`notifications-${userId}`)
@@ -96,6 +105,7 @@ export function useNotifications(userId: string | undefined) {
 
     return () => {
       supabase.removeChannel(channel)
+      isSubscribedRef.current = false
     }
   }, [supabase, userId])
 

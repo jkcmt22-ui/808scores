@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState, useCallback, useRef } from 'react'
+import { useEffect, useState, useCallback, useRef, useMemo } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { isValidGifUrl } from '@808scores/shared'
 import type { User } from '@supabase/supabase-js'
@@ -50,13 +50,14 @@ export function useGeneralChat(
   user: User | null,
   { limit = 50 }: UseGeneralChatOptions = {}
 ): UseGeneralChatReturn {
-  const supabase = createClient()
+  const supabase = useMemo(() => createClient(), [])
   const [messages, setMessages] = useState<GeneralChatMessage[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<Error | null>(null)
   const [hasMore, setHasMore] = useState(true)
   const [isSending, setIsSending] = useState(false)
   const channelRef = useRef<ReturnType<NonNullable<typeof supabase>['channel']> | null>(null)
+  const isSubscribedRef = useRef(false)
 
   // Fetch messages
   const fetchMessages = useCallback(async (offset = 0) => {
@@ -141,6 +142,10 @@ export function useGeneralChat(
   useEffect(() => {
     if (!supabase) return
 
+    // Prevent duplicate subscriptions (React StrictMode protection)
+    if (isSubscribedRef.current) return
+    isSubscribedRef.current = true
+
     channelRef.current = supabase
       .channel('general-chat-web')
       .on(
@@ -189,6 +194,7 @@ export function useGeneralChat(
     return () => {
       if (channelRef.current) {
         supabase.removeChannel(channelRef.current)
+        isSubscribedRef.current = false
       }
     }
   }, [supabase])

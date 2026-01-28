@@ -79,16 +79,27 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
     })
   }, [authLoading, user, profile])
 
-  // Track loading state with timeout
+  // Track loading state with timeout and auto-retry
   useEffect(() => {
     if (authLoading) {
       loadingIdRef.current = logLoadingStart('AdminLayout', 'auth check')
       setLoadingTimeout(false)
 
+      // Check if we've already retried (persisted in sessionStorage)
+      const retryKey = 'admin-auth-retry'
+      const hasRetried = sessionStorage.getItem(retryKey) === 'true'
+
       // Timeout after 6 seconds (slightly longer than auth provider's 5s timeout)
       const timeout = setTimeout(() => {
-        setLoadingTimeout(true)
-        logLoadingEnd(loadingIdRef.current, 'timeout')
+        if (!hasRetried) {
+          // Auto-retry once
+          sessionStorage.setItem(retryKey, 'true')
+          logLoadingEnd(loadingIdRef.current, 'timeout') // Will auto-retry
+          window.location.reload()
+        } else {
+          setLoadingTimeout(true)
+          logLoadingEnd(loadingIdRef.current, 'timeout')
+        }
       }, 6000)
 
       return () => clearTimeout(timeout)
@@ -96,6 +107,8 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
       logLoadingEnd(loadingIdRef.current, 'success')
       loadingIdRef.current = ''
       setLoadingTimeout(false) // Reset timeout state when loading completes
+      // Clear retry flag on success
+      sessionStorage.removeItem('admin-auth-retry')
     }
   }, [authLoading])
 
@@ -124,13 +137,19 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
           <div className="flex min-h-[50vh] flex-col items-center justify-center p-4">
             <AlertCircle className="mb-4 h-12 w-12 text-neon-pink" />
             <h1 className="mb-2 font-display text-xl font-bold text-foreground uppercase">
-              Loading Timeout
+              Connection Issue
             </h1>
             <p className="mb-4 text-foreground-muted text-sm text-center max-w-md">
-              Taking longer than expected. Please try again.
+              Unable to verify your session. This may be due to a slow connection or server issue.
             </p>
-            <Button onClick={() => window.location.reload()} variant="outline">
-              Retry
+            <Button
+              onClick={() => {
+                sessionStorage.removeItem('admin-auth-retry')
+                window.location.reload()
+              }}
+              variant="outline"
+            >
+              Try Again
             </Button>
           </div>
         </div>
