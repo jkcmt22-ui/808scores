@@ -67,7 +67,7 @@ export default function SubmitPage({ params }: SubmitPageProps) {
   const router = useRouter()
   const { game, isLoading: gameLoading } = useGame(gameId)
   const { user, profile } = useAuth()
-  const supabase = createClient()!
+  const supabase = createClient()
 
   const [step, setStep] = useState<'type' | 'score' | 'extras' | 'confirm' | 'success' | 'queued'>('type')
   const [submissionType, setSubmissionType] = useState<SubmissionType | null>(null)

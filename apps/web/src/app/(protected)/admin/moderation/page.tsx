@@ -35,7 +35,7 @@ type FilterType = 'all' | 'reported' | 'hidden'
 export default function ModerationPage() {
   const router = useRouter()
   const { user, profile, isLoading: authLoading } = useAuth()
-  const supabase = useMemo(() => createClient()!, [])
+  const supabase = useMemo(() => createClient(), [])
 
   const [messages, setMessages] = useState<MessageWithDetails[]>([])
   const [isLoading, setIsLoading] = useState(true)
@@ -48,6 +48,11 @@ export default function ModerationPage() {
   // Fetch messages
   useEffect(() => {
     const fetchMessages = async () => {
+      if (!supabase) {
+        setIsLoading(false)
+        return
+      }
+
       setIsLoading(true)
 
       const { data, error } = await supabase
@@ -103,6 +108,11 @@ export default function ModerationPage() {
 
   // Toggle message visibility
   const toggleHidden = async (messageId: string, currentlyHidden: boolean) => {
+    if (!supabase) {
+      setMessage({ type: 'error', text: 'Database connection not available' })
+      return
+    }
+
     try {
       const { error } = await supabase
         .from('chat_messages')
@@ -130,6 +140,11 @@ export default function ModerationPage() {
   // Delete message permanently
   const deleteMessage = async (messageId: string) => {
     if (!confirm('Permanently delete this message? This cannot be undone.')) return
+
+    if (!supabase) {
+      setMessage({ type: 'error', text: 'Database connection not available' })
+      return
+    }
 
     try {
       const { error } = await supabase

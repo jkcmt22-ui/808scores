@@ -90,7 +90,7 @@ export default function TournamentsAdminPage() {
   const router = useRouter()
   const { user, profile, isLoading: authLoading } = useAuth()
   const { sports } = useSports()
-  const supabase = useMemo(() => createClient()!, [])
+  const supabase = useMemo(() => createClient(), [])
 
   const [tournaments, setTournaments] = useState<TournamentWithSport[]>([])
   const [schools, setSchools] = useState<School[]>([])

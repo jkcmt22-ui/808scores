@@ -17,7 +17,7 @@ export function ComingSoon({ maxGames = 5 }: ComingSoonProps) {
   const [isLoading, setIsLoading] = useState(true)
   const [isExpanded, setIsExpanded] = useState(false)
 
-  const supabase = useMemo(() => createClient()!, [])
+  const supabase = useMemo(() => createClient(), [])
 
   useEffect(() => {
     const fetchUpcomingGames = async () => {

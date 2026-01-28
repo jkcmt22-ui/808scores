@@ -116,7 +116,7 @@ function isToday(date: Date): boolean {
 export default function ScheduleAdminPage() {
   const router = useRouter()
   const { user, profile, isLoading: authLoading } = useAuth()
-  const supabase = useMemo(() => createClient()!, [])
+  const supabase = useMemo(() => createClient(), [])
 
   // Week navigation
   const [currentWeekStart, setCurrentWeekStart] = useState(() => getWeekStart(new Date()))

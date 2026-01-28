@@ -28,7 +28,7 @@ export default function AdminRaffleDetailPage() {
   const [drawingResults, setDrawingResults] = useState<DrawingResult[] | null>(null)
   const [error, setError] = useState<string | null>(null)
 
-  const supabase = createClient()!
+  const supabase = createClient()
   const hasAdminAccess = profile?.is_admin === true || profile?.is_super_admin === true
 
   const fetchData = useCallback(async () => {

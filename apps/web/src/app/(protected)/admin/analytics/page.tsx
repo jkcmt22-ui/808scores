@@ -96,7 +96,7 @@ interface AnalyticsData {
 export default function AnalyticsPage() {
   const router = useRouter()
   const { user, profile, isLoading: authLoading } = useAuth()
-  const supabase = useMemo(() => createClient()!, [])
+  const supabase = useMemo(() => createClient(), [])
 
   const [data, setData] = useState<AnalyticsData | null>(null)
   const [isLoading, setIsLoading] = useState(true)
@@ -105,6 +105,12 @@ export default function AnalyticsPage() {
   const isSuperAdmin = profile?.is_super_admin === true
 
   const fetchAnalytics = useCallback(async () => {
+    if (!supabase) {
+      setError('Database connection not available')
+      setIsLoading(false)
+      return
+    }
+
     setIsLoading(true)
     setError(null)
 

@@ -50,7 +50,7 @@ export function SchoolClient({ params }: SchoolPageProps) {
   const [error, setError] = useState<string | null>(null)
   const [followLoading, setFollowLoading] = useState(false)
 
-  const supabase = useMemo(() => createClient()!, [])
+  const supabase = useMemo(() => createClient(), [])
 
   // Fetch schedule data
   const { schedules, isLoading: scheduleLoading } = useSchoolSchedule(id)
@@ -62,6 +62,12 @@ export function SchoolClient({ params }: SchoolPageProps) {
   // Fetch school data
   useEffect(() => {
     const fetchSchool = async () => {
+      if (!supabase) {
+        setError('Database connection not available')
+        setIsLoading(false)
+        return
+      }
+
       setIsLoading(true)
       setError(null)
 

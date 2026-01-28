@@ -87,7 +87,7 @@ export function GameClient({ params }: GamePageProps) {
   const [loadingSubmissions, setLoadingSubmissions] = useState(true)
   const [shareStatus, setShareStatus] = useState<'idle' | 'copied' | 'shared'>('idle')
 
-  const supabase = useMemo(() => createClient()!, [])
+  const supabase = useMemo(() => createClient(), [])
 
   // Share functionality
   const handleShare = useCallback(async () => {
@@ -148,6 +148,11 @@ export function GameClient({ params }: GamePageProps) {
 
   // Fetch submissions for this game
   useEffect(() => {
+    if (!supabase) {
+      setLoadingSubmissions(false)
+      return
+    }
+
     const fetchSubmissions = async () => {
       setLoadingSubmissions(true)
       const { data, error: subError } = await supabase

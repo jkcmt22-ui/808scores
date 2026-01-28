@@ -53,10 +53,15 @@ export default function AdminPrizesPage() {
   const [isSaving, setIsSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
-  const supabase = createClient()!
+  const supabase = createClient()
   const hasAdminAccess = profile?.is_admin === true || profile?.is_super_admin === true
 
   const fetchPrizes = useCallback(async () => {
+    if (!supabase) {
+      setIsLoading(false)
+      return
+    }
+
     setIsLoading(true)
     const { data, error } = await supabase
       .from('prizes')
@@ -102,6 +107,11 @@ export default function AdminPrizesPage() {
   }
 
   const handleSave = async () => {
+    if (!supabase) {
+      setError('Database connection not available')
+      return
+    }
+
     if (!formData.name.trim()) {
       setError('Prize name is required')
       return
@@ -160,6 +170,8 @@ export default function AdminPrizesPage() {
 
   const handleDelete = async (prize: Prize) => {
     if (!confirm(`Delete "${prize.name}"? This cannot be undone.`)) return
+
+    if (!supabase) return
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const { error } = await (supabase as any)

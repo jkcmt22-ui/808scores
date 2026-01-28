@@ -78,7 +78,7 @@ export default function ProfileSettingsPage() {
   const [isTogglingPush, setIsTogglingPush] = useState(false)
   const [pushError, setPushError] = useState<string | null>(null)
 
-  const supabase = createClient()!
+  const supabase = createClient()
 
   // Initialize from profile
   useEffect(() => {

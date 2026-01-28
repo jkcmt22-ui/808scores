@@ -65,7 +65,7 @@ const ROLE_COLORS: Record<SchoolManagerRole, string> = {
 export default function SchoolManagersAdminPage() {
   const router = useRouter()
   const { user, profile, isLoading: authLoading } = useAuth()
-  const supabase = useMemo(() => createClient()!, [])
+  const supabase = useMemo(() => createClient(), [])
 
   const [managers, setManagers] = useState<SchoolManagerWithUser[]>([])
   const [schools, setSchools] = useState<School[]>([])
