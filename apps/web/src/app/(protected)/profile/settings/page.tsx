@@ -263,6 +263,11 @@ export default function ProfileSettingsPage() {
       return
     }
 
+    if (!supabase) {
+      setAvatarError('Database connection not available')
+      return
+    }
+
     setIsUploadingAvatar(true)
     setAvatarError(null)
 

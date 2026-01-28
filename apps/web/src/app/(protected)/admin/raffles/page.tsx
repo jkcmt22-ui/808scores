@@ -82,6 +82,11 @@ export default function AdminRafflesPage() {
   const hasAdminAccess = profile?.is_admin === true || profile?.is_super_admin === true
 
   const fetchData = useCallback(async () => {
+    if (!supabase) {
+      setIsLoading(false)
+      return
+    }
+
     setIsLoading(true)
 
     const [rafflesResult, prizesResult] = await Promise.all([

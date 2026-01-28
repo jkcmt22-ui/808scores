@@ -187,6 +187,13 @@ export default function SubmitPage({ params }: SubmitPageProps) {
       return
     }
 
+    // Check database connection
+    if (!supabase) {
+      setSubmitError('Database connection not available')
+      setIsSubmitting(false)
+      return
+    }
+
     // Online submission
     try {
       // Create the submission

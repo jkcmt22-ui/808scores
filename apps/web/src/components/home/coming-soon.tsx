@@ -21,6 +21,11 @@ export function ComingSoon({ maxGames = 5 }: ComingSoonProps) {
 
   useEffect(() => {
     const fetchUpcomingGames = async () => {
+      if (!supabase) {
+        setIsLoading(false)
+        return
+      }
+
       setIsLoading(true)
 
       const now = new Date()

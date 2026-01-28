@@ -79,6 +79,8 @@ export function FavoritesModal({ userId, onComplete }: FavoritesModalProps) {
 
   // Handle completing onboarding
   const handleComplete = async () => {
+    if (!supabase) return
+
     setIsSubmitting(true)
 
     try {
@@ -110,6 +112,8 @@ export function FavoritesModal({ userId, onComplete }: FavoritesModalProps) {
 
   // Handle skip
   const handleSkip = async () => {
+    if (!supabase) return
+
     setIsSubmitting(true)
     try {
       await supabase

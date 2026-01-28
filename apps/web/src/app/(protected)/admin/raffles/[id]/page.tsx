@@ -32,6 +32,12 @@ export default function AdminRaffleDetailPage() {
   const hasAdminAccess = profile?.is_admin === true || profile?.is_super_admin === true
 
   const fetchData = useCallback(async () => {
+    if (!supabase) {
+      setError('Database connection not available')
+      setIsLoading(false)
+      return
+    }
+
     setIsLoading(true)
 
     // Fetch raffle
@@ -110,6 +116,8 @@ export default function AdminRaffleDetailPage() {
   }
 
   const handleMarkClaimed = async (winnerId: string) => {
+    if (!supabase) return
+
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const { error } = await (supabase as any)
       .from('raffle_winners')

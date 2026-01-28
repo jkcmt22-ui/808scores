@@ -90,6 +90,11 @@ export default function SchoolManagersAdminPage() {
 
   // Fetch managers and schools
   const fetchData = useCallback(async () => {
+    if (!supabase) {
+      setIsLoading(false)
+      return
+    }
+
     setIsLoading(true)
 
     // Fetch school managers with user and school details
@@ -134,6 +139,11 @@ export default function SchoolManagersAdminPage() {
   const searchUsers = useCallback(async (term: string) => {
     if (!term || term.length < 2) {
       setUserSearchResults([])
+      return
+    }
+
+    if (!supabase) {
+      setIsSearching(false)
       return
     }
 
@@ -233,6 +243,11 @@ export default function SchoolManagersAdminPage() {
       return
     }
 
+    if (!supabase) {
+      setMessage({ type: 'error', text: 'Database connection not available' })
+      return
+    }
+
     setIsSaving(true)
     setMessage(null)
 
@@ -280,6 +295,11 @@ export default function SchoolManagersAdminPage() {
   const handleUpdateManager = async () => {
     if (!editingManager) return
 
+    if (!supabase) {
+      setMessage({ type: 'error', text: 'Database connection not available' })
+      return
+    }
+
     setIsSaving(true)
     setMessage(null)
 
@@ -317,6 +337,8 @@ export default function SchoolManagersAdminPage() {
     if (!confirm(`Remove ${manager.user?.display_name || 'this user'} as manager of ${manager.school?.name}?`)) {
       return
     }
+
+    if (!supabase) return
 
     try {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any

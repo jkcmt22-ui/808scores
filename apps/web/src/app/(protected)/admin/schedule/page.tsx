@@ -148,6 +148,11 @@ export default function ScheduleAdminPage() {
 
   // Fetch games for the current week
   const fetchGames = useCallback(async () => {
+    if (!supabase) {
+      setIsLoading(false)
+      return
+    }
+
     setIsLoading(true)
 
     const { data, error } = await supabase
@@ -174,6 +179,8 @@ export default function ScheduleAdminPage() {
   // Initial data fetch
   useEffect(() => {
     const fetchInitialData = async () => {
+      if (!supabase) return
+
       // Fetch sports
       const { data: sportsData } = await supabase
         .from('sports')
@@ -315,6 +322,11 @@ export default function ScheduleAdminPage() {
       return
     }
 
+    if (!supabase) {
+      setMessage({ type: 'error', text: 'Database connection not available' })
+      return
+    }
+
     setIsSaving(true)
     setMessage(null)
 
@@ -350,6 +362,11 @@ export default function ScheduleAdminPage() {
   // Update game
   const handleUpdateGame = async () => {
     if (!editingGame) return
+
+    if (!supabase) {
+      setMessage({ type: 'error', text: 'Database connection not available' })
+      return
+    }
 
     setIsSaving(true)
     setMessage(null)
@@ -388,6 +405,11 @@ export default function ScheduleAdminPage() {
       return
     }
 
+    if (!supabase) {
+      setMessage({ type: 'error', text: 'Database connection not available' })
+      return
+    }
+
     try {
       const { error } = await supabase.from('games').delete().eq('id', gameId)
       if (error) throw error
@@ -402,6 +424,11 @@ export default function ScheduleAdminPage() {
 
   // Duplicate game (for recurring schedule)
   const handleDuplicateGame = async (game: GameWithTeams, daysToAdd: number) => {
+    if (!supabase) {
+      setMessage({ type: 'error', text: 'Database connection not available' })
+      return
+    }
+
     const newDate = new Date(game.scheduled_at)
     newDate.setDate(newDate.getDate() + daysToAdd)
 

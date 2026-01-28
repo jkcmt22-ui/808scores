@@ -53,6 +53,11 @@ export default function ApplyTrustedReporterPage() {
     const checkExistingApplication = async () => {
       if (!profile?.id) return
 
+      if (!supabase) {
+        setIsCheckingApplication(false)
+        return
+      }
+
       const { data, error } = await supabase
         .from('trusted_reporter_applications')
         .select('id, status, created_at, reviewed_at')
@@ -119,6 +124,11 @@ export default function ApplyTrustedReporterPage() {
     // Validate required fields
     if (!fullName.trim() || !role.trim()) {
       setMessage({ type: 'error', text: 'Please fill in all required fields' })
+      return
+    }
+
+    if (!supabase) {
+      setMessage({ type: 'error', text: 'Database connection not available' })
       return
     }
 

@@ -117,6 +117,11 @@ export default function TournamentsAdminPage() {
   // Fetch data
   useEffect(() => {
     const fetchData = async () => {
+      if (!supabase) {
+        setIsLoading(false)
+        return
+      }
+
       setIsLoading(true)
 
       // Fetch tournaments with sport
@@ -173,6 +178,11 @@ export default function TournamentsAdminPage() {
       return
     }
 
+    if (!supabase) {
+      setMessage({ type: 'error', text: 'Database connection not available' })
+      return
+    }
+
     setIsSaving(true)
     setMessage(null)
 
@@ -219,6 +229,11 @@ export default function TournamentsAdminPage() {
   // Update tournament
   const handleUpdateTournament = async () => {
     if (!editingTournament) return
+
+    if (!supabase) {
+      setMessage({ type: 'error', text: 'Database connection not available' })
+      return
+    }
 
     setIsSaving(true)
     setMessage(null)
@@ -270,6 +285,8 @@ export default function TournamentsAdminPage() {
       return
     }
 
+    if (!supabase) return
+
     try {
       const { error } = await supabase
         .from('tournaments')
@@ -312,6 +329,8 @@ export default function TournamentsAdminPage() {
     setSelectedTournament(tournament)
     setShowTeamsModal(true)
 
+    if (!supabase) return
+
     // Fetch tournament teams
     const { data } = await supabase
       .from('tournament_teams')
@@ -325,6 +344,8 @@ export default function TournamentsAdminPage() {
   // Add team to tournament
   const handleAddTeam = async () => {
     if (!selectedTournament || !selectedSchoolId) return
+
+    if (!supabase) return
 
     try {
       const { error } = await supabase
@@ -361,6 +382,8 @@ export default function TournamentsAdminPage() {
   const handleRemoveTeam = async (teamId: string) => {
     if (!confirm('Remove this team from the tournament?')) return
 
+    if (!supabase) return
+
     try {
       const { error } = await supabase
         .from('tournament_teams')
@@ -379,6 +402,8 @@ export default function TournamentsAdminPage() {
 
   // Update team seed
   const handleUpdateTeamSeed = async (teamId: string, seed: number | null) => {
+    if (!supabase) return
+
     try {
       const { error } = await supabase
         .from('tournament_teams')
