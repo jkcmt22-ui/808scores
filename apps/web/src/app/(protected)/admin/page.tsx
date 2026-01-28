@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useMemo, useEffect, useCallback } from 'react'
+import { useState, useMemo, useEffect, useCallback, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import {
   Plus,
@@ -151,6 +151,7 @@ export default function AdminPage() {
   const [userSearchTerm, setUserSearchTerm] = useState('')
   const [dateSortOrder, setDateSortOrder] = useState<'desc' | 'asc'>('desc')
   const [loadedTabs, setLoadedTabs] = useState<Set<TabType>>(new Set())
+  const hasLoadedCommonDataRef = useRef(false)
 
   // Check if user has admin access (must be an admin or super admin)
   const isSuperAdmin = profile?.is_super_admin === true
@@ -239,9 +240,8 @@ export default function AdminPage() {
       setMessage({ type: 'error', text: 'Failed to load games' })
     } finally {
       endTimer()
+      setLoadingStates(prev => ({ ...prev, games: false }))
     }
-
-    setLoadingStates(prev => ({ ...prev, games: false }))
   }, [supabase])
 
   // Fetch applications
@@ -269,9 +269,9 @@ export default function AdminPage() {
     } catch (err) {
       console.error('Error fetching applications:', err)
       setMessage({ type: 'error', text: 'Failed to load applications' })
+    } finally {
+      setLoadingStates(prev => ({ ...prev, applications: false }))
     }
-
-    setLoadingStates(prev => ({ ...prev, applications: false }))
   }, [supabase])
 
   // Fetch codes
@@ -296,9 +296,9 @@ export default function AdminPage() {
     } catch (err) {
       console.error('Error fetching codes:', err)
       setMessage({ type: 'error', text: 'Failed to load codes' })
+    } finally {
+      setLoadingStates(prev => ({ ...prev, codes: false }))
     }
-
-    setLoadingStates(prev => ({ ...prev, codes: false }))
   }, [supabase])
 
   // Fetch users
@@ -324,17 +324,18 @@ export default function AdminPage() {
       console.error('Error fetching users:', err)
       const errorMessage = err instanceof Error ? err.message : 'Unknown error'
       setMessage({ type: 'error', text: `Failed to load users: ${errorMessage}` })
+    } finally {
+      setLoadingStates(prev => ({ ...prev, users: false }))
     }
-
-    setLoadingStates(prev => ({ ...prev, users: false }))
   }, [supabase])
 
   // Load data for active tab
   useEffect(() => {
     if (!hasAdminAccess || authLoading) return
 
-    // Always load common data (sports/schools)
-    if (sports.length === 0 || schools.length === 0) {
+    // Load common data (sports/schools) once
+    if (!hasLoadedCommonDataRef.current) {
+      hasLoadedCommonDataRef.current = true
       fetchCommonData()
     }
 
@@ -360,8 +361,7 @@ export default function AdminPage() {
           break
       }
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [hasAdminAccess, authLoading, activeTab, sports.length, schools.length])
+  }, [hasAdminAccess, authLoading, activeTab, loadedTabs, fetchCommonData, fetchGames, fetchApplications, fetchCodes, fetchUsers])
 
   // Refresh current tab data
   const handleRefresh = useCallback(() => {
