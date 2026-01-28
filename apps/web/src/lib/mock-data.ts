@@ -11,6 +11,7 @@ export const mockSchools: School[] = [
     league: 'OIA',
     division: 'Open',
     colors: { primary: '#CC0000', secondary: '#000000' },
+    logo_url: null,
     created_at: new Date().toISOString(),
   },
   {
@@ -22,6 +23,7 @@ export const mockSchools: School[] = [
     league: 'OIA',
     division: 'Open',
     colors: { primary: '#000080', secondary: '#FFD700' },
+    logo_url: null,
     created_at: new Date().toISOString(),
   },
   {
@@ -33,6 +35,7 @@ export const mockSchools: School[] = [
     league: 'ILH',
     division: 'Open',
     colors: { primary: '#0000FF', secondary: '#FFFFFF' },
+    logo_url: null,
     created_at: new Date().toISOString(),
   },
   {
@@ -44,6 +47,7 @@ export const mockSchools: School[] = [
     league: 'ILH',
     division: 'Open',
     colors: { primary: '#003366', secondary: '#FFCC00' },
+    logo_url: null,
     created_at: new Date().toISOString(),
   },
   {
@@ -55,6 +59,7 @@ export const mockSchools: School[] = [
     league: 'ILH',
     division: 'Open',
     colors: { primary: '#00008B', secondary: '#FFFFFF' },
+    logo_url: null,
     created_at: new Date().toISOString(),
   },
   {
@@ -66,6 +71,7 @@ export const mockSchools: School[] = [
     league: 'OIA',
     division: 'Open',
     colors: { primary: '#FFD700', secondary: '#000000' },
+    logo_url: null,
     created_at: new Date().toISOString(),
   },
   {
@@ -77,6 +83,7 @@ export const mockSchools: School[] = [
     league: 'OIA',
     division: 'Open',
     colors: { primary: '#FF0000', secondary: '#000000' },
+    logo_url: null,
     created_at: new Date().toISOString(),
   },
   {
@@ -88,6 +95,7 @@ export const mockSchools: School[] = [
     league: 'MIL',
     division: 'Division I',
     colors: { primary: '#800000', secondary: '#FFFFFF' },
+    logo_url: null,
     created_at: new Date().toISOString(),
   },
 ]

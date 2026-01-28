@@ -72,6 +72,7 @@ export interface Database {
           league: string | null
           division: string | null
           colors: Json | null
+          logo_url: string | null
           created_at: string
         }
         Insert: Omit<Database['public']['Tables']['schools']['Row'], 'id' | 'created_at'>

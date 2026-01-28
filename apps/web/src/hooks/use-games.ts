@@ -24,15 +24,15 @@ interface UseGamesOptions {
 
 export function useGames(options: UseGamesOptions = {}) {
   const supabase = useMemo(() => createClient(), [])
-  return useGamesBase(supabase, options)
+  return useGamesBase(supabase as any, options)
 }
 
 export function useLiveGames() {
   const supabase = useMemo(() => createClient(), [])
-  return useLiveGamesBase(supabase)
+  return useLiveGamesBase(supabase as any)
 }
 
 export function useGame(gameId: string) {
   const supabase = useMemo(() => createClient(), [])
-  return useGameBase(supabase, gameId)
+  return useGameBase(supabase as any, gameId)
 }

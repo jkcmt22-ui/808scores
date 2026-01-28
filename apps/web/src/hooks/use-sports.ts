@@ -9,5 +9,5 @@ export type { SportCategory }
 
 export function useSports() {
   const supabase = useMemo(() => createClient(), [])
-  return useSportsBase(supabase)
+  return useSportsBase(supabase as any)
 }

@@ -61,7 +61,7 @@ export default function LivePage() {
 
   // Sort with favorites first
   const sortedGames = useMemo(
-    () => sortByFavorites(filteredGames, favoriteTeamIds, favoriteSportIds),
+    () => sortByFavorites(filteredGames as any, favoriteTeamIds, favoriteSportIds),
     [filteredGames, favoriteTeamIds, favoriteSportIds]
   )
 
@@ -99,7 +99,7 @@ export default function LivePage() {
                   <span className="font-display uppercase tracking-wider">Your Teams</span>
                 </div>
                 {sortedGames.favorites.map((game) => (
-                  <GameCard key={game.id} game={game} showSport />
+                  <GameCard key={game.id} game={game as any} showSport />
                 ))}
                 {sortedGames.others.length > 0 && (
                   <div className="border-t border-border/50 pt-3 mt-3" />
@@ -108,7 +108,7 @@ export default function LivePage() {
             )}
             {/* Other live games */}
             {(hasFavorites ? sortedGames.others : filteredGames).map((game) => (
-              <GameCard key={game.id} game={game} showSport />
+              <GameCard key={game.id} game={game as any} showSport />
             ))}
           </div>
         )}

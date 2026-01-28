@@ -152,6 +152,8 @@ export default function AdminPage() {
 
   // Fetch sports and schools (needed for forms)
   const fetchCommonData = useCallback(async () => {
+    if (!supabase) return
+
     try {
       // Fetch sports
       const { data: sportsData, error: sportsError } = await supabase
@@ -180,6 +182,8 @@ export default function AdminPage() {
 
   // Fetch games
   const fetchGames = useCallback(async () => {
+    if (!supabase) return
+
     setLoadingStates(prev => ({ ...prev, games: true }))
     setMessage(null)
 
@@ -211,6 +215,8 @@ export default function AdminPage() {
 
   // Fetch applications
   const fetchApplications = useCallback(async () => {
+    if (!supabase) return
+
     setLoadingStates(prev => ({ ...prev, applications: true }))
     setMessage(null)
 
@@ -239,6 +245,8 @@ export default function AdminPage() {
 
   // Fetch codes
   const fetchCodes = useCallback(async () => {
+    if (!supabase) return
+
     setLoadingStates(prev => ({ ...prev, codes: true }))
     setMessage(null)
 
@@ -264,6 +272,8 @@ export default function AdminPage() {
 
   // Fetch users
   const fetchUsers = useCallback(async () => {
+    if (!supabase) return
+
     setLoadingStates(prev => ({ ...prev, users: true }))
     setMessage(null)
 
@@ -370,6 +380,7 @@ export default function AdminPage() {
 
   // Create game
   const handleCreateGame = async () => {
+    if (!supabase) return
     if (!formData.sport_id || !formData.home_team_id || !formData.away_team_id || !formData.scheduled_at) {
       setMessage({ type: 'error', text: 'Please fill in all required fields' })
       return
@@ -428,6 +439,7 @@ export default function AdminPage() {
 
   // Update game
   const handleUpdateGame = async () => {
+    if (!supabase) return
     if (!editingGame) return
 
     setIsSaving(true)
@@ -481,6 +493,7 @@ export default function AdminPage() {
 
   // Delete game
   const handleDeleteGame = async (gameId: string) => {
+    if (!supabase) return
     if (!confirm('Are you sure you want to delete this game? This cannot be undone.')) {
       return
     }
@@ -506,6 +519,8 @@ export default function AdminPage() {
     gameId: string,
     updates: { home_score?: number; away_score?: number; status?: GameStatus }
   ) => {
+    if (!supabase) return
+
     try {
       const { error } = await supabase
         .from('games')
@@ -529,6 +544,7 @@ export default function AdminPage() {
 
   // Approve application
   const handleApproveApplication = async (application: TrustedReporterApplication) => {
+    if (!supabase) return
     if (!confirm(`Approve ${application.full_name} as a Trusted Reporter?`)) return
 
     try {
@@ -574,6 +590,7 @@ export default function AdminPage() {
 
   // Reject application
   const handleRejectApplication = async (application: TrustedReporterApplication) => {
+    if (!supabase) return
     if (!confirm(`Reject ${application.full_name}'s application?`)) return
 
     try {
@@ -624,6 +641,8 @@ export default function AdminPage() {
 
   // Create a new trusted reporter code
   const handleGenerateCode = async () => {
+    if (!supabase) return
+
     setIsGeneratingCode(true)
     try {
       const code = generateRandomCode()
@@ -653,6 +672,8 @@ export default function AdminPage() {
 
   // Deactivate a code
   const handleDeactivateCode = async (codeId: string) => {
+    if (!supabase) return
+
     try {
       const { error } = await supabase
         .from('trusted_reporter_codes')
@@ -1223,6 +1244,7 @@ export default function AdminPage() {
                       key={adminUser.id}
                       adminUser={adminUser}
                       onToggleAdmin={async () => {
+                        if (!supabase) return
                         const newValue = !adminUser.is_admin
                         const { error } = await supabase
                           .from('users')
@@ -1241,6 +1263,7 @@ export default function AdminPage() {
                         }
                       }}
                       onToggleTrusted={async () => {
+                        if (!supabase) return
                         const newValue = !adminUser.is_trusted_reporter
                         const { error } = await supabase
                           .from('users')
@@ -1264,6 +1287,7 @@ export default function AdminPage() {
                         }
                       }}
                       onToggleBeta={async () => {
+                        if (!supabase) return
                         const newValue = !adminUser.has_beta_access
                         const { error } = await supabase
                           .from('users')

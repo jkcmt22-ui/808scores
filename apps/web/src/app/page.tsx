@@ -181,19 +181,19 @@ export default function HomePage() {
   const finalGames = filteredGames.filter((g) => g.status === 'final' && !overdueIds.has(g.id))
 
   const sortedOverdue = useMemo(
-    () => sortByFavorites(overdueGames, favoriteTeamIds, favoriteSportIds),
+    () => sortByFavorites(overdueGames as any, favoriteTeamIds, favoriteSportIds),
     [overdueGames, favoriteTeamIds, favoriteSportIds]
   )
   const sortedLive = useMemo(
-    () => sortByFavorites(liveGames, favoriteTeamIds, favoriteSportIds),
+    () => sortByFavorites(liveGames as any, favoriteTeamIds, favoriteSportIds),
     [liveGames, favoriteTeamIds, favoriteSportIds]
   )
   const sortedScheduled = useMemo(
-    () => sortByFavorites(scheduledGames, favoriteTeamIds, favoriteSportIds),
+    () => sortByFavorites(scheduledGames as any, favoriteTeamIds, favoriteSportIds),
     [scheduledGames, favoriteTeamIds, favoriteSportIds]
   )
   const sortedFinal = useMemo(
-    () => sortByFavorites(finalGames, favoriteTeamIds, favoriteSportIds),
+    () => sortByFavorites(finalGames as any, favoriteTeamIds, favoriteSportIds),
     [finalGames, favoriteTeamIds, favoriteSportIds]
   )
 
@@ -224,7 +224,7 @@ export default function HomePage() {
 
         {/* Live Hero - Featured live games at the top */}
         {!isLoading && liveGames.length > 0 && (
-          <LiveHero games={liveGames.slice(0, 5)} />
+          <LiveHero games={liveGames.slice(0, 5) as any} />
         )}
 
         {/* Date Navigation */}
@@ -344,7 +344,7 @@ export default function HomePage() {
                     <span className="font-display uppercase tracking-wider">Your Teams</span>
                   </div>
                   {sortedOverdue.favorites.map((game) => (
-                    <GameCard key={game.id} game={game} showSport />
+                    <GameCard key={game.id} game={game as any} showSport />
                   ))}
                   {sortedOverdue.others.length > 0 && (
                     <div className="border-t border-border/50 pt-3 mt-3" />
@@ -353,7 +353,7 @@ export default function HomePage() {
               )}
               {/* Other overdue games */}
               {(hasFavorites ? sortedOverdue.others : overdueGames).map((game) => (
-                <GameCard key={game.id} game={game} showSport />
+                <GameCard key={game.id} game={game as any} showSport />
               ))}
             </div>
           </section>
@@ -382,7 +382,7 @@ export default function HomePage() {
               {liveGames
                 .slice(5, expandedSections.live ? undefined : 5 + LIVE_GAMES_LIMIT)
                 .map((game) => (
-                  <GameCard key={game.id} game={game} showSport />
+                  <GameCard key={game.id} game={game as any} showSport />
                 ))}
               {/* Show less button when expanded */}
               {expandedSections.live && liveGames.length > 5 + LIVE_GAMES_LIMIT && (
@@ -423,7 +423,7 @@ export default function HomePage() {
                     <span className="font-display uppercase tracking-wider">Your Teams</span>
                   </div>
                   {sortedScheduled.favorites.slice(0, expandedSections.upcoming ? undefined : UPCOMING_GAMES_LIMIT).map((game) => (
-                    <GameCard key={game.id} game={game} showSport />
+                    <GameCard key={game.id} game={game as any} showSport />
                   ))}
                   {sortedScheduled.others.length > 0 && (
                     <div className="border-t border-border/50 pt-3 mt-3" />
@@ -434,7 +434,7 @@ export default function HomePage() {
               {(hasFavorites ? sortedScheduled.others : scheduledGames)
                 .slice(0, expandedSections.upcoming ? undefined : Math.max(0, UPCOMING_GAMES_LIMIT - (hasFavorites ? sortedScheduled.favorites.length : 0)))
                 .map((game) => (
-                  <GameCard key={game.id} game={game} showSport />
+                  <GameCard key={game.id} game={game as any} showSport />
                 ))}
               {/* Show less button when expanded */}
               {expandedSections.upcoming && scheduledGames.length > UPCOMING_GAMES_LIMIT && (
@@ -475,7 +475,7 @@ export default function HomePage() {
                     <span className="font-display uppercase tracking-wider">Your Teams</span>
                   </div>
                   {sortedFinal.favorites.slice(0, expandedSections.final ? undefined : FINAL_GAMES_LIMIT).map((game) => (
-                    <GameCard key={game.id} game={game} showSport />
+                    <GameCard key={game.id} game={game as any} showSport />
                   ))}
                   {sortedFinal.others.length > 0 && (
                     <div className="border-t border-border/50 pt-3 mt-3" />
@@ -486,7 +486,7 @@ export default function HomePage() {
               {(hasFavorites ? sortedFinal.others : finalGames)
                 .slice(0, expandedSections.final ? undefined : Math.max(0, FINAL_GAMES_LIMIT - (hasFavorites ? sortedFinal.favorites.length : 0)))
                 .map((game) => (
-                  <GameCard key={game.id} game={game} showSport />
+                  <GameCard key={game.id} game={game as any} showSport />
                 ))}
               {/* Show less button when expanded */}
               {expandedSections.final && finalGames.length > FINAL_GAMES_LIMIT && (
@@ -552,7 +552,7 @@ export default function HomePage() {
                         {game.game_type === 'exhibition' ? 'Exhibition' : 'Scrimmage'}
                       </span>
                     </div>
-                    <GameCard game={game} showSport />
+                    <GameCard game={game as any} showSport />
                   </div>
                 ))}
               </div>

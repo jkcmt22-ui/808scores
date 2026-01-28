@@ -120,7 +120,7 @@ export default function SelectGamePage() {
                 <div className="space-y-2">
                   {liveGames.map((game) => (
                     <div key={game.id} onClick={() => router.push(`/submit/${game.id}`)} className="cursor-pointer">
-                      <GameCardCompact game={game} />
+                      <GameCardCompact game={game as any} />
                     </div>
                   ))}
                 </div>
@@ -134,7 +134,7 @@ export default function SelectGamePage() {
                 <div className="space-y-2">
                   {scheduledGames.map((game) => (
                     <div key={game.id} onClick={() => router.push(`/submit/${game.id}`)} className="cursor-pointer">
-                      <GameCardCompact game={game} />
+                      <GameCardCompact game={game as any} />
                     </div>
                   ))}
                 </div>
@@ -148,7 +148,7 @@ export default function SelectGamePage() {
                 <div className="space-y-2">
                   {otherGames.map((game) => (
                     <div key={game.id} onClick={() => router.push(`/submit/${game.id}`)} className="cursor-pointer">
-                      <GameCardCompact game={game} />
+                      <GameCardCompact game={game as any} />
                     </div>
                   ))}
                 </div>

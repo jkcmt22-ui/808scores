@@ -109,156 +109,61 @@ export default function AnalyticsPage() {
     setError(null)
 
     try {
-      const now = new Date()
-      const today = new Date(now.getFullYear(), now.getMonth(), now.getDate())
-      const weekAgo = new Date(today.getTime() - 7 * 24 * 60 * 60 * 1000)
-      const monthAgo = new Date(today.getTime() - 30 * 24 * 60 * 60 * 1000)
+      // Single RPC call instead of 50+ queries
+      const { data: analyticsData, error: rpcError } = await supabase.rpc('get_admin_analytics')
 
-      // Fetch all data in parallel
-      const [
-        usersRes,
-        newUsersWeekRes,
-        newUsersMonthRes,
-        trustedRes,
-        adminsRes,
-        gamesRes,
-        gamesWeekRes,
-        gamesTodayRes,
-        liveGamesRes,
-        completedGamesRes,
-        submissionsRes,
-        submissionsWeekRes,
-        pendingRes,
-        verifiedRes,
-        chatRes,
-        chatWeekRes,
-        rafflesRes,
-        entriesRes,
-        topContributorsRes,
-        recentSubmissionsRes,
-        scheduledGamesRes,
-        postponedGamesRes,
-        canceledGamesRes,
-      ] = await Promise.all([
-        // Users
-        supabase.from('users').select('id', { count: 'exact', head: true }),
-        supabase.from('users').select('id', { count: 'exact', head: true }).gte('created_at', weekAgo.toISOString()),
-        supabase.from('users').select('id', { count: 'exact', head: true }).gte('created_at', monthAgo.toISOString()),
-        supabase.from('users').select('id', { count: 'exact', head: true }).eq('is_trusted_reporter', true),
-        supabase.from('users').select('id', { count: 'exact', head: true }).or('is_admin.eq.true,is_super_admin.eq.true'),
+      if (rpcError) throw rpcError
 
-        // Games
-        supabase.from('games').select('id', { count: 'exact', head: true }),
-        supabase.from('games').select('id', { count: 'exact', head: true }).gte('scheduled_at', weekAgo.toISOString()),
-        supabase.from('games').select('id', { count: 'exact', head: true }).gte('scheduled_at', today.toISOString()).lt('scheduled_at', new Date(today.getTime() + 24 * 60 * 60 * 1000).toISOString()),
-        supabase.from('games').select('id', { count: 'exact', head: true }).eq('status', 'in_progress'),
-        supabase.from('games').select('id', { count: 'exact', head: true }).eq('status', 'final'),
+      // Parse JSON response
+      const analytics = analyticsData as any
 
-        // Submissions
-        supabase.from('submissions').select('id', { count: 'exact', head: true }),
-        supabase.from('submissions').select('id', { count: 'exact', head: true }).gte('created_at', weekAgo.toISOString()),
-        supabase.from('submissions').select('id', { count: 'exact', head: true }).eq('status', 'pending'),
-        supabase.from('submissions').select('id', { count: 'exact', head: true }).eq('status', 'published'),
-
-        // Chat
-        supabase.from('chat_messages').select('id', { count: 'exact', head: true }),
-        supabase.from('chat_messages').select('id', { count: 'exact', head: true }).gte('created_at', weekAgo.toISOString()),
-
-        // Raffles
-        supabase.from('raffles').select('id', { count: 'exact', head: true }).eq('status', 'open'),
-        supabase.from('raffle_entries').select('id', { count: 'exact', head: true }),
-
-        // Top contributors
-        supabase.from('users')
-          .select('id, display_name, submission_count, verified_count, reputation_score')
-          .order('submission_count', { ascending: false })
-          .limit(10),
-
-        // Recent submissions
-        supabase.from('submissions')
-          .select(`
-            id, created_at, submission_type, status,
-            user:users(display_name),
-            game:games(
-              home_team:schools!games_home_team_id_fkey(short_name),
-              away_team:schools!games_away_team_id_fkey(short_name)
-            )
-          `)
-          .order('created_at', { ascending: false })
-          .limit(10),
-
-        // Games by status
-        supabase.from('games').select('id', { count: 'exact', head: true }).eq('status', 'scheduled'),
-        supabase.from('games').select('id', { count: 'exact', head: true }).eq('status', 'postponed'),
-        supabase.from('games').select('id', { count: 'exact', head: true }).eq('status', 'canceled'),
-      ])
-
-      // Build daily stats for last 7 days
-      const dailyStats: AnalyticsData['dailyStats'] = []
-      for (let i = 6; i >= 0; i--) {
-        const dayStart = new Date(today.getTime() - i * 24 * 60 * 60 * 1000)
-        const dayEnd = new Date(dayStart.getTime() + 24 * 60 * 60 * 1000)
-
-        const [dayUsers, daySubmissions, dayGames, dayMessages] = await Promise.all([
-          supabase.from('users').select('id', { count: 'exact', head: true })
-            .gte('created_at', dayStart.toISOString())
-            .lt('created_at', dayEnd.toISOString()),
-          supabase.from('submissions').select('id', { count: 'exact', head: true })
-            .gte('created_at', dayStart.toISOString())
-            .lt('created_at', dayEnd.toISOString()),
-          supabase.from('games').select('id', { count: 'exact', head: true })
-            .gte('scheduled_at', dayStart.toISOString())
-            .lt('scheduled_at', dayEnd.toISOString()),
-          supabase.from('chat_messages').select('id', { count: 'exact', head: true })
-            .gte('created_at', dayStart.toISOString())
-            .lt('created_at', dayEnd.toISOString()),
-        ])
-
-        dailyStats.push({
-          date: dayStart.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' }),
-          users: dayUsers.count || 0,
-          submissions: daySubmissions.count || 0,
-          games: dayGames.count || 0,
-          messages: dayMessages.count || 0,
-        })
-      }
+      // Format daily stats with proper date formatting
+      const formattedDailyStats = (analytics.daily_stats || []).map((day: any) => ({
+        date: new Date(day.date).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' }),
+        users: day.new_users || 0,
+        submissions: day.new_submissions || 0,
+        games: day.new_games || 0,
+        messages: day.new_messages || 0,
+      }))
 
       setData({
-        totalUsers: usersRes.count || 0,
-        newUsersLast7Days: newUsersWeekRes.count || 0,
-        newUsersLast30Days: newUsersMonthRes.count || 0,
-        trustedReporters: trustedRes.count || 0,
-        admins: adminsRes.count || 0,
+        // User metrics
+        totalUsers: analytics.users.total,
+        newUsersLast7Days: analytics.users.last_7_days,
+        newUsersLast30Days: analytics.users.last_30_days,
+        trustedReporters: analytics.users.trusted,
+        admins: analytics.users.admins,
 
-        totalGames: gamesRes.count || 0,
-        gamesThisWeek: gamesWeekRes.count || 0,
-        gamesToday: gamesTodayRes.count || 0,
-        liveGames: liveGamesRes.count || 0,
-        completedGames: completedGamesRes.count || 0,
+        // Game metrics
+        totalGames: analytics.games.total,
+        gamesThisWeek: analytics.games.this_week,
+        gamesToday: analytics.games.today,
+        liveGames: analytics.games.live,
+        completedGames: analytics.games.completed,
 
-        totalSubmissions: submissionsRes.count || 0,
-        submissionsThisWeek: submissionsWeekRes.count || 0,
-        pendingSubmissions: pendingRes.count || 0,
-        verifiedSubmissions: verifiedRes.count || 0,
+        // Submission metrics
+        totalSubmissions: analytics.submissions.total,
+        submissionsThisWeek: analytics.submissions.this_week,
+        pendingSubmissions: analytics.submissions.pending,
+        verifiedSubmissions: analytics.submissions.verified,
 
-        totalChatMessages: chatRes.count || 0,
-        chatMessagesThisWeek: chatWeekRes.count || 0,
+        // Chat metrics
+        totalChatMessages: analytics.chat.total,
+        chatMessagesThisWeek: analytics.chat.this_week,
 
-        activeRaffles: rafflesRes.count || 0,
-        totalRaffleEntries: entriesRes.count || 0,
+        // Raffle metrics
+        activeRaffles: analytics.raffles.active,
+        totalRaffleEntries: analytics.raffles.total_entries,
 
-        topContributors: (topContributorsRes.data || []) as AnalyticsData['topContributors'],
-        recentSubmissions: (recentSubmissionsRes.data || []) as AnalyticsData['recentSubmissions'],
+        // Aggregated data
+        topContributors: analytics.top_contributors || [],
+        recentSubmissions: analytics.recent_submissions || [],
 
-        gamesByStatus: {
-          scheduled: scheduledGamesRes.count || 0,
-          in_progress: liveGamesRes.count || 0,
-          final: completedGamesRes.count || 0,
-          postponed: postponedGamesRes.count || 0,
-          canceled: canceledGamesRes.count || 0,
-        },
+        // Games by status
+        gamesByStatus: analytics.games.by_status,
 
-        dailyStats,
+        // Daily stats
+        dailyStats: formattedDailyStats,
       })
     } catch (err) {
       console.error('Error fetching analytics:', err)
