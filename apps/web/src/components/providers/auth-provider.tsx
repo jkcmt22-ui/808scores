@@ -27,7 +27,6 @@ const PROFILE_FIELDS = `
   is_admin,
   is_super_admin,
   is_trusted_reporter,
-  is_banned,
   total_points,
   season_points,
   submission_count,
