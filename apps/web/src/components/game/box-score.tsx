@@ -77,12 +77,6 @@ export function BoxScore({
   awayStats,
   className,
 }: BoxScoreProps) {
-  const isBasketball = sportCode.includes('basketball')
-  const isFootball = sportCode === 'football'
-  const isVolleyball = sportCode.includes('volleyball')
-  const isBaseball = sportCode === 'baseball' || sportCode === 'softball'
-  const isSoccer = sportCode.includes('soccer')
-
   return (
     <div className={cn('space-y-6', className)}>
       {/* Away Team Box Score */}

@@ -12,8 +12,6 @@ import { formatFullDate, isScoreOverdue } from '@/lib/utils'
 import { Calendar, ChevronDown, ChevronUp, ChevronLeft, ChevronRight, Star } from 'lucide-react'
 import type { GameType, GameWithTeams } from '@/types/database'
 
-// Main competitive game types shown in the main feed
-const COMPETITIVE_GAME_TYPES: GameType[] = ['regular_season', 'playoff', 'championship', 'tournament']
 // Non-competitive game types shown in the "Other Games" section
 const OTHER_GAME_TYPES: GameType[] = ['exhibition', 'scrimmage']
 
@@ -187,10 +185,6 @@ export default function HomePage() {
   const sortedOverdue = useMemo(
     () => sortByFavorites(overdueGames as any, favoriteTeamIds, favoriteSportIds),
     [overdueGames, favoriteTeamIds, favoriteSportIds]
-  )
-  const sortedLive = useMemo(
-    () => sortByFavorites(liveGames as any, favoriteTeamIds, favoriteSportIds),
-    [liveGames, favoriteTeamIds, favoriteSportIds]
   )
   const sortedScheduled = useMemo(
     () => sortByFavorites(scheduledGames as any, favoriteTeamIds, favoriteSportIds),

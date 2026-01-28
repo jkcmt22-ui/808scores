@@ -18,7 +18,6 @@ export function ShareButtons({ title, text, url, className }: ShareButtonsProps)
   const fullUrl = url.startsWith('http') ? url : `https://www.hawaiisportscenter.com${url}`
   const encodedUrl = encodeURIComponent(fullUrl)
   const encodedText = encodeURIComponent(text)
-  const encodedTitle = encodeURIComponent(title)
 
   const handleCopyLink = useCallback(async () => {
     try {
