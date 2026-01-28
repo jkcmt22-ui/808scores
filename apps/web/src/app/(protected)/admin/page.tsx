@@ -37,6 +37,7 @@ import { useAuth } from '@/hooks'
 import { createClient } from '@/lib/supabase/client'
 import { cn, formatGameTime, isGameLive, isGameFinal } from '@/lib/utils'
 import { adminCache } from '@/lib/admin-cache'
+import { perf } from '@/lib/perf'
 import type { GameWithTeams, Sport, School, GameStatus, GameType, TrustedReporterCode } from '@/types/database'
 
 type TabType = 'games' | 'create' | 'applications' | 'codes' | 'users'
@@ -157,17 +158,21 @@ export default function AdminPage() {
   const fetchCommonData = useCallback(async () => {
     if (!supabase) return
 
+    const endTimer = perf.start('Admin: Fetch Common Data (Sports + Schools)')
+
     try {
       // Check cache for sports
       const cachedSports = adminCache.getSports()
       if (cachedSports) {
         setSports(cachedSports)
       } else {
+        const endSportsTimer = perf.start('Admin: Fetch Sports')
         const { data: sportsData, error: sportsError } = await supabase
           .from('sports')
           .select('*')
           .eq('active', true)
           .order('sort_order')
+        endSportsTimer()
 
         if (!sportsError && sportsData) {
           const sports = sportsData as Sport[]
@@ -181,10 +186,12 @@ export default function AdminPage() {
       if (cachedSchools) {
         setSchools(cachedSchools)
       } else {
+        const endSchoolsTimer = perf.start('Admin: Fetch Schools')
         const { data: schoolsData, error: schoolsError } = await supabase
           .from('schools')
           .select('*')
           .order('name')
+        endSchoolsTimer()
 
         if (!schoolsError && schoolsData) {
           const schools = schoolsData as School[]
@@ -194,6 +201,8 @@ export default function AdminPage() {
       }
     } catch (err) {
       console.error('Error fetching common data:', err)
+    } finally {
+      endTimer()
     }
   }, [supabase])
 
@@ -201,6 +210,7 @@ export default function AdminPage() {
   const fetchGames = useCallback(async () => {
     if (!supabase) return
 
+    const endTimer = perf.start('Admin: Fetch Games')
     setLoadingStates(prev => ({ ...prev, games: true }))
     setMessage(null)
 
@@ -225,6 +235,8 @@ export default function AdminPage() {
     } catch (err) {
       console.error('Error fetching games:', err)
       setMessage({ type: 'error', text: 'Failed to load games' })
+    } finally {
+      endTimer()
     }
 
     setLoadingStates(prev => ({ ...prev, games: false }))
@@ -567,6 +579,8 @@ export default function AdminPage() {
   ) => {
     if (!supabase) return
 
+    const endTimer = perf.start('Admin: Quick Update Game Score')
+
     try {
       const { error } = await supabase
         .from('games')
@@ -585,6 +599,8 @@ export default function AdminPage() {
     } catch (err) {
       console.error('Error updating game:', err)
       setMessage({ type: 'error', text: 'Failed to update score' })
+    } finally {
+      endTimer()
     }
   }
 
