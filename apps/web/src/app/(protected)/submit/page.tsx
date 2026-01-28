@@ -2,18 +2,33 @@
 
 import { useState, useMemo } from 'react'
 import { useRouter } from 'next/navigation'
-import { ArrowLeft, Search, Loader2, Radio } from 'lucide-react'
+import { ArrowLeft, Search, Loader2, Radio, Calendar } from 'lucide-react'
 // Header not used - using GameSelectPage component instead
 import { GameCardCompact } from '@/components/game'
-import { Input } from '@/components/ui'
+import { Input, Button } from '@/components/ui'
 import { useGames } from '@/hooks'
 
 export default function SelectGamePage() {
   const router = useRouter()
   const [search, setSearch] = useState('')
-  // Memoize the date to prevent infinite re-renders
+  // Start with today's date
   const today = useMemo(() => new Date(), [])
-  const { games, isLoading, error } = useGames({ date: today })
+  const [selectedDate, setSelectedDate] = useState(today)
+  const { games, isLoading, error } = useGames({ date: selectedDate })
+
+  // Format date for input (YYYY-MM-DD)
+  const formatDateForInput = (date: Date) => {
+    return date.toISOString().split('T')[0]
+  }
+
+  const handleDateChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const newDate = new Date(e.target.value + 'T00:00:00')
+    setSelectedDate(newDate)
+  }
+
+  const goToToday = () => {
+    setSelectedDate(today)
+  }
 
   const filteredGames = games.filter(
     (game) =>
@@ -45,6 +60,26 @@ export default function SelectGamePage() {
 
       <main className="p-4 grid-bg pb-24">
         <h1 className="mb-4 text-xl font-display font-bold uppercase tracking-wider text-foreground">Select a Game</h1>
+
+        {/* Date Picker */}
+        <div className="mb-4 flex gap-2">
+          <div className="relative flex-1">
+            <Calendar className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-foreground-muted pointer-events-none" />
+            <Input
+              type="date"
+              value={formatDateForInput(selectedDate)}
+              onChange={handleDateChange}
+              className="pl-10 bg-background-secondary border-2 border-border focus:border-neon-blue"
+            />
+          </div>
+          <Button
+            onClick={goToToday}
+            variant="secondary"
+            className="font-display"
+          >
+            Today
+          </Button>
+        </div>
 
         {/* Search */}
         <div className="relative mb-6">
