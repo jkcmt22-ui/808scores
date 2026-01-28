@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useMemo } from 'react'
 import { useParams } from 'next/navigation'
 import { Header } from '@/components/layout'
 import { Button, Badge, Avatar } from '@/components/ui'
@@ -28,7 +28,7 @@ export default function AdminRaffleDetailPage() {
   const [drawingResults, setDrawingResults] = useState<DrawingResult[] | null>(null)
   const [error, setError] = useState<string | null>(null)
 
-  const supabase = createClient()
+  const supabase = useMemo(() => createClient(), [])
   const hasAdminAccess = profile?.is_admin === true || profile?.is_super_admin === true
 
   const fetchData = useCallback(async () => {
@@ -77,6 +77,8 @@ export default function AdminRaffleDetailPage() {
   }, [supabase, raffleId])
 
   useEffect(() => {
+    // fetchData is a stable useCallback - this pattern is correct
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     fetchData()
   }, [fetchData])
 

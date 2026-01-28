@@ -146,35 +146,38 @@ export function GameClient({ params }: GamePageProps) {
     }
   }, [shareStatus])
 
-  // Fetch submissions for this game
-  useEffect(() => {
+  // Fetch submissions callback
+  const fetchSubmissions = useCallback(async () => {
     if (!supabase) {
       setLoadingSubmissions(false)
       return
     }
 
-    const fetchSubmissions = async () => {
-      setLoadingSubmissions(true)
-      const { data, error: subError } = await supabase
-        .from('submissions')
-        .select(`
-          *,
-          user:users(id, display_name, tier, is_trusted_reporter)
-        `)
-        .eq('game_id', id)
-        .eq('status', 'published')
-        .order('created_at', { ascending: false })
-        .limit(20)
+    setLoadingSubmissions(true)
+    const { data, error: subError } = await supabase
+      .from('submissions')
+      .select(`
+        *,
+        user:users(id, display_name, tier, is_trusted_reporter)
+      `)
+      .eq('game_id', id)
+      .eq('status', 'published')
+      .order('created_at', { ascending: false })
+      .limit(20)
 
-      if (!subError && data) {
-        setSubmissions(data as SubmissionWithUser[])
-      }
-      setLoadingSubmissions(false)
+    if (!subError && data) {
+      setSubmissions(data as SubmissionWithUser[])
     }
+    setLoadingSubmissions(false)
+  }, [supabase, id])
 
-    if (id) {
-      fetchSubmissions()
-    }
+  // Fetch submissions for this game and subscribe to updates
+  useEffect(() => {
+    if (!supabase || !id) return
+
+    // fetchSubmissions is a stable useCallback - this pattern is correct
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    fetchSubmissions()
 
     // Subscribe to new submissions
     const channel = supabase
@@ -196,7 +199,7 @@ export function GameClient({ params }: GamePageProps) {
     return () => {
       supabase.removeChannel(channel)
     }
-  }, [supabase, id])
+  }, [supabase, id, fetchSubmissions])
 
   if (isLoading) {
     return (

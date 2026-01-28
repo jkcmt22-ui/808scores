@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useMemo } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import type { RaffleWithPrize, RaffleEntry, RaffleWinnerWithDetails } from '@/types/database'
 
@@ -20,7 +20,7 @@ export function useRaffles({ status = 'open', limit = 10 }: UseRafflesOptions = 
   const [raffles, setRaffles] = useState<RaffleWithPrize[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
-  const supabase = createClient()
+  const supabase = useMemo(() => createClient(), [])
 
   const fetchRaffles = useCallback(async () => {
     if (!supabase) {
@@ -84,7 +84,7 @@ interface UseUserRaffleEntriesReturn {
 export function useUserRaffleEntries({ userId }: UseUserRaffleEntriesOptions): UseUserRaffleEntriesReturn {
   const [entries, setEntries] = useState<(RaffleEntry & { raffle: RaffleWithPrize })[]>([])
   const [isLoading, setIsLoading] = useState(true)
-  const supabase = createClient()
+  const supabase = useMemo(() => createClient(), [])
 
   const fetchEntries = useCallback(async () => {
     if (!supabase) {
@@ -166,7 +166,7 @@ interface UsePastWinnersReturn {
 export function usePastWinners(limit: number = 10): UsePastWinnersReturn {
   const [winners, setWinners] = useState<RaffleWinnerWithDetails[]>([])
   const [isLoading, setIsLoading] = useState(true)
-  const supabase = createClient()
+  const supabase = useMemo(() => createClient(), [])
 
   useEffect(() => {
     async function fetchWinners() {
@@ -209,7 +209,7 @@ export function usePastWinners(limit: number = 10): UsePastWinnersReturn {
 export function useEnterRaffle() {
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const supabase = createClient()
+  const supabase = useMemo(() => createClient(), [])
 
   const enterRaffle = useCallback(
     async (raffleId: string, entryCount: number): Promise<{ success: boolean; error?: string }> => {

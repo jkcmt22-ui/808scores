@@ -17,7 +17,7 @@ async function findUnknownSchools() {
     const $ = cheerio.load(html)
 
     $('table.table-condensed a[href*="gamesummary.php"] b').each((_, el) => {
-      let name = $(el).text().trim()
+      const name = $(el).text().trim()
         .replace(/\s+/g, ' ')
         .replace(/^#\d+\s*/, '')
 

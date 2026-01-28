@@ -5,7 +5,7 @@ const BASE_URL = 'https://scoringlive.com'
 
 // Same normalizeSchoolName as in scraper
 function normalizeSchoolName(name: string): string | null {
-  let cleaned = name.trim()
+  const cleaned = name.trim()
     .replace(/\s+/g, ' ')
     .replace(/^#\d+\s*/, '')
 

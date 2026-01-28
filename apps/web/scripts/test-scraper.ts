@@ -12,7 +12,7 @@ function parseGameDateTime(dateStr: string, timeStr: string): Date {
   }
 
   const now = new Date()
-  let year = now.getFullYear()
+  const year = now.getFullYear()
   let month = now.getMonth()
   let day = now.getDate()
 

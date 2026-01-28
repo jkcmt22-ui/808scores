@@ -41,7 +41,7 @@ async function fetchPage(url: string): Promise<string> {
 // Normalize school name to match our database
 function normalizeSchoolName(name: string): string | null {
   // Clean up the name
-  let cleaned = name.trim()
+  const cleaned = name.trim()
     .replace(/\s+/g, ' ')
     .replace(/^#\d+\s*/, '') // Remove ranking numbers like "#1 "
 
@@ -110,7 +110,7 @@ function parseGameDateTime(dateStr: string, timeStr: string): Date {
   }
 
   const now = new Date()
-  let year = now.getFullYear()
+  const year = now.getFullYear()
   let month = now.getMonth()
   let day = now.getDate()
 

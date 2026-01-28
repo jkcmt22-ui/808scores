@@ -68,25 +68,16 @@ export default function SchoolsAdminPage() {
   const [logoPreviewUrl, setLogoPreviewUrl] = useState<string | null>(null)
 
   const hasAdminAccess = profile?.is_admin === true || profile?.is_super_admin === true
-
-  // Check Supabase client availability
-  if (!supabaseClient) {
-    return (
-      <div className="flex min-h-screen flex-col items-center justify-center p-4 bg-background">
-        <AlertCircle className="mb-4 h-12 w-12 text-neon-pink" />
-        <h1 className="mb-2 font-display text-xl font-bold text-foreground uppercase">Connection Error</h1>
-        <p className="mb-4 text-foreground-muted text-sm text-center">
-          Unable to connect to the database. Please check your environment variables.
-        </p>
-      </div>
-    )
-  }
-
   const supabase = supabaseClient
 
   // Fetch schools
   useEffect(() => {
     const fetchSchools = async () => {
+      if (!supabase) {
+        setIsLoading(false)
+        return
+      }
+
       setIsLoading(true)
 
       const { data, error } = await supabase
@@ -176,6 +167,7 @@ export default function SchoolsAdminPage() {
       setShowForm(false)
 
       // Refresh schools list
+      if (!supabase) return
       const { data } = await supabase.from('schools').select('*').order('name')
       if (data) setSchools(data as School[])
     } catch (err) {
@@ -230,6 +222,7 @@ export default function SchoolsAdminPage() {
       setShowForm(false)
 
       // Refresh schools
+      if (!supabase) return
       const { data } = await supabase.from('schools').select('*').order('name')
       if (data) setSchools(data as School[])
     } catch (err) {
@@ -308,6 +301,19 @@ export default function SchoolsAdminPage() {
           You need admin privileges to access this area.
         </p>
         <Button onClick={() => router.push('/')}>Go Home</Button>
+      </div>
+    )
+  }
+
+  // Check Supabase client availability
+  if (!supabaseClient) {
+    return (
+      <div className="flex min-h-screen flex-col items-center justify-center p-4 bg-background">
+        <AlertCircle className="mb-4 h-12 w-12 text-neon-pink" />
+        <h1 className="mb-2 font-display text-xl font-bold text-foreground uppercase">Connection Error</h1>
+        <p className="mb-4 text-foreground-muted text-sm text-center">
+          Unable to connect to the database. Please check your environment variables.
+        </p>
       </div>
     )
   }
