@@ -390,11 +390,19 @@ export default function AdminPage() {
     setMessage(null)
 
     try {
+      // Parse the datetime-local input value as Hawaii time
+      // The input gives us a string like "2024-01-15T19:00" which is already in Hawaii time
+      // We need to append the timezone offset to prevent UTC conversion
+      const hawaiiOffset = '-10:00' // Hawaii is UTC-10
+      const scheduledAtHawaii = formData.scheduled_at.includes('T')
+        ? `${formData.scheduled_at}:00${hawaiiOffset}`
+        : `${formData.scheduled_at}${hawaiiOffset}`
+
       const gameData = {
         sport_id: formData.sport_id,
         home_team_id: formData.home_team_id,
         away_team_id: formData.away_team_id,
-        scheduled_at: new Date(formData.scheduled_at).toISOString(),
+        scheduled_at: new Date(scheduledAtHawaii).toISOString(),
         venue: formData.venue || null,
         status: formData.status,
         game_type: formData.game_type,
@@ -409,6 +417,8 @@ export default function AdminPage() {
         streaming_url: formData.streaming_url || null,
       }
 
+      console.log('Creating game with data:', gameData)
+
       const { data: newGame, error } = await supabase
         .from('games')
         .insert(gameData as never)
@@ -420,7 +430,10 @@ export default function AdminPage() {
         `)
         .single()
 
-      if (error) throw error
+      if (error) {
+        console.error('Supabase error details:', error)
+        throw error
+      }
 
       // Add to existing games state instead of re-fetching
       if (newGame) {
@@ -431,7 +444,8 @@ export default function AdminPage() {
       }
     } catch (err) {
       console.error('Error creating game:', err)
-      setMessage({ type: 'error', text: 'Failed to create game' })
+      const errorMessage = err instanceof Error ? err.message : 'Failed to create game'
+      setMessage({ type: 'error', text: errorMessage })
     } finally {
       setIsSaving(false)
     }
