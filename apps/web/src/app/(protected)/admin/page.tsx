@@ -116,13 +116,19 @@ export default function AdminPage() {
   const supabaseClient = useMemo(() => createClient(), [])
 
   // We need to check this before using supabase
-  const supabase = supabaseClient!
+  const supabase = supabaseClient
 
   const [activeTab, setActiveTab] = useState<TabType>('games')
   const [games, setGames] = useState<GameWithTeams[]>([])
   const [sports, setSports] = useState<Sport[]>([])
   const [schools, setSchools] = useState<School[]>([])
-  const [isLoading, setIsLoading] = useState(true)
+  const [loadingStates, setLoadingStates] = useState<Record<TabType, boolean>>({
+    games: false,
+    create: false,
+    applications: false,
+    codes: false,
+    users: false,
+  })
   const [searchTerm, setSearchTerm] = useState('')
   const [statusFilter, setStatusFilter] = useState<string>('all')
   const [editingGame, setEditingGame] = useState<GameWithTeams | null>(null)
@@ -174,7 +180,7 @@ export default function AdminPage() {
 
   // Fetch games
   const fetchGames = useCallback(async () => {
-    setIsLoading(true)
+    setLoadingStates(prev => ({ ...prev, games: true }))
     setMessage(null)
 
     try {
@@ -200,12 +206,12 @@ export default function AdminPage() {
       setMessage({ type: 'error', text: 'Failed to load games' })
     }
 
-    setIsLoading(false)
+    setLoadingStates(prev => ({ ...prev, games: false }))
   }, [supabase])
 
   // Fetch applications
   const fetchApplications = useCallback(async () => {
-    setIsLoading(true)
+    setLoadingStates(prev => ({ ...prev, applications: true }))
     setMessage(null)
 
     try {
@@ -228,12 +234,12 @@ export default function AdminPage() {
       setMessage({ type: 'error', text: 'Failed to load applications' })
     }
 
-    setIsLoading(false)
+    setLoadingStates(prev => ({ ...prev, applications: false }))
   }, [supabase])
 
   // Fetch codes
   const fetchCodes = useCallback(async () => {
-    setIsLoading(true)
+    setLoadingStates(prev => ({ ...prev, codes: true }))
     setMessage(null)
 
     try {
@@ -253,31 +259,19 @@ export default function AdminPage() {
       setMessage({ type: 'error', text: 'Failed to load codes' })
     }
 
-    setIsLoading(false)
+    setLoadingStates(prev => ({ ...prev, codes: false }))
   }, [supabase])
 
   // Fetch users
   const fetchUsers = useCallback(async () => {
-    setIsLoading(true)
+    setLoadingStates(prev => ({ ...prev, users: true }))
     setMessage(null)
 
     try {
-      // Add timeout to prevent infinite loading
-      const timeoutPromise = new Promise((_, reject) =>
-        setTimeout(() => reject(new Error('Query timeout')), 10000)
-      )
-
-      const queryPromise = supabase
-        .from('users')
-        .select('id, display_name, email, phone, is_super_admin, is_admin, is_trusted_reporter, has_beta_access, tier, created_at')
-        .or('is_admin.eq.true,is_super_admin.eq.true,is_trusted_reporter.eq.true,has_beta_access.eq.true')
-        .order('created_at', { ascending: false })
+      const { data: usersData, error: usersError } = await supabase
+        .from('admin_users_list')
+        .select('*')
         .limit(100)
-
-      const { data: usersData, error: usersError } = await Promise.race([
-        queryPromise,
-        timeoutPromise,
-      ]) as any
 
       if (usersError) {
         console.error('Users fetch error:', usersError)
@@ -291,7 +285,7 @@ export default function AdminPage() {
       setMessage({ type: 'error', text: `Failed to load users: ${errorMessage}` })
     }
 
-    setIsLoading(false)
+    setLoadingStates(prev => ({ ...prev, users: false }))
   }, [supabase])
 
   // Load data for active tab
@@ -325,7 +319,8 @@ export default function AdminPage() {
           break
       }
     }
-  }, [hasAdminAccess, authLoading, activeTab, loadedTabs, sports.length, schools.length, fetchCommonData, fetchGames, fetchApplications, fetchCodes, fetchUsers])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [hasAdminAccess, authLoading, activeTab, sports.length, schools.length])
 
   // Refresh current tab data
   const handleRefresh = useCallback(() => {
@@ -403,29 +398,26 @@ export default function AdminPage() {
         streaming_url: formData.streaming_url || null,
       }
 
-      const { error } = await supabase
+      const { data: newGame, error } = await supabase
         .from('games')
         .insert(gameData as never)
-
-      if (error) throw error
-
-      setMessage({ type: 'success', text: 'Game created successfully' })
-      setFormData(initialFormData)
-      setActiveTab('games')
-
-      // Refresh games list
-      const { data: gamesData } = await supabase
-        .from('games')
         .select(`
           *,
           sport:sports(*),
           home_team:schools!games_home_team_id_fkey(*),
           away_team:schools!games_away_team_id_fkey(*)
         `)
-        .order('scheduled_at', { ascending: false })
-        .limit(100)
+        .single()
 
-      if (gamesData) setGames(gamesData as GameWithTeams[])
+      if (error) throw error
+
+      // Add to existing games state instead of re-fetching
+      if (newGame) {
+        setGames(prev => [newGame as GameWithTeams, ...prev])
+        setMessage({ type: 'success', text: 'Game created successfully' })
+        setFormData(initialFormData)
+        setActiveTab('games')
+      }
     } catch (err) {
       console.error('Error creating game:', err)
       setMessage({ type: 'error', text: 'Failed to create game' })
@@ -457,29 +449,28 @@ export default function AdminPage() {
         streaming_url: formData.streaming_url || null,
       }
 
-      const { error } = await supabase
+      const { data: updatedGame, error } = await supabase
         .from('games')
         .update(updateData as never)
         .eq('id', editingGame.id)
-
-      if (error) throw error
-
-      setMessage({ type: 'success', text: 'Game updated successfully' })
-      setEditingGame(null)
-
-      // Refresh games list
-      const { data: gamesData } = await supabase
-        .from('games')
         .select(`
           *,
           sport:sports(*),
           home_team:schools!games_home_team_id_fkey(*),
           away_team:schools!games_away_team_id_fkey(*)
         `)
-        .order('scheduled_at', { ascending: false })
-        .limit(100)
+        .single()
 
-      if (gamesData) setGames(gamesData as GameWithTeams[])
+      if (error) throw error
+
+      // Update the game in local state instead of re-fetching
+      if (updatedGame) {
+        setGames(prev => prev.map(g =>
+          g.id === editingGame.id ? updatedGame as GameWithTeams : g
+        ))
+        setMessage({ type: 'success', text: 'Game updated successfully' })
+        setEditingGame(null)
+      }
     } catch (err) {
       console.error('Error updating game:', err)
       setMessage({ type: 'error', text: 'Failed to update game' })
@@ -716,8 +707,8 @@ export default function AdminPage() {
     })
   }
 
-  // Auth loading - check both authLoading and profile === undefined
-  if (authLoading || profile === undefined) {
+  // Auth loading - check both authLoading and profile === null
+  if (authLoading || profile === null) {
     return (
       <div className="flex min-h-screen flex-col items-center justify-center bg-background">
         <Loader2 className="h-8 w-8 animate-spin text-neon-yellow" />
@@ -884,9 +875,9 @@ export default function AdminPage() {
               variant="ghost"
               size="sm"
               onClick={handleRefresh}
-              disabled={isLoading}
+              disabled={loadingStates[activeTab]}
             >
-              <RefreshCw className={cn("h-4 w-4", isLoading && "animate-spin")} />
+              <RefreshCw className={cn("h-4 w-4", loadingStates[activeTab] && "animate-spin")} />
             </Button>
           )}
         </div>
@@ -968,15 +959,15 @@ export default function AdminPage() {
                 variant="outline"
                 size="icon"
                 onClick={handleRefresh}
-                disabled={isLoading}
+                disabled={loadingStates.games}
                 aria-label="Refresh data"
               >
-                <RefreshCw className={cn("h-4 w-4", isLoading && "animate-spin")} />
+                <RefreshCw className={cn("h-4 w-4", loadingStates.games && "animate-spin")} />
               </Button>
             </div>
 
             {/* Games List */}
-            {isLoading ? (
+            {loadingStates.games ? (
               <div className="flex justify-center py-12">
                 <Loader2 className="h-8 w-8 animate-spin text-neon-yellow" />
               </div>
@@ -1041,7 +1032,7 @@ export default function AdminPage() {
               </select>
             </div>
 
-            {isLoading ? (
+            {loadingStates.applications ? (
               <div className="flex justify-center py-12">
                 <Loader2 className="h-8 w-8 animate-spin text-neon-purple" />
               </div>
@@ -1107,7 +1098,7 @@ export default function AdminPage() {
               Existing Codes ({codes.length})
             </h3>
 
-            {isLoading ? (
+            {loadingStates.codes ? (
               <div className="flex justify-center py-12">
                 <Loader2 className="h-8 w-8 animate-spin text-neon-green" />
               </div>
@@ -1211,7 +1202,7 @@ export default function AdminPage() {
               </div>
             </div>
 
-            {isLoading ? (
+            {loadingStates.users ? (
               <div className="flex justify-center py-12">
                 <Loader2 className="h-8 w-8 animate-spin text-neon-yellow" />
               </div>

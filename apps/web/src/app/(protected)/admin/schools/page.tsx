@@ -30,6 +30,8 @@ interface SchoolFormData {
   league: string
   division: string
   colors: { primary: string; secondary: string } | null
+  logo: File | null
+  currentLogoUrl: string | null
 }
 
 const ISLANDS = ['Oahu', 'Maui', 'Hawaii', 'Kauai', 'Molokai', 'Lanai']
@@ -44,12 +46,14 @@ const initialFormData: SchoolFormData = {
   league: '',
   division: '',
   colors: null,
+  logo: null,
+  currentLogoUrl: null,
 }
 
 export default function SchoolsAdminPage() {
   const router = useRouter()
   const { user, profile, isLoading: authLoading } = useAuth()
-  const supabase = useMemo(() => createClient()!, [])
+  const supabaseClient = useMemo(() => createClient(), [])
 
   const [schools, setSchools] = useState<School[]>([])
   const [isLoading, setIsLoading] = useState(true)
@@ -61,8 +65,24 @@ export default function SchoolsAdminPage() {
   const [formData, setFormData] = useState<SchoolFormData>(initialFormData)
   const [isSaving, setIsSaving] = useState(false)
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null)
+  const [logoPreviewUrl, setLogoPreviewUrl] = useState<string | null>(null)
 
   const hasAdminAccess = profile?.is_admin === true || profile?.is_super_admin === true
+
+  // Check Supabase client availability
+  if (!supabaseClient) {
+    return (
+      <div className="flex min-h-screen flex-col items-center justify-center p-4 bg-background">
+        <AlertCircle className="mb-4 h-12 w-12 text-neon-pink" />
+        <h1 className="mb-2 font-display text-xl font-bold text-foreground uppercase">Connection Error</h1>
+        <p className="mb-4 text-foreground-muted text-sm text-center">
+          Unable to connect to the database. Please check your environment variables.
+        </p>
+      </div>
+    )
+  }
+
+  const supabase = supabaseClient
 
   // Fetch schools
   useEffect(() => {
@@ -85,6 +105,9 @@ export default function SchoolsAdminPage() {
 
     if (hasAdminAccess) {
       fetchSchools()
+    } else {
+      // User doesn't have admin access, stop loading
+      setIsLoading(false)
     }
   }, [supabase, hasAdminAccess])
 
@@ -120,30 +143,47 @@ export default function SchoolsAdminPage() {
     setMessage(null)
 
     try {
-      const { error } = await supabase
-        .from('schools')
-        .insert({
-          name: formData.name,
-          short_name: formData.short_name,
-          mascot: formData.mascot || null,
-          island: formData.island,
-          league: formData.league || null,
-          division: formData.division || null,
-          colors: formData.colors,
-        } as never)
+      // Build FormData
+      const formDataToSend = new FormData()
+      formDataToSend.append('name', formData.name)
+      formDataToSend.append('short_name', formData.short_name)
+      if (formData.mascot) formDataToSend.append('mascot', formData.mascot)
+      formDataToSend.append('island', formData.island)
+      if (formData.league) formDataToSend.append('league', formData.league)
+      if (formData.division) formDataToSend.append('division', formData.division)
+      if (formData.colors) formDataToSend.append('colors', JSON.stringify(formData.colors))
+      if (formData.logo) formDataToSend.append('logo', formData.logo)
 
-      if (error) throw error
+      // Call API
+      const response = await fetch('/api/admin/schools', {
+        method: 'POST',
+        body: formDataToSend,
+      })
+
+      if (!response.ok) {
+        let errorMessage = 'Failed to create school'
+        try {
+          const error = await response.json()
+          errorMessage = error.message || errorMessage
+        } catch (e) {
+          // Response is not JSON, use default message
+        }
+        throw new Error(errorMessage)
+      }
 
       setMessage({ type: 'success', text: 'School created successfully' })
       setFormData(initialFormData)
       setShowForm(false)
 
-      // Refresh schools
+      // Refresh schools list
       const { data } = await supabase.from('schools').select('*').order('name')
       if (data) setSchools(data as School[])
     } catch (err) {
       console.error('Error creating school:', err)
-      setMessage({ type: 'error', text: 'Failed to create school' })
+      setMessage({
+        type: 'error',
+        text: err instanceof Error ? err.message : 'Failed to create school'
+      })
     } finally {
       setIsSaving(false)
     }
@@ -157,20 +197,33 @@ export default function SchoolsAdminPage() {
     setMessage(null)
 
     try {
-      const { error } = await supabase
-        .from('schools')
-        .update({
-          name: formData.name,
-          short_name: formData.short_name,
-          mascot: formData.mascot || null,
-          island: formData.island,
-          league: formData.league || null,
-          division: formData.division || null,
-          colors: formData.colors,
-        } as never)
-        .eq('id', editingSchool.id)
+      // Build FormData
+      const formDataToSend = new FormData()
+      formDataToSend.append('name', formData.name)
+      formDataToSend.append('short_name', formData.short_name)
+      if (formData.mascot) formDataToSend.append('mascot', formData.mascot)
+      formDataToSend.append('island', formData.island)
+      if (formData.league) formDataToSend.append('league', formData.league)
+      if (formData.division) formDataToSend.append('division', formData.division)
+      if (formData.colors) formDataToSend.append('colors', JSON.stringify(formData.colors))
+      if (formData.logo) formDataToSend.append('logo', formData.logo)
 
-      if (error) throw error
+      // Call API
+      const response = await fetch(`/api/admin/schools/${editingSchool.id}`, {
+        method: 'PATCH',
+        body: formDataToSend,
+      })
+
+      if (!response.ok) {
+        let errorMessage = 'Failed to update school'
+        try {
+          const error = await response.json()
+          errorMessage = error.message || errorMessage
+        } catch (e) {
+          // Response is not JSON, use default message
+        }
+        throw new Error(errorMessage)
+      }
 
       setMessage({ type: 'success', text: 'School updated successfully' })
       setEditingSchool(null)
@@ -181,7 +234,10 @@ export default function SchoolsAdminPage() {
       if (data) setSchools(data as School[])
     } catch (err) {
       console.error('Error updating school:', err)
-      setMessage({ type: 'error', text: 'Failed to update school' })
+      setMessage({
+        type: 'error',
+        text: err instanceof Error ? err.message : 'Failed to update school'
+      })
     } finally {
       setIsSaving(false)
     }
@@ -199,6 +255,8 @@ export default function SchoolsAdminPage() {
       league: school.league || '',
       division: school.division || '',
       colors: colors,
+      logo: null,
+      currentLogoUrl: school.logo_url || null,
     })
     setShowForm(true)
   }
@@ -210,6 +268,20 @@ export default function SchoolsAdminPage() {
       return () => clearTimeout(timer)
     }
   }, [message])
+
+  // Cleanup blob URLs for logo preview
+  useEffect(() => {
+    if (formData.logo) {
+      const blobUrl = URL.createObjectURL(formData.logo)
+      setLogoPreviewUrl(blobUrl)
+      return () => {
+        URL.revokeObjectURL(blobUrl)
+        setLogoPreviewUrl(null)
+      }
+    } else {
+      setLogoPreviewUrl(null)
+    }
+  }, [formData.logo])
 
   // Auth loading
   if (authLoading) {
@@ -441,6 +513,62 @@ export default function SchoolsAdminPage() {
                 </div>
               </div>
 
+              {/* Logo Upload */}
+              <div>
+                <label className="block text-sm font-medium text-foreground mb-1">
+                  School Logo
+                </label>
+                <div className="space-y-2">
+                  {/* Show current logo if editing */}
+                  {editingSchool?.logo_url && !formData.logo && (
+                    <div className="flex items-center gap-2">
+                      <img
+                        src={editingSchool.logo_url}
+                        alt="Current logo"
+                        className="h-12 w-12 object-contain border-2 border-border rounded"
+                      />
+                      <span className="text-xs text-foreground-muted">Current logo</span>
+                    </div>
+                  )}
+
+                  {/* Show preview if new file selected */}
+                  {formData.logo && logoPreviewUrl && (
+                    <div className="flex items-center gap-2">
+                      <img
+                        src={logoPreviewUrl}
+                        alt="Preview"
+                        className="h-12 w-12 object-contain border-2 border-border rounded"
+                      />
+                      <span className="text-xs text-neon-green">New logo selected</span>
+                    </div>
+                  )}
+
+                  {/* File input */}
+                  <Input
+                    type="file"
+                    accept="image/png,image/jpeg,image/jpg,image/webp,image/svg+xml"
+                    onChange={(e) => {
+                      const file = e.target.files?.[0]
+                      if (file) {
+                        // Validate file size (5MB max)
+                        if (file.size > 5 * 1024 * 1024) {
+                          setMessage({
+                            type: 'error',
+                            text: 'Logo must be smaller than 5MB'
+                          })
+                          e.target.value = ''
+                          return
+                        }
+                        setFormData(prev => ({ ...prev, logo: file }))
+                      }
+                    }}
+                  />
+                  <p className="text-xs text-foreground-muted">
+                    PNG, JPG, SVG up to 5MB. Transparent backgrounds recommended.
+                  </p>
+                </div>
+              </div>
+
               {/* Actions */}
               <div className="flex gap-3 pt-4">
                 <Button
@@ -560,14 +688,22 @@ function SchoolRow({
     <div className="border-2 border-border bg-background-secondary p-4 hover:border-neon-blue/50 transition-colors">
       <div className="flex items-center justify-between gap-3">
         <div className="flex items-center gap-4 flex-1 min-w-0">
-          {/* Color Badge */}
-          {colors && (
+          {/* Logo or Color Badge */}
+          {school.logo_url ? (
+            <img
+              src={school.logo_url}
+              alt={`${school.name} logo`}
+              className="w-10 h-10 object-contain rounded border-2 border-border flex-shrink-0"
+            />
+          ) : colors ? (
             <div
               className="w-10 h-10 rounded-full border-2 border-border flex-shrink-0"
               style={{
                 background: `linear-gradient(135deg, ${colors.primary} 50%, ${colors.secondary} 50%)`,
               }}
             />
+          ) : (
+            <div className="w-10 h-10 rounded-full border-2 border-border flex-shrink-0 bg-background-secondary" />
           )}
 
           <div className="flex-1 min-w-0">

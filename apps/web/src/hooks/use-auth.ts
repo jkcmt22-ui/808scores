@@ -23,8 +23,12 @@ export function useAuth() {
   })
 
   // Use ref to ensure supabase client is stable
-  const supabaseRef = useRef(createClient()!)
+  const supabaseRef = useRef(createClient())
   const supabase = supabaseRef.current
+
+  if (!supabase) {
+    throw new Error('Supabase client not initialized. Check environment variables.')
+  }
 
   // Initialize auth state - only run once on mount
   useEffect(() => {
