@@ -19,9 +19,15 @@ export function useNotifications(userId: string | undefined) {
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<Error | null>(null)
 
-  const supabase = useMemo(() => createClient()!, [])
+  const supabase = useMemo(() => createClient(), [])
 
   const fetchNotifications = useCallback(async () => {
+    if (!supabase) {
+      setError(new Error('Database connection not available'))
+      setIsLoading(false)
+      return
+    }
+
     if (!userId) {
       setNotifications([])
       setIsLoading(false)
@@ -56,7 +62,7 @@ export function useNotifications(userId: string | undefined) {
 
   // Subscribe to new notifications
   useEffect(() => {
-    if (!userId) return
+    if (!supabase || !userId) return
 
     const channel = supabase
       .channel(`notifications-${userId}`)
@@ -95,6 +101,8 @@ export function useNotifications(userId: string | undefined) {
 
   const markAsRead = useCallback(
     async (notificationId: string) => {
+      if (!supabase) return
+
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const { error: updateError } = await (supabase as any)
         .from('notifications')
@@ -111,7 +119,7 @@ export function useNotifications(userId: string | undefined) {
   )
 
   const markAllAsRead = useCallback(async () => {
-    if (!userId) return
+    if (!supabase || !userId) return
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const { error: updateError } = await (supabase as any)

@@ -143,19 +143,23 @@ export default function HomePage() {
     setSelectedDate(new Date())
   }
 
-  // Fetch main competitive games
-  const { games, isLoading } = useGames({
+  // Fetch all games once (50% fewer queries than fetching twice)
+  const { games: allGames, isLoading } = useGames({
     date: selectedDate,
     sportCode: selectedSport,
-    excludeGameTypes: OTHER_GAME_TYPES,
+    // No game type filters - fetch everything
   })
 
-  // Fetch exhibition/scrimmage games
-  const { games: otherGames, isLoading: isLoadingOther } = useGames({
-    date: selectedDate,
-    sportCode: selectedSport,
-    gameTypes: OTHER_GAME_TYPES,
-  })
+  // Split games client-side instead of 2 database queries
+  const games = useMemo(
+    () => allGames.filter((g) => !OTHER_GAME_TYPES.includes(g.game_type)),
+    [allGames]
+  )
+  const otherGames = useMemo(
+    () => allGames.filter((g) => OTHER_GAME_TYPES.includes(g.game_type)),
+    [allGames]
+  )
+  const isLoadingOther = isLoading // Same loading state since it's one query
 
   // Filter for favorites only if enabled
   const hasFavorites = favoriteTeamIds.length > 0 || favoriteSportIds.length > 0

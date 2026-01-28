@@ -20,9 +20,15 @@ export function useRaffles({ status = 'open', limit = 10 }: UseRafflesOptions = 
   const [raffles, setRaffles] = useState<RaffleWithPrize[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
-  const supabase = createClient()!
+  const supabase = createClient()
 
   const fetchRaffles = useCallback(async () => {
+    if (!supabase) {
+      setError('Database connection not available')
+      setIsLoading(false)
+      return
+    }
+
     setIsLoading(true)
     setError(null)
 
@@ -78,9 +84,14 @@ interface UseUserRaffleEntriesReturn {
 export function useUserRaffleEntries({ userId }: UseUserRaffleEntriesOptions): UseUserRaffleEntriesReturn {
   const [entries, setEntries] = useState<(RaffleEntry & { raffle: RaffleWithPrize })[]>([])
   const [isLoading, setIsLoading] = useState(true)
-  const supabase = createClient()!
+  const supabase = createClient()
 
   const fetchEntries = useCallback(async () => {
+    if (!supabase) {
+      setIsLoading(false)
+      return
+    }
+
     if (!userId) {
       setEntries([])
       setIsLoading(false)
@@ -117,7 +128,7 @@ export function useUserRaffleEntries({ userId }: UseUserRaffleEntriesOptions): U
 
   // Subscribe to entry changes
   useEffect(() => {
-    if (!userId) return
+    if (!supabase || !userId) return
 
     const channel = supabase
       .channel(`raffle-entries-${userId}`)
@@ -155,10 +166,15 @@ interface UsePastWinnersReturn {
 export function usePastWinners(limit: number = 10): UsePastWinnersReturn {
   const [winners, setWinners] = useState<RaffleWinnerWithDetails[]>([])
   const [isLoading, setIsLoading] = useState(true)
-  const supabase = createClient()!
+  const supabase = createClient()
 
   useEffect(() => {
     async function fetchWinners() {
+      if (!supabase) {
+        setIsLoading(false)
+        return
+      }
+
       const { data, error } = await supabase
         .from('raffle_winners')
         .select(`
@@ -193,10 +209,14 @@ export function usePastWinners(limit: number = 10): UsePastWinnersReturn {
 export function useEnterRaffle() {
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const supabase = createClient()!
+  const supabase = createClient()
 
   const enterRaffle = useCallback(
     async (raffleId: string, entryCount: number): Promise<{ success: boolean; error?: string }> => {
+      if (!supabase) {
+        return { success: false, error: 'Database connection not available' }
+      }
+
       setIsLoading(true)
       setError(null)
 

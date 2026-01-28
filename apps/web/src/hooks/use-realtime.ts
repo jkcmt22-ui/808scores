@@ -13,10 +13,16 @@ export function useRealtimeGame(gameId: string) {
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<Error | null>(null)
 
-  const supabase = createClient()!
+  const supabase = createClient()
 
   // Fetch initial game data
   const fetchGame = useCallback(async () => {
+    if (!supabase) {
+      setError(new Error('Database connection not available'))
+      setIsLoading(false)
+      return
+    }
+
     try {
       const { data, error: fetchError } = await supabase
         .from('games')
@@ -42,6 +48,8 @@ export function useRealtimeGame(gameId: string) {
   }, [supabase, gameId])
 
   useEffect(() => {
+    if (!supabase) return
+
     fetchGame()
 
     // Subscribe to real-time updates
@@ -79,10 +87,16 @@ export function useRealtimeLiveGames() {
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<Error | null>(null)
 
-  const supabase = createClient()!
+  const supabase = createClient()
 
   // Fetch live games
   const fetchLiveGames = useCallback(async () => {
+    if (!supabase) {
+      setError(new Error('Database connection not available'))
+      setIsLoading(false)
+      return
+    }
+
     try {
       const { data, error: fetchError } = await supabase
         .from('games')
@@ -108,6 +122,8 @@ export function useRealtimeLiveGames() {
   }, [supabase])
 
   useEffect(() => {
+    if (!supabase) return
+
     fetchLiveGames()
 
     // Subscribe to all game updates
@@ -142,9 +158,14 @@ export function useRealtimeSubmissions(gameId: string) {
   const [submissions, setSubmissions] = useState<Submission[]>([])
   const [isLoading, setIsLoading] = useState(true)
 
-  const supabase = createClient()!
+  const supabase = createClient()
 
   const fetchSubmissions = useCallback(async () => {
+    if (!supabase) {
+      setIsLoading(false)
+      return
+    }
+
     try {
       const { data, error } = await supabase
         .from('submissions')
@@ -163,6 +184,8 @@ export function useRealtimeSubmissions(gameId: string) {
   }, [supabase, gameId])
 
   useEffect(() => {
+    if (!supabase) return
+
     fetchSubmissions()
 
     const channel = supabase
