@@ -18,6 +18,7 @@ interface AuthContextType {
   isAuthenticated: boolean
   signOut: () => Promise<void>
   refreshProfile: () => Promise<void>
+  updateProfile: (updates: { display_name?: string; avatar_url?: string }) => Promise<User | null>
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined)
@@ -123,6 +124,28 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   }
 
+  const updateProfile = async (updates: { display_name?: string; avatar_url?: string }): Promise<User | null> => {
+    if (!user || !supabase) return null
+
+    try {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const { data, error } = await (supabase as any)
+        .from('users')
+        .update(updates)
+        .eq('id', user.id)
+        .select()
+        .single()
+
+      if (error) throw error
+
+      setProfile(data as User)
+      return data as User
+    } catch (err) {
+      console.error('Update profile error:', err)
+      return null
+    }
+  }
+
   return (
     <AuthContext.Provider
       value={{
@@ -132,6 +155,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         isAuthenticated: !!user,
         signOut,
         refreshProfile,
+        updateProfile,
       }}
     >
       {children}
