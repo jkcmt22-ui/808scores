@@ -38,7 +38,8 @@ import { createClient } from '@/lib/supabase/client'
 import { cn, formatGameTime, isGameLive, isGameFinal } from '@/lib/utils'
 import { adminCache } from '@/lib/admin-cache'
 import { perf } from '@/lib/perf'
-import type { GameWithTeams, Sport, School, GameStatus, GameType, TrustedReporterCode } from '@/types/database'
+import { getPeriodOptions, getPeriodTypeLabel, isInningsBased, type PeriodOption } from '@/lib/sport-periods'
+import type { GameWithTeams, Sport, School, GameStatus, GameType, TrustedReporterCode, PeriodsConfig } from '@/types/database'
 
 type TabType = 'games' | 'create' | 'applications' | 'codes' | 'users'
 
@@ -977,6 +978,7 @@ export default function AdminPage() {
               sports={sports}
               schools={schools}
               isEdit={true}
+              editingGame={editingGame}
             />
             <div className="flex gap-3 mt-4">
               <Button variant="outline" onClick={() => setEditingGame(null)} disabled={isSaving}>
@@ -1141,6 +1143,7 @@ export default function AdminPage() {
               sports={sports}
               schools={schools}
               isEdit={false}
+              editingGame={null}
             />
             <Button onClick={handleCreateGame} disabled={isSaving} className="mt-4 w-full">
               {isSaving ? (
@@ -1868,13 +1871,24 @@ function GameForm({
   sports,
   schools,
   isEdit,
+  editingGame,
 }: {
   formData: GameFormData
   onChange: (field: keyof GameFormData, value: string | number | boolean) => void
   sports: Sport[]
   schools: School[]
   isEdit: boolean
+  editingGame?: GameWithTeams | null
 }) {
+  // Get the selected sport for period options
+  const selectedSport = isEdit && editingGame
+    ? editingGame.sport
+    : sports.find(s => s.id === formData.sport_id)
+
+  const periodsConfig = selectedSport?.periods_config as PeriodsConfig | null
+  const periodOptions = getPeriodOptions(periodsConfig)
+  const periodLabel = getPeriodTypeLabel(periodsConfig)
+  const showInningsHalf = isInningsBased(periodsConfig)
   return (
     <div className="space-y-4">
       {!isEdit && (
@@ -2012,12 +2026,40 @@ function GameForm({
       {/* Period & Time */}
       <div className="grid grid-cols-2 gap-4">
         <div>
-          <label className="block text-sm font-medium text-foreground mb-1">Current Period</label>
-          <Input
-            placeholder="e.g., Q3, Set 2"
-            value={formData.current_period}
-            onChange={(e) => onChange('current_period', e.target.value)}
-          />
+          <label className="block text-sm font-medium text-foreground mb-1">
+            Current {periodLabel}
+          </label>
+          {selectedSport ? (
+            <select
+              value={formData.current_period}
+              onChange={(e) => onChange('current_period', e.target.value)}
+              className="w-full h-10 px-3 border-2 border-border bg-background text-foreground font-display text-sm"
+            >
+              <option value="">Not started / Clear</option>
+              {periodOptions.map((option) => (
+                <option
+                  key={option.value}
+                  value={showInningsHalf ? `Top ${option.value}` : option.value}
+                  className={option.isOvertime ? 'text-neon-pink' : ''}
+                >
+                  {option.label}
+                  {option.isOvertime && ' (OT)'}
+                </option>
+              ))}
+              {showInningsHalf && periodOptions.filter(o => !o.isOvertime).map((option) => (
+                <option key={`bot-${option.value}`} value={`Bot ${option.value}`}>
+                  Bot {option.label}
+                </option>
+              ))}
+            </select>
+          ) : (
+            <Input
+              placeholder="Select a sport first"
+              value={formData.current_period}
+              onChange={(e) => onChange('current_period', e.target.value)}
+              disabled={!isEdit}
+            />
+          )}
         </div>
         <div>
           <label className="block text-sm font-medium text-foreground mb-1">Time Remaining</label>

@@ -19,44 +19,10 @@ import { useGame, useAuth } from '@/hooks'
 import { createClient } from '@/lib/supabase/client'
 import { addToQueue, isOnline, onOnlineStatusChange } from '@/lib/offline-queue'
 import { cn } from '@/lib/utils'
+import { getOvertimePeriods } from '@/lib/sport-periods'
 import type { PeriodsConfig, SubmissionType as DBSubmissionType } from '@/types/database'
 
 type SubmissionType = 'period_score' | 'final_score' | 'live_update' | 'event'
-
-// Helper to generate overtime period names based on sport type
-function getOvertimePeriods(periodsConfig: PeriodsConfig, maxOT: number = 3): string[] {
-  const overtimePeriods: string[] = []
-
-  if (!periodsConfig.overtime) return overtimePeriods
-
-  switch (periodsConfig.overtime.type) {
-    case 'kansas':
-      for (let i = 1; i <= maxOT; i++) {
-        overtimePeriods.push(i === 1 ? 'OT' : `${i}OT`)
-      }
-      break
-    case 'periods':
-      for (let i = 1; i <= maxOT; i++) {
-        overtimePeriods.push(i === 1 ? 'OT' : `${i}OT`)
-      }
-      break
-    case 'golden_goal':
-      overtimePeriods.push('OT1', 'OT2', 'PKs')
-      break
-    case 'extra_innings':
-      const baseInnings = periodsConfig.count
-      for (let i = 1; i <= maxOT; i++) {
-        overtimePeriods.push(`${baseInnings + i}`)
-      }
-      break
-    default:
-      for (let i = 1; i <= maxOT; i++) {
-        overtimePeriods.push(i === 1 ? 'OT' : `${i}OT`)
-      }
-  }
-
-  return overtimePeriods
-}
 
 interface SubmitPageProps {
   params: Promise<{ gameId: string }>
