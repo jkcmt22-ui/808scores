@@ -1502,6 +1502,7 @@ function GameRow({
                   type="number"
                   value={quickAwayScore}
                   onChange={(e) => setQuickAwayScore(Math.max(0, parseInt(e.target.value) || 0))}
+                  onFocus={(e) => e.target.select()}
                   className="w-12 h-6 text-center bg-background border-2 border-neon-blue text-neon-blue font-bold text-sm"
                   min="0"
                 />
@@ -1525,6 +1526,7 @@ function GameRow({
                   type="number"
                   value={quickHomeScore}
                   onChange={(e) => setQuickHomeScore(Math.max(0, parseInt(e.target.value) || 0))}
+                  onFocus={(e) => e.target.select()}
                   className="w-12 h-6 text-center bg-background border-2 border-neon-pink text-neon-pink font-bold text-sm"
                   min="0"
                 />
@@ -1888,6 +1890,7 @@ function GameForm({
             min="0"
             value={formData.away_score}
             onChange={(e) => onChange('away_score', parseInt(e.target.value) || 0)}
+            onFocus={(e) => e.target.select()}
           />
         </div>
         <div>
@@ -1897,6 +1900,7 @@ function GameForm({
             min="0"
             value={formData.home_score}
             onChange={(e) => onChange('home_score', parseInt(e.target.value) || 0)}
+            onFocus={(e) => e.target.select()}
           />
         </div>
       </div>
