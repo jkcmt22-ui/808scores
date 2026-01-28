@@ -279,52 +279,10 @@ export default function SchoolsAdminPage() {
     }
   }, [formData.logo])
 
-  // Auth loading
-  if (authLoading) {
-    return (
-      <div className="flex min-h-screen flex-col items-center justify-center bg-background">
-        <Loader2 className="h-8 w-8 animate-spin text-neon-yellow" />
-      </div>
-    )
-  }
+  // NOTE: Auth checks (loading, user, profile, admin access) are handled by AdminLayout
+  // Do not duplicate them here - the layout ensures these are valid before rendering children
 
-  // Not authenticated
-  if (!user) {
-    router.push('/login?redirect=/admin/schools')
-    return null
-  }
-
-  // Profile failed to load - graceful error state (no crash)
-  if (!profile) {
-    return (
-      <div className="flex min-h-screen flex-col items-center justify-center p-4 bg-background">
-        <AlertCircle className="mb-4 h-12 w-12 text-neon-pink" />
-        <h1 className="mb-2 font-display text-xl font-bold text-foreground uppercase">Profile Not Found</h1>
-        <p className="mb-4 text-foreground-muted text-sm text-center max-w-md">
-          Unable to load your profile. This could be a temporary issue.
-        </p>
-        <Button onClick={() => window.location.reload()} variant="outline">
-          Try Again
-        </Button>
-      </div>
-    )
-  }
-
-  // No admin access
-  if (!hasAdminAccess) {
-    return (
-      <div className="flex min-h-screen flex-col items-center justify-center p-4 bg-background">
-        <AlertCircle className="mb-4 h-12 w-12 text-neon-pink" />
-        <h1 className="mb-2 font-display text-xl font-bold text-foreground uppercase">Access Denied</h1>
-        <p className="mb-4 text-foreground-muted text-sm text-center">
-          You need admin privileges to access this area.
-        </p>
-        <Button onClick={() => router.push('/')}>Go Home</Button>
-      </div>
-    )
-  }
-
-  // Check Supabase client availability
+  // Check Supabase client availability (this is different - it's about DB connection)
   if (!supabaseClient) {
     return (
       <div className="flex min-h-screen flex-col items-center justify-center p-4 bg-background">

@@ -185,25 +185,10 @@ export default function AnalyticsPage() {
     }
   }, [isSuperAdmin, fetchAnalytics])
 
-  // Auth loading
-  if (authLoading) {
-    return (
-      <div className="flex min-h-[50vh] flex-col items-center justify-center">
-        <Loader2 className="h-8 w-8 animate-spin text-neon-yellow" />
-        <span className="mt-4 font-display text-sm text-foreground-muted uppercase tracking-wider">
-          Loading...
-        </span>
-      </div>
-    )
-  }
+  // NOTE: Basic auth checks (loading, user, profile, admin access) are handled by AdminLayout
+  // Only check for super admin access here since this page has additional requirements
 
-  // Not authenticated
-  if (!user) {
-    router.push('/login?redirect=/admin/analytics')
-    return null
-  }
-
-  // No super admin access
+  // No super admin access (this is page-specific, not handled by layout)
   if (!isSuperAdmin) {
     return (
       <div className="flex min-h-[50vh] flex-col items-center justify-center p-4">

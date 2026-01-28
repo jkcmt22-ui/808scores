@@ -1,8 +1,8 @@
 'use client'
 
-import { ReactNode, useState, useMemo } from 'react'
+import { ReactNode, useState, useMemo, useEffect, useRef } from 'react'
 import Link from 'next/link'
-import { usePathname } from 'next/navigation'
+import { usePathname, useRouter } from 'next/navigation'
 import {
   LayoutDashboard,
   Trophy,
@@ -19,10 +19,14 @@ import {
   X,
   BarChart3,
   Key,
+  Loader2,
+  AlertCircle,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { Header } from '@/components/layout'
+import { Button } from '@/components/ui'
 import { useAuth } from '@/hooks'
+import { logAuthState, logLoadingStart, logLoadingEnd, logRender } from '@/lib/nav-debug'
 
 const adminNavItems = [
   { href: '/admin', label: 'Dashboard', icon: LayoutDashboard, exact: true },
@@ -40,11 +44,137 @@ const adminNavItems = [
 
 export default function AdminLayout({ children }: { children: ReactNode }) {
   const pathname = usePathname()
-  const { profile } = useAuth()
+  const router = useRouter()
+  const { user, profile, isLoading: authLoading } = useAuth()
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const [collapsed, setCollapsed] = useState(false)
+  const [loadingTimeout, setLoadingTimeout] = useState(false)
+  const loadingIdRef = useRef<string>('')
+  const redirectedRef = useRef(false)
 
   const isSuperAdmin = profile?.is_super_admin === true
+  const hasAdminAccess = profile?.is_admin === true || isSuperAdmin
+
+  // Debug: Log render
+  logRender('AdminLayout', `authLoading=${authLoading}, hasUser=${!!user}, hasProfile=${!!profile}`)
+
+  // Debug: Log auth state
+  useEffect(() => {
+    logAuthState('AdminLayout', {
+      isLoading: authLoading,
+      hasUser: !!user,
+      hasProfile: !!profile,
+      isAdmin: profile?.is_admin,
+      isSuperAdmin: profile?.is_super_admin,
+    })
+  }, [authLoading, user, profile])
+
+  // Track loading state with timeout
+  useEffect(() => {
+    if (authLoading) {
+      loadingIdRef.current = logLoadingStart('AdminLayout', 'auth check')
+      setLoadingTimeout(false)
+
+      // Timeout after 10 seconds
+      const timeout = setTimeout(() => {
+        setLoadingTimeout(true)
+        logLoadingEnd(loadingIdRef.current, 'timeout')
+      }, 10000)
+
+      return () => clearTimeout(timeout)
+    } else if (loadingIdRef.current) {
+      logLoadingEnd(loadingIdRef.current, 'success')
+      loadingIdRef.current = ''
+    }
+  }, [authLoading])
+
+  // Handle redirect in useEffect (not during render)
+  useEffect(() => {
+    if (!authLoading && !user && !redirectedRef.current) {
+      redirectedRef.current = true
+      router.push(`/login?redirect=${encodeURIComponent(pathname)}`)
+    }
+  }, [authLoading, user, router, pathname])
+
+  // Auth loading state - show loading in layout with timeout fallback
+  if (authLoading) {
+    if (loadingTimeout) {
+      return (
+        <div className="min-h-screen bg-background">
+          <Header title="Admin Panel" />
+          <div className="flex min-h-[50vh] flex-col items-center justify-center p-4">
+            <AlertCircle className="mb-4 h-12 w-12 text-neon-pink" />
+            <h1 className="mb-2 font-display text-xl font-bold text-foreground uppercase">
+              Loading Timeout
+            </h1>
+            <p className="mb-4 text-foreground-muted text-sm text-center max-w-md">
+              Taking longer than expected. Please try again.
+            </p>
+            <Button onClick={() => window.location.reload()} variant="outline">
+              Retry
+            </Button>
+          </div>
+        </div>
+      )
+    }
+
+    return (
+      <div className="min-h-screen bg-background">
+        <Header title="Admin Panel" />
+        <div className="flex min-h-[50vh] flex-col items-center justify-center">
+          <Loader2 className="h-8 w-8 animate-spin text-neon-yellow" />
+          <span className="mt-4 font-display text-sm text-foreground-muted uppercase tracking-wider">
+            Loading...
+          </span>
+        </div>
+      </div>
+    )
+  }
+
+  // Not authenticated - redirect handled by useEffect above
+  if (!user) {
+    return null
+  }
+
+  // Profile failed to load - graceful error
+  if (!profile) {
+    return (
+      <div className="min-h-screen bg-background">
+        <Header title="Admin Panel" />
+        <div className="flex min-h-[50vh] flex-col items-center justify-center p-4">
+          <AlertCircle className="mb-4 h-12 w-12 text-neon-pink" />
+          <h1 className="mb-2 font-display text-xl font-bold text-foreground uppercase">
+            Profile Not Found
+          </h1>
+          <p className="mb-4 text-foreground-muted text-sm text-center max-w-md">
+            Unable to load your profile. This could be a temporary issue.
+          </p>
+          <Button onClick={() => window.location.reload()} variant="outline">
+            Try Again
+          </Button>
+        </div>
+      </div>
+    )
+  }
+
+  // No admin access
+  if (!hasAdminAccess) {
+    return (
+      <div className="min-h-screen bg-background">
+        <Header title="Admin Panel" />
+        <div className="flex min-h-[50vh] flex-col items-center justify-center p-4">
+          <AlertCircle className="mb-4 h-12 w-12 text-neon-pink" />
+          <h1 className="mb-2 font-display text-xl font-bold text-foreground uppercase">
+            Access Denied
+          </h1>
+          <p className="mb-4 text-foreground-muted text-sm text-center">
+            You need admin privileges to access this area.
+          </p>
+          <Button onClick={() => router.push('/')}>Go Home</Button>
+        </div>
+      </div>
+    )
+  }
 
   // Filter nav items based on user role
   const visibleNavItems = useMemo(() => {

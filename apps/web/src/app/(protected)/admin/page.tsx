@@ -791,51 +791,8 @@ export default function AdminPage() {
     })
   }
 
-  // Auth loading state
-  if (authLoading) {
-    return (
-      <div className="flex min-h-screen flex-col items-center justify-center bg-background">
-        <Loader2 className="h-8 w-8 animate-spin text-neon-yellow" />
-        <span className="mt-4 font-display text-sm text-foreground-muted uppercase tracking-wider">Loading...</span>
-      </div>
-    )
-  }
-
-  // Not authenticated
-  if (!user) {
-    router.push('/login?redirect=/admin')
-    return null
-  }
-
-  // Profile failed to load - graceful error state (no crash)
-  if (!profile) {
-    return (
-      <div className="flex min-h-screen flex-col items-center justify-center p-4 bg-background">
-        <AlertCircle className="mb-4 h-12 w-12 text-neon-pink" />
-        <h1 className="mb-2 font-display text-xl font-bold text-foreground uppercase">Profile Not Found</h1>
-        <p className="mb-4 text-foreground-muted text-sm text-center max-w-md">
-          Unable to load your profile. This could be a temporary issue.
-        </p>
-        <Button onClick={() => window.location.reload()} variant="outline">
-          Try Again
-        </Button>
-      </div>
-    )
-  }
-
-  // No admin access
-  if (!hasAdminAccess) {
-    return (
-      <div className="flex min-h-screen flex-col items-center justify-center p-4 bg-background">
-        <AlertCircle className="mb-4 h-12 w-12 text-neon-pink" />
-        <h1 className="mb-2 font-display text-xl font-bold text-foreground uppercase">Access Denied</h1>
-        <p className="mb-4 text-foreground-muted text-sm text-center">
-          You need admin privileges to access this area.
-        </p>
-        <Button onClick={() => router.push('/')}>Go Home</Button>
-      </div>
-    )
-  }
+  // NOTE: Auth checks are handled by AdminLayout - do not duplicate here
+  // The layout ensures user, profile, and admin access before rendering children
 
   // Supabase client not available
   if (!supabaseClient) {
