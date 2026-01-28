@@ -85,16 +85,17 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
       loadingIdRef.current = logLoadingStart('AdminLayout', 'auth check')
       setLoadingTimeout(false)
 
-      // Timeout after 10 seconds
+      // Timeout after 6 seconds (slightly longer than auth provider's 5s timeout)
       const timeout = setTimeout(() => {
         setLoadingTimeout(true)
         logLoadingEnd(loadingIdRef.current, 'timeout')
-      }, 10000)
+      }, 6000)
 
       return () => clearTimeout(timeout)
     } else if (loadingIdRef.current) {
       logLoadingEnd(loadingIdRef.current, 'success')
       loadingIdRef.current = ''
+      setLoadingTimeout(false) // Reset timeout state when loading completes
     }
   }, [authLoading])
 

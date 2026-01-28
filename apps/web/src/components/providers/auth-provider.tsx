@@ -11,6 +11,9 @@ import {
   logAuthEvent,
 } from '@/lib/auth-debug'
 
+// Auth initialization timeout (5 seconds)
+const AUTH_INIT_TIMEOUT_MS = 5000
+
 /**
  * Explicit profile fields selection - no select('*')
  * This documents our dependencies and ensures predictable query results.
@@ -53,6 +56,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [profile, setProfile] = useState<User | null>(null)
   const [isLoading, setIsLoading] = useState(true)
   const subscriptionIdRef = useRef<string>('')
+  const hasInitializedRef = useRef(false)
 
   const supabase = createClient()
 
@@ -86,10 +90,36 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       return
     }
 
+    // Prevent double initialization (React StrictMode can cause this)
+    if (hasInitializedRef.current) {
+      return
+    }
+    hasInitializedRef.current = true
+
     const initAuth = async () => {
       logAuthEvent('INIT_START', 'AuthProvider')
+
+      // Create a timeout promise
+      const timeoutPromise = new Promise<{ data: { user: null }, timedOut: true }>((resolve) => {
+        setTimeout(() => {
+          resolve({ data: { user: null }, timedOut: true })
+        }, AUTH_INIT_TIMEOUT_MS)
+      })
+
       try {
-        const { data: { user: authUser } } = await supabase.auth.getUser()
+        // Race between auth check and timeout
+        const authPromise = supabase.auth.getUser().then(result => ({ ...result, timedOut: false }))
+        const result = await Promise.race([authPromise, timeoutPromise])
+
+        if ('timedOut' in result && result.timedOut) {
+          console.warn('Auth init timed out after', AUTH_INIT_TIMEOUT_MS, 'ms')
+          logAuthEvent('INIT_TIMEOUT', 'AuthProvider', { timeout: AUTH_INIT_TIMEOUT_MS })
+          // Continue without user - they can retry or the auth state change listener will pick up
+          setIsLoading(false)
+          return
+        }
+
+        const authUser = result.data.user
 
         if (authUser) {
           setUser(authUser)
