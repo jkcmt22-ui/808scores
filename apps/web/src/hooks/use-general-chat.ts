@@ -40,7 +40,7 @@ interface UseGeneralChatReturn {
   sendGif: (gif: { id: string; url: string }, replyToId?: string | null) => Promise<boolean>
   toggleLike: (messageId: string) => Promise<void>
   reportMessage: (messageId: string) => Promise<boolean>
-  deleteMessage: (messageId: string) => Promise<boolean>
+  deleteMessage: (messageId: string, isAdmin?: boolean) => Promise<boolean>
   loadMore: () => Promise<void>
   hasMore: boolean
   isSending: boolean
@@ -356,15 +356,21 @@ export function useGeneralChat(
   }, [supabase, user, messages])
 
   // Delete message (soft delete by setting is_hidden)
-  const deleteMessage = useCallback(async (messageId: string): Promise<boolean> => {
+  const deleteMessage = useCallback(async (messageId: string, isAdmin = false): Promise<boolean> => {
     if (!user || !supabase) return false
 
     try {
-      const { error } = await (supabase as any)
+      let query = (supabase as any)
         .from('general_chat_messages')
         .update({ is_hidden: true })
         .eq('id', messageId)
-        .eq('user_id', user.id) // Security: only allow deleting own messages
+
+      // Non-admins can only delete their own messages
+      if (!isAdmin) {
+        query = query.eq('user_id', user.id)
+      }
+
+      const { error } = await query
 
       if (error) throw error
 

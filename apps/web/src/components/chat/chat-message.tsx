@@ -11,6 +11,7 @@ import type { ChatMessageWithUser } from '@/types/database'
 interface ChatMessageProps {
   message: ChatMessageWithUser
   currentUserId?: string
+  isAdmin?: boolean
   isAuthenticated: boolean
   onReply: (message: ChatMessageWithUser) => void
   onReport: (messageId: string) => void
@@ -75,6 +76,7 @@ function renderContentWithMentions(content: string) {
 export function ChatMessageComponent({
   message,
   currentUserId,
+  isAdmin,
   isAuthenticated,
   onReply,
   onReport,
@@ -227,8 +229,8 @@ export function ChatMessageComponent({
           </div>
         </div>
 
-        {/* Delete button (own messages only) */}
-        {isAuthenticated && isOwnMessage && onDelete && (
+        {/* Delete button (own messages or admin) */}
+        {isAuthenticated && (isOwnMessage || isAdmin) && onDelete && (
           <button
             onClick={handleDelete}
             disabled={isDeleting}

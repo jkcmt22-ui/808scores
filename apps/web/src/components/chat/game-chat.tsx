@@ -26,7 +26,7 @@ interface GameChatProps {
 }
 
 export function GameChat({ gameId }: GameChatProps) {
-  const { user, isAuthenticated } = useAuth()
+  const { user, profile, isAuthenticated } = useAuth()
   const [messages, setMessages] = useState<ChatMessageWithUser[]>([])
   const [chatUsers, setChatUsers] = useState<MentionUser[]>([])
   const [newMessage, setNewMessage] = useState('')
@@ -363,15 +363,23 @@ export function GameChat({ gameId }: GameChatProps) {
   }
 
   const handleDelete = async (messageId: string) => {
-    if (!user) return
+    if (!user || !profile) return
+
+    const isAdmin = profile.is_admin || profile.is_super_admin
 
     // Soft delete by setting is_hidden = true
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const { error: deleteError } = await (supabase as any)
+    let query = (supabase as any)
       .from('chat_messages')
       .update({ is_hidden: true })
       .eq('id', messageId)
-      .eq('user_id', user.id) // Security: Only allow deleting own messages
+
+    // Non-admins can only delete their own messages
+    if (!isAdmin) {
+      query = query.eq('user_id', user.id)
+    }
+
+    const { error: deleteError } = await query
 
     if (deleteError) {
       console.error('Error deleting message:', deleteError)
@@ -406,7 +414,7 @@ export function GameChat({ gameId }: GameChatProps) {
   }
 
   return (
-    <div className="flex flex-col h-[400px] scoreboard-panel overflow-hidden">
+    <div className="flex flex-col h-[500px] lg:h-[600px] scoreboard-panel overflow-hidden">
       {/* Header */}
       <div className="flex items-center justify-between border-b-2 border-border px-4 py-3">
         <h3 className="font-mono text-sm font-bold text-score-amber uppercase tracking-wider">
@@ -442,6 +450,7 @@ export function GameChat({ gameId }: GameChatProps) {
               key={msg.id}
               message={msg}
               currentUserId={user?.id}
+              isAdmin={profile?.is_admin || profile?.is_super_admin}
               isAuthenticated={isAuthenticated}
               onReply={handleReply}
               onReport={handleReport}

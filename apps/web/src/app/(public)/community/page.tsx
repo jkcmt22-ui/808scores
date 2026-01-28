@@ -11,6 +11,7 @@ import Link from 'next/link'
 function MessageItem({
   message,
   currentUserId,
+  isAdmin,
   isAuthenticated,
   onReply,
   onReport,
@@ -19,6 +20,7 @@ function MessageItem({
 }: {
   message: GeneralChatMessage
   currentUserId?: string
+  isAdmin?: boolean
   isAuthenticated: boolean
   onReply: (message: GeneralChatMessage) => void
   onReport: (messageId: string) => void
@@ -136,8 +138,8 @@ function MessageItem({
           </div>
         </div>
 
-        {/* Delete button (own messages only) */}
-        {isAuthenticated && isOwnMessage && onDelete && (
+        {/* Delete button (own messages or admin) */}
+        {isAuthenticated && (isOwnMessage || isAdmin) && onDelete && (
           <button
             onClick={handleDelete}
             disabled={isDeleting}
@@ -170,7 +172,7 @@ function MessageItem({
 }
 
 export default function CommunityPage() {
-  const { user } = useAuth()
+  const { user, profile } = useAuth()
   const {
     messages,
     isLoading,
@@ -224,7 +226,8 @@ export default function CommunityPage() {
   }
 
   const handleDelete = async (messageId: string) => {
-    await deleteMessage(messageId)
+    const isAdmin = profile?.is_admin || profile?.is_super_admin
+    await deleteMessage(messageId, isAdmin)
   }
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
@@ -301,6 +304,7 @@ export default function CommunityPage() {
               key={message.id}
               message={message}
               currentUserId={user?.id}
+              isAdmin={profile?.is_admin || profile?.is_super_admin}
               isAuthenticated={!!user}
               onReply={handleReply}
               onReport={handleReport}
