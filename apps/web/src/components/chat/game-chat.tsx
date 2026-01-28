@@ -39,7 +39,15 @@ export function GameChat({ gameId }: GameChatProps) {
   const [highlightedMessageId, setHighlightedMessageId] = useState<string | null>(null)
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const messagesContainerRef = useRef<HTMLDivElement>(null)
-  const supabase = createClient()!
+  const supabase = createClient()
+
+  if (!supabase) {
+    return (
+      <div className="flex h-96 items-center justify-center">
+        <p className="text-foreground-muted text-sm">Unable to connect to chat</p>
+      </div>
+    )
+  }
 
   // Chat likes hook
   const { likedMessageIds, toggleLike } = useChatLikes({
@@ -92,13 +100,13 @@ export function GameChat({ gameId }: GameChatProps) {
       return
     }
 
-    // Process messages to add user_has_liked flag
+    // Process messages - liked status will be applied by separate effect
     const rawMessages = data || []
     const processedMessages = rawMessages.map((msg) => {
       const message = msg as unknown as ChatMessageWithUser
       return {
         ...message,
-        user_has_liked: likedMessageIds.has(message.id),
+        user_has_liked: false, // Will be updated by likedMessageIds effect
       }
     })
 
@@ -118,7 +126,7 @@ export function GameChat({ gameId }: GameChatProps) {
     setChatUsers(Array.from(users.values()))
 
     setIsLoading(false)
-  }, [supabase, gameId, likedMessageIds])
+  }, [supabase, gameId])
 
   useEffect(() => {
     fetchMessages()
@@ -203,7 +211,8 @@ export function GameChat({ gameId }: GameChatProps) {
     return () => {
       supabase.removeChannel(channel)
     }
-  }, [supabase, gameId, fetchMessages])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [supabase, gameId]) // fetchMessages removed to prevent subscription recreation
 
   // Update user_has_liked when likedMessageIds changes
   useEffect(() => {
