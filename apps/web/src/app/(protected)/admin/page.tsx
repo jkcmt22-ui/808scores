@@ -791,8 +791,8 @@ export default function AdminPage() {
     })
   }
 
-  // Auth loading - check both authLoading and profile === null
-  if (authLoading || profile === null) {
+  // Auth loading state
+  if (authLoading) {
     return (
       <div className="flex min-h-screen flex-col items-center justify-center bg-background">
         <Loader2 className="h-8 w-8 animate-spin text-neon-yellow" />
@@ -805,6 +805,22 @@ export default function AdminPage() {
   if (!user) {
     router.push('/login?redirect=/admin')
     return null
+  }
+
+  // Profile failed to load - graceful error state (no crash)
+  if (!profile) {
+    return (
+      <div className="flex min-h-screen flex-col items-center justify-center p-4 bg-background">
+        <AlertCircle className="mb-4 h-12 w-12 text-neon-pink" />
+        <h1 className="mb-2 font-display text-xl font-bold text-foreground uppercase">Profile Not Found</h1>
+        <p className="mb-4 text-foreground-muted text-sm text-center max-w-md">
+          Unable to load your profile. This could be a temporary issue.
+        </p>
+        <Button onClick={() => window.location.reload()} variant="outline">
+          Try Again
+        </Button>
+      </div>
+    )
   }
 
   // No admin access

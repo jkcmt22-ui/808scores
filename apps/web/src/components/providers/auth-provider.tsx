@@ -11,6 +11,32 @@ import {
   logAuthEvent,
 } from '@/lib/auth-debug'
 
+/**
+ * Explicit profile fields selection - no select('*')
+ * This documents our dependencies and ensures predictable query results.
+ * Update this list if new User fields are needed.
+ */
+const PROFILE_FIELDS = `
+  id,
+  display_name,
+  avatar_url,
+  email,
+  phone,
+  tier,
+  created_at,
+  is_admin,
+  is_super_admin,
+  is_trusted_reporter,
+  is_banned,
+  total_points,
+  season_points,
+  submission_count,
+  verified_count,
+  reputation_score,
+  accuracy_rate,
+  onboarding_completed
+`.replace(/\s+/g, '')
+
 interface AuthContextType {
   user: SupabaseUser | null
   profile: User | null
@@ -35,12 +61,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const fetchProfile = async (userId: string, source: string) => {
     if (!supabase) return null
 
-    const query = "select('*')" // TODO: Will be narrowed in Commit 3
+    const query = `select(${PROFILE_FIELDS})`
 
     return trackProfileFetch('AuthProvider.' + source, userId, query, async () => {
       const { data, error } = await supabase
         .from('users')
-        .select('*')
+        .select(PROFILE_FIELDS)
         .eq('id', userId)
         .single()
 
