@@ -36,6 +36,7 @@ import { Button, Badge, Input, Card } from '@/components/ui'
 import { useAuth } from '@/hooks'
 import { createClient } from '@/lib/supabase/client'
 import { cn, formatGameTime, isGameLive, isGameFinal } from '@/lib/utils'
+import { adminCache } from '@/lib/admin-cache'
 import type { GameWithTeams, Sport, School, GameStatus, GameType, TrustedReporterCode } from '@/types/database'
 
 type TabType = 'games' | 'create' | 'applications' | 'codes' | 'users'
@@ -157,25 +158,39 @@ export default function AdminPage() {
     if (!supabase) return
 
     try {
-      // Fetch sports
-      const { data: sportsData, error: sportsError } = await supabase
-        .from('sports')
-        .select('*')
-        .eq('active', true)
-        .order('sort_order')
+      // Check cache for sports
+      const cachedSports = adminCache.getSports()
+      if (cachedSports) {
+        setSports(cachedSports)
+      } else {
+        const { data: sportsData, error: sportsError } = await supabase
+          .from('sports')
+          .select('*')
+          .eq('active', true)
+          .order('sort_order')
 
-      if (!sportsError && sportsData) {
-        setSports(sportsData as Sport[])
+        if (!sportsError && sportsData) {
+          const sports = sportsData as Sport[]
+          setSports(sports)
+          adminCache.setSports(sports)
+        }
       }
 
-      // Fetch schools
-      const { data: schoolsData, error: schoolsError } = await supabase
-        .from('schools')
-        .select('*')
-        .order('name')
+      // Check cache for schools
+      const cachedSchools = adminCache.getSchools()
+      if (cachedSchools) {
+        setSchools(cachedSchools)
+      } else {
+        const { data: schoolsData, error: schoolsError } = await supabase
+          .from('schools')
+          .select('*')
+          .order('name')
 
-      if (!schoolsError && schoolsData) {
-        setSchools(schoolsData as School[])
+        if (!schoolsError && schoolsData) {
+          const schools = schoolsData as School[]
+          setSchools(schools)
+          adminCache.setSchools(schools)
+        }
       }
     } catch (err) {
       console.error('Error fetching common data:', err)

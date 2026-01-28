@@ -20,6 +20,7 @@ import { Button, Badge, Input, Card } from '@/components/ui'
 import { useAuth } from '@/hooks'
 import { createClient } from '@/lib/supabase/client'
 import { cn } from '@/lib/utils'
+import { adminCache } from '@/lib/admin-cache'
 import type { School } from '@/types/database'
 
 interface SchoolFormData {
@@ -166,7 +167,8 @@ export default function SchoolsAdminPage() {
       setFormData(initialFormData)
       setShowForm(false)
 
-      // Refresh schools list
+      // Invalidate cache and refresh schools list
+      adminCache.clearSchools()
       if (!supabase) return
       const { data } = await supabase.from('schools').select('*').order('name')
       if (data) setSchools(data as School[])
@@ -221,7 +223,8 @@ export default function SchoolsAdminPage() {
       setEditingSchool(null)
       setShowForm(false)
 
-      // Refresh schools
+      // Invalidate cache and refresh schools
+      adminCache.clearSchools()
       if (!supabase) return
       const { data } = await supabase.from('schools').select('*').order('name')
       if (data) setSchools(data as School[])

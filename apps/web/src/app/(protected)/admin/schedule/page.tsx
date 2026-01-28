@@ -22,6 +22,7 @@ import { Button, Badge, Input, Card } from '@/components/ui'
 import { useAuth } from '@/hooks'
 import { createClient } from '@/lib/supabase/client'
 import { cn } from '@/lib/utils'
+import { adminCache } from '@/lib/admin-cache'
 import type { GameWithTeams, Sport, School, GameStatus, GameType } from '@/types/database'
 
 interface GameFormData {
@@ -179,22 +180,40 @@ export default function ScheduleAdminPage() {
     const fetchInitialData = async () => {
       if (!supabase) return
 
-      // Fetch sports
-      const { data: sportsData } = await supabase
-        .from('sports')
-        .select('*')
-        .eq('active', true)
-        .order('sort_order')
+      // Check cache for sports
+      const cachedSports = adminCache.getSports()
+      if (cachedSports) {
+        setSports(cachedSports)
+      } else {
+        const { data: sportsData } = await supabase
+          .from('sports')
+          .select('*')
+          .eq('active', true)
+          .order('sort_order')
 
-      if (sportsData) setSports(sportsData as Sport[])
+        if (sportsData) {
+          const sports = sportsData as Sport[]
+          setSports(sports)
+          adminCache.setSports(sports)
+        }
+      }
 
-      // Fetch schools
-      const { data: schoolsData } = await supabase
-        .from('schools')
-        .select('*')
-        .order('name')
+      // Check cache for schools
+      const cachedSchools = adminCache.getSchools()
+      if (cachedSchools) {
+        setSchools(cachedSchools)
+      } else {
+        const { data: schoolsData } = await supabase
+          .from('schools')
+          .select('*')
+          .order('name')
 
-      if (schoolsData) setSchools(schoolsData as School[])
+        if (schoolsData) {
+          const schools = schoolsData as School[]
+          setSchools(schools)
+          adminCache.setSchools(schools)
+        }
+      }
     }
 
     if (hasAdminAccess) {
