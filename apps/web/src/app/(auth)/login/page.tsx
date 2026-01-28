@@ -56,6 +56,12 @@ function LoginForm() {
         if (redemption.success) {
           sessionStorage.removeItem('betaCode')
           setMessage(redemption.message || 'Beta access granted! Welcome to Hawaii Sports Center.')
+
+          // Redirect to home page after short delay to show success message
+          setTimeout(() => {
+            // Use window.location for hard redirect to ensure middleware sees updated session
+            window.location.href = '/'
+          }, 1500)
         } else {
           setError(redemption.error || 'Failed to redeem beta code')
         }
@@ -251,6 +257,10 @@ function LoginForm() {
               }).eq('id', (code as any).id)
 
               sessionStorage.removeItem('betaCode')
+
+              // Use hard redirect to ensure middleware sees updated beta access
+              window.location.href = redirect
+              return
             }
           }
         }
