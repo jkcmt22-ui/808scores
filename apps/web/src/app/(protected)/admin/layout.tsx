@@ -55,6 +55,16 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
   const isSuperAdmin = profile?.is_super_admin === true
   const hasAdminAccess = profile?.is_admin === true || isSuperAdmin
 
+  // ALL HOOKS MUST BE CALLED BEFORE ANY CONDITIONAL RETURNS (Rules of Hooks)
+
+  // Filter nav items based on user role - must be before returns
+  const visibleNavItems = useMemo(() => {
+    return adminNavItems.filter(item => {
+      if (item.superAdminOnly && !isSuperAdmin) return false
+      return true
+    })
+  }, [isSuperAdmin])
+
   // Debug: Log render
   logRender('AdminLayout', `authLoading=${authLoading}, hasUser=${!!user}, hasProfile=${!!profile}`)
 
@@ -95,6 +105,14 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
       router.push(`/login?redirect=${encodeURIComponent(pathname)}`)
     }
   }, [authLoading, user, router, pathname])
+
+  // Helper function for active state - defined before returns
+  const isActive = (href: string, exact?: boolean) => {
+    if (exact) return pathname === href
+    return pathname === href || pathname.startsWith(href + '/')
+  }
+
+  // === CONDITIONAL RETURNS START HERE (after all hooks) ===
 
   // Auth loading state - show loading in layout with timeout fallback
   if (authLoading) {
@@ -176,19 +194,7 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
     )
   }
 
-  // Filter nav items based on user role
-  const visibleNavItems = useMemo(() => {
-    return adminNavItems.filter(item => {
-      if (item.superAdminOnly && !isSuperAdmin) return false
-      return true
-    })
-  }, [isSuperAdmin])
-
-  const isActive = (href: string, exact?: boolean) => {
-    if (exact) return pathname === href
-    return pathname === href || pathname.startsWith(href + '/')
-  }
-
+  // === MAIN RENDER ===
   return (
     <div className="min-h-screen bg-background">
       <Header title="Admin Panel" />
