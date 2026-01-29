@@ -11,7 +11,6 @@ import {
   Share2,
   Bell,
   AlertCircle,
-  CheckCircle2,
   Loader2,
   Trophy,
   Swords,
@@ -27,7 +26,7 @@ import {
 import { Button, Badge, Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui'
 import { Breadcrumbs } from '@/components/layout'
 import { GameChat } from '@/components/chat'
-import { ShareButtons, RemindMeButton } from '@/components/game'
+import { ShareButtons, RemindMeButton, VerificationBadge } from '@/components/game'
 import { PredictionForm, AudienceExpectation, PredictionResults } from '@/components/predictions'
 import { useGame, useAuth } from '@/hooks'
 import { createClient } from '@/lib/supabase/client'
@@ -398,11 +397,14 @@ export function GameClient({ params }: GamePageProps) {
             )}
           </div>
 
-          {/* Verification Status */}
-          {game.is_verified && (
-            <div className="mt-4 flex items-center gap-2 text-sm neon-text-green font-display">
-              <CheckCircle2 className="h-4 w-4" />
-              <span className="uppercase tracking-wider">Verified Score</span>
+          {/* Verification Status - shown for live and final games */}
+          {(isLive || isFinal) && (
+            <div className="mt-4">
+              <VerificationBadge
+                isVerified={game.is_verified}
+                verifiedAt={(game as { verified_at?: string | null }).verified_at}
+                size="md"
+              />
             </div>
           )}
         </div>
