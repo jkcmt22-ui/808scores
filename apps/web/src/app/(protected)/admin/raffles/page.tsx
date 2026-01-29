@@ -154,9 +154,29 @@ export default function AdminRafflesPage() {
   }
 
   const handleSave = async () => {
+    // Validate required fields
     if (!formData.name.trim()) {
       setError('Raffle name is required')
       return
+    }
+
+    // Validate date order
+    if (formData.entries_open_at && formData.entries_close_at) {
+      const openDate = new Date(formData.entries_open_at)
+      const closeDate = new Date(formData.entries_close_at)
+      if (closeDate <= openDate) {
+        setError('Entries close date must be after open date')
+        return
+      }
+    }
+
+    if (formData.entries_close_at && formData.drawing_at) {
+      const closeDate = new Date(formData.entries_close_at)
+      const drawDate = new Date(formData.drawing_at)
+      if (drawDate < closeDate) {
+        setError('Drawing date must be on or after entries close date')
+        return
+      }
     }
 
     setIsSaving(true)

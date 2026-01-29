@@ -42,10 +42,13 @@ export default function ModerationPage() {
   const [searchTerm, setSearchTerm] = useState('')
   const [filter, setFilter] = useState<FilterType>('reported')
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null)
+  const [page, setPage] = useState(0)
+  const [hasMore, setHasMore] = useState(true)
+  const PAGE_SIZE = 50
 
   const hasAdminAccess = profile?.is_admin === true || profile?.is_super_admin === true
 
-  // Fetch messages
+  // Fetch messages with pagination
   useEffect(() => {
     const fetchMessages = async () => {
       if (!supabase) {
@@ -55,25 +58,35 @@ export default function ModerationPage() {
 
       setIsLoading(true)
 
+      const from = page * PAGE_SIZE
+      const to = from + PAGE_SIZE - 1
+
       const { data, error } = await supabase
         .from('chat_messages')
         .select(`
           *,
           user:users(id, display_name, email, phone),
           game:games(
-            *,
-            home_team:schools!games_home_team_id_fkey(*),
-            away_team:schools!games_away_team_id_fkey(*),
-            sport:sports(*)
+            id,
+            scheduled_at,
+            status,
+            home_team:schools!games_home_team_id_fkey(id, name, short_name),
+            away_team:schools!games_away_team_id_fkey(id, name, short_name),
+            sport:sports(id, name, code)
           )
         `)
         .order('created_at', { ascending: false })
-        .limit(200)
+        .range(from, to)
 
       if (error) {
         console.error('Error fetching messages:', error)
       } else if (data) {
-        setMessages(data as MessageWithDetails[])
+        if (page === 0) {
+          setMessages(data as MessageWithDetails[])
+        } else {
+          setMessages(prev => [...prev, ...(data as MessageWithDetails[])])
+        }
+        setHasMore(data.length === PAGE_SIZE)
       }
 
       setIsLoading(false)
@@ -82,7 +95,7 @@ export default function ModerationPage() {
     if (hasAdminAccess) {
       fetchMessages()
     }
-  }, [supabase, hasAdminAccess])
+  }, [supabase, hasAdminAccess, page])
 
   // Filter messages
   const filteredMessages = useMemo(() => {
@@ -304,6 +317,21 @@ export default function ModerationPage() {
                 onViewGame={() => router.push(`/game/${msg.game_id}`)}
               />
             ))}
+            {/* Load More */}
+            {hasMore && filteredMessages.length >= PAGE_SIZE && (
+              <div className="pt-4 text-center">
+                <Button
+                  variant="outline"
+                  onClick={() => setPage(p => p + 1)}
+                  disabled={isLoading}
+                >
+                  {isLoading ? (
+                    <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                  ) : null}
+                  Load More
+                </Button>
+              </div>
+            )}
           </div>
         )}
       </main>
