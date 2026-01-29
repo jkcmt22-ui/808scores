@@ -50,6 +50,12 @@ export default function SubmitPage({ params }: SubmitPageProps) {
   const [showOvertimePeriods, setShowOvertimePeriods] = useState(false)
   const [submitError, setSubmitError] = useState<string | null>(null)
   const [online, setOnline] = useState(true)
+  const [submissionResult, setSubmissionResult] = useState<{
+    isVerified: boolean
+    gameUpdated: boolean
+    message: string
+    pointsEarned: number
+  } | null>(null)
 
   // Track online/offline status
   useEffect(() => {
@@ -194,98 +200,41 @@ export default function SubmitPage({ params }: SubmitPageProps) {
       return
     }
 
-    // Online submission
+    // Online submission via API (handles rate limiting, verification, points)
     try {
-      // Create the submission
-      const submissionData = {
-        game_id: gameId,
-        user_id: user.id,
-        submission_type: submissionType as DBSubmissionType,
-        period: submissionType === 'final_score' ? null : fullPeriod,
-        home_score: parseInt(homeScore),
-        away_score: parseInt(awayScore),
-        time_remaining: timeRemaining || null,
-        photo_url: hasPhoto ? 'pending_upload' : null,
-        at_game: hasLocation,
-        points_earned: calculatePoints(),
-        status: 'pending' as const,
-      }
-      const { error: submissionError } = await supabase
-        .from('submissions')
-        .insert(submissionData as never)
-        .select()
-        .single()
+      const isOT = overtimePeriods.includes(period)
+      const otCount = isOT ? overtimePeriods.indexOf(period) + 1 : 0
 
-      if (submissionError) throw submissionError
-
-      // If this is a final score or the user is trusted, update the game
-      const isTrusted = profile?.tier === 'trusted' || profile?.tier === 'elite'
-
-      if (submissionType === 'final_score') {
-        // Update game to final status
-        const gameUpdate = {
-          status: 'final' as const,
+      const response = await fetch(`/api/games/${gameId}/submit-score`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          submission_type: submissionType,
           home_score: parseInt(homeScore),
           away_score: parseInt(awayScore),
-          current_period: null,
-          time_remaining: null,
-          is_verified: isTrusted,
-          verification_method: isTrusted ? ('trusted' as const) : null,
-        }
-        const { error: gameError } = await supabase
-          .from('games')
-          .update(gameUpdate as never)
-          .eq('id', gameId)
-
-        if (gameError) console.error('Error updating game:', gameError)
-      } else if (submissionType === 'live_update' || submissionType === 'period_score') {
-        // Update game with live score
-        const isOT = overtimePeriods.includes(period)
-        const otCount = isOT ? overtimePeriods.indexOf(period) + 1 : 0
-
-        const gameUpdate = {
-          status: 'in_progress' as const,
-          home_score: parseInt(homeScore),
-          away_score: parseInt(awayScore),
-          current_period: fullPeriod,
+          period: submissionType === 'final_score' ? null : fullPeriod,
           time_remaining: timeRemaining || null,
           is_overtime: isOT,
           overtime_count: otCount,
-          is_verified: isTrusted,
-          verification_method: isTrusted ? ('trusted' as const) : null,
-        }
-        const { error: gameError } = await supabase
-          .from('games')
-          .update(gameUpdate as never)
-          .eq('id', gameId)
+          photo_url: hasPhoto ? 'pending_upload' : null,
+          at_game: hasLocation,
+        }),
+      })
 
-        if (gameError) console.error('Error updating game:', gameError)
+      const result = await response.json()
+
+      if (!response.ok) {
+        // Handle specific error cases
+        if (response.status === 429) {
+          throw new Error(result.message || 'Too many submissions. Please wait.')
+        }
+        throw new Error(result.message || 'Failed to submit score')
       }
 
-      // Award points via the ledger (this handles the audit trail)
-      if (profile) {
-        // Get the submission ID from the response
-        const { data: submissionData } = await supabase
-          .from('submissions')
-          .select('id')
-          .eq('game_id', gameId)
-          .eq('user_id', user.id)
-          .order('created_at', { ascending: false })
-          .limit(1)
-          .single() as { data: { id: string } | null }
-
-        const submissionId = submissionData?.id
-        if (submissionId) {
-          const pointsBreakdown = buildPointsBreakdown()
-          const { error: pointsError } = await awardSubmissionPoints(
-            user.id,
-            submissionId,
-            pointsBreakdown
-          )
-          if (pointsError) console.error('Error awarding points via ledger:', pointsError)
-        }
-
-        // Update submission count separately (not handled by ledger)
+      // Update submission count locally
+      if (profile && supabase) {
         const { error: countError } = await supabase
           .from('users')
           .update({ submission_count: (profile.submission_count || 0) + 1 } as never)
@@ -293,6 +242,14 @@ export default function SubmitPage({ params }: SubmitPageProps) {
 
         if (countError) console.error('Error updating submission count:', countError)
       }
+
+      // Store verification status for success message
+      setSubmissionResult({
+        isVerified: result.is_verified,
+        gameUpdated: result.game_updated,
+        message: result.message,
+        pointsEarned: result.submission?.points_earned || calculatePoints(),
+      })
 
       setStep('success')
     } catch (err) {
@@ -636,16 +593,34 @@ export default function SubmitPage({ params }: SubmitPageProps) {
       case 'success':
         return (
           <div className="flex flex-col items-center justify-center py-12 text-center">
-            <div className="mb-4 flex h-20 w-20 items-center justify-center bg-neon-green/20 border-2 border-neon-green">
-              <CheckCircle className="h-10 w-10 text-neon-green" />
+            <div className={cn(
+              "mb-4 flex h-20 w-20 items-center justify-center border-2",
+              submissionResult?.isVerified
+                ? "bg-neon-green/20 border-neon-green"
+                : "bg-neon-yellow/20 border-neon-yellow"
+            )}>
+              <CheckCircle className={cn(
+                "h-10 w-10",
+                submissionResult?.isVerified ? "text-neon-green" : "text-neon-yellow"
+              )} />
             </div>
-            <h2 className="mb-2 text-2xl font-bold font-display text-foreground">Score Submitted!</h2>
-            <p className="mb-6 text-foreground-muted">
-              Thanks for contributing. Your score is being verified.
+            <h2 className="mb-2 text-2xl font-bold font-display text-foreground">
+              {submissionResult?.isVerified ? 'Score Verified!' : 'Score Submitted!'}
+            </h2>
+            <p className="mb-4 text-foreground-muted max-w-xs">
+              {submissionResult?.message || 'Thanks for contributing.'}
             </p>
+            {!submissionResult?.isVerified && (
+              <div className="mb-4 px-3 py-2 bg-neon-yellow/10 border border-neon-yellow/30 text-sm text-neon-yellow">
+                <Clock className="inline h-4 w-4 mr-1" />
+                Will become official in 60 seconds if no conflicts
+              </div>
+            )}
             <div className="mb-8 p-6 bg-neon-blue/10 border-2 border-neon-blue/30">
               <p className="text-sm text-neon-blue">Points earned</p>
-              <p className="text-5xl font-bold font-display neon-text-blue">+{calculatePoints()}</p>
+              <p className="text-5xl font-bold font-display neon-text-blue">
+                +{submissionResult?.pointsEarned || calculatePoints()}
+              </p>
             </div>
             <div className="flex gap-3">
               <Button variant="outline" onClick={() => router.push(`/game/${gameId}`)}>

@@ -4,6 +4,10 @@
     {
       "path": "/api/cron/scrape-scores",
       "schedule": "0 0 * * *"
+    },
+    {
+      "path": "/api/cron/promote-scores",
+      "schedule": "* * * * *"
     }
   ]
 }
