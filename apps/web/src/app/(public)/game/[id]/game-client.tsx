@@ -28,7 +28,8 @@ import { Button, Badge, Tabs, TabsList, TabsTrigger, TabsContent } from '@/compo
 import { Breadcrumbs } from '@/components/layout'
 import { GameChat } from '@/components/chat'
 import { ShareButtons, RemindMeButton } from '@/components/game'
-import { useGame } from '@/hooks'
+import { PredictionForm, AudienceExpectation, PredictionResults } from '@/components/predictions'
+import { useGame, useAuth } from '@/hooks'
 import { createClient } from '@/lib/supabase/client'
 import { cn, formatGameTime, isGameLive, isGameFinal } from '@/lib/utils'
 import type { GameType, SubmissionWithUser } from '@/types/database'
@@ -82,6 +83,7 @@ export function GameClient({ params }: GamePageProps) {
   const { id } = use(params)
   const router = useRouter()
   const { game, isLoading, error } = useGame(id)
+  const { user } = useAuth()
   const [submissions, setSubmissions] = useState<SubmissionWithUser[]>([])
   const [loadingSubmissions, setLoadingSubmissions] = useState(true)
   const [shareStatus, setShareStatus] = useState<'idle' | 'copied' | 'shared'>('idle')
@@ -488,10 +490,13 @@ export function GameClient({ params }: GamePageProps) {
           </div>
         )}
 
-        {/* Tabs for Chat/Updates/Report */}
+        {/* Tabs for Chat/Updates/Predictions/Report */}
         <Tabs defaultValue="chat" className="mb-6">
           <TabsList className="w-full">
             <TabsTrigger value="chat" className="flex-1">Chat</TabsTrigger>
+            {(game as { predictions_enabled?: boolean }).predictions_enabled && (
+              <TabsTrigger value="predictions" className="flex-1">Predict</TabsTrigger>
+            )}
             <TabsTrigger value="updates" className="flex-1">Updates</TabsTrigger>
             <TabsTrigger value="report" className="flex-1">Report</TabsTrigger>
           </TabsList>
@@ -499,6 +504,60 @@ export function GameClient({ params }: GamePageProps) {
           <TabsContent value="chat">
             <GameChat gameId={id} />
           </TabsContent>
+
+          {/* Predictions Tab - Only shown when predictions_enabled */}
+          {(game as { predictions_enabled?: boolean }).predictions_enabled && (
+            <TabsContent value="predictions">
+              <div className="space-y-4">
+                {/* Before game: Show prediction form and audience expectation */}
+                {isScheduled && (
+                  <>
+                    <PredictionForm
+                      gameId={id}
+                      userId={user?.id}
+                      homeTeam={game.home_team}
+                      awayTeam={game.away_team}
+                    />
+                    <AudienceExpectation
+                      gameId={id}
+                      homeTeam={game.home_team}
+                      awayTeam={game.away_team}
+                    />
+                  </>
+                )}
+
+                {/* During game: Show locked notice and audience expectation */}
+                {isLive && (
+                  <>
+                    <div className="scoreboard-panel p-4 text-center">
+                      <Trophy className="h-8 w-8 mx-auto mb-2 text-foreground-muted" />
+                      <p className="font-display font-bold text-foreground mb-1">Predictions Locked</p>
+                      <p className="text-sm text-foreground-muted">
+                        The game has started. Check back after the final whistle to see results!
+                      </p>
+                    </div>
+                    <AudienceExpectation
+                      gameId={id}
+                      homeTeam={game.home_team}
+                      awayTeam={game.away_team}
+                    />
+                  </>
+                )}
+
+                {/* After game: Show results */}
+                {isFinal && (
+                  <PredictionResults
+                    gameId={id}
+                    userId={user?.id}
+                    homeTeam={game.home_team}
+                    awayTeam={game.away_team}
+                    actualHomeScore={game.home_score}
+                    actualAwayScore={game.away_score}
+                  />
+                )}
+              </div>
+            </TabsContent>
+          )}
 
           <TabsContent value="updates">
             <div className="scoreboard-panel p-4">

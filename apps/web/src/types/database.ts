@@ -20,6 +20,27 @@ export type RaffleType = 'monthly' | 'season_end' | 'special'
 export type RaffleStatus = 'upcoming' | 'open' | 'closed' | 'drawing' | 'completed' | 'canceled'
 export type ChatPointAction = 'comment' | 'like_received' | 'mention_received'
 
+// Point event types
+export type PointEventType =
+  | 'submission'
+  | 'chat_comment'
+  | 'chat_like_received'
+  | 'chat_mention_received'
+  | 'prediction_exact_match'
+  | 'prediction_top3'
+  | 'prediction_top10'
+  | 'raffle_deduction'
+  | 'admin_adjustment'
+  | 'bonus'
+  | 'lucky_reporter'
+
+export type PointSourceType =
+  | 'submission'
+  | 'chat_message'
+  | 'game_prediction'
+  | 'raffle'
+  | 'admin'
+
 // Tournament types
 export type TournamentFormat = 'single_elimination' | 'double_elimination' | 'round_robin' | 'pool_play' | 'custom'
 export type TournamentStatus = 'upcoming' | 'in_progress' | 'completed' | 'canceled'
@@ -663,6 +684,49 @@ export interface Database {
         Insert: Omit<Database['public']['Tables']['tournament_teams']['Row'], 'id' | 'created_at' | 'eliminated' | 'wins' | 'losses' | 'points_for' | 'points_against'>
         Update: Partial<Database['public']['Tables']['tournament_teams']['Insert']>
       }
+      point_events: {
+        Row: {
+          id: string
+          user_id: string
+          event_type: PointEventType
+          points: number
+          source_type: PointSourceType
+          source_id: string | null
+          metadata: Json
+          created_at: string
+        }
+        Insert: Omit<Database['public']['Tables']['point_events']['Row'], 'id' | 'created_at'>
+        Update: Partial<Database['public']['Tables']['point_events']['Insert']>
+      }
+      game_predictions: {
+        Row: {
+          id: string
+          game_id: string
+          user_id: string
+          predicted_home_score: number
+          predicted_away_score: number
+          predicted_winner_id: string | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: Omit<Database['public']['Tables']['game_predictions']['Row'], 'id' | 'created_at' | 'updated_at' | 'predicted_winner_id'>
+        Update: Partial<Database['public']['Tables']['game_predictions']['Insert']>
+      }
+      prediction_results: {
+        Row: {
+          id: string
+          game_id: string
+          processed_at: string
+          total_predictions: number
+          exact_match_count: number
+          avg_home_score: number | null
+          avg_away_score: number | null
+          home_win_prediction_pct: number | null
+          results_json: Json | null
+        }
+        Insert: Omit<Database['public']['Tables']['prediction_results']['Row'], 'id' | 'processed_at'>
+        Update: Partial<Database['public']['Tables']['prediction_results']['Insert']>
+      }
       player_game_stats: {
         Row: {
           id: string
@@ -778,6 +842,9 @@ export type TrustedReporterCode = Database['public']['Tables']['trusted_reporter
 export type Tournament = Database['public']['Tables']['tournaments']['Row']
 export type TournamentTeam = Database['public']['Tables']['tournament_teams']['Row']
 export type PlayerGameStats = Database['public']['Tables']['player_game_stats']['Row']
+export type PointEvent = Database['public']['Tables']['point_events']['Row']
+export type GamePrediction = Database['public']['Tables']['game_predictions']['Row']
+export type PredictionResult = Database['public']['Tables']['prediction_results']['Row']
 
 // Extended types with relations
 export interface GameWithTeams extends Game {
@@ -1034,4 +1101,49 @@ export interface ScholarshipWithDetails extends Scholarship {
     school: Pick<School, 'id' | 'name' | 'short_name'>
   } | null
   nominees?: ScholarshipNomineeWithDetails[]
+}
+
+// Prediction types
+export interface GamePredictionWithUser extends GamePrediction {
+  user: Pick<User, 'id' | 'display_name' | 'avatar_url'>
+}
+
+export interface PredictionResultEntry {
+  user_id: string
+  rank: number
+  error: number
+  points_awarded: number
+  predicted_home_score: number
+  predicted_away_score: number
+  is_exact_match: boolean
+}
+
+export interface PredictionResultWithDetails extends PredictionResult {
+  results: PredictionResultEntry[]
+}
+
+export interface AudienceExpectation {
+  totalPredictions: number
+  avgHomeScore: number | null
+  avgAwayScore: number | null
+  homeWinPct: number | null
+  awayWinPct: number | null
+  tiePct: number | null
+}
+
+// Point event extended types
+export interface PointEventWithDetails extends PointEvent {
+  // Optional related data based on source_type
+  submission?: Pick<Submission, 'id' | 'submission_type' | 'game_id'>
+  game?: Pick<Game, 'id'> & {
+    home_team: Pick<School, 'short_name'>
+    away_team: Pick<School, 'short_name'>
+  }
+}
+
+// Game with predictions enabled
+export interface GameWithPredictions extends GameWithTeams {
+  predictions_enabled: boolean
+  user_prediction?: GamePrediction | null
+  prediction_results?: PredictionResult | null
 }

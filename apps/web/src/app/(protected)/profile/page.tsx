@@ -15,10 +15,14 @@ import {
   LogOut,
   ChevronRight,
   Loader2,
+  History,
+  ChevronDown,
 } from 'lucide-react'
 import { getTierColor, getTierLabel } from '@/lib/utils'
 import { useRequireAuth, useUserBadges } from '@/hooks'
+import { usePointEvents, getEventTypeDisplay, formatEventTime } from '@/hooks/use-point-events'
 import { createClient } from '@/lib/supabase/client'
+import { cn } from '@/lib/utils'
 
 // Badge emoji mapping (fallback when no icon_url)
 const BADGE_ICONS: Record<string, string> = {
@@ -53,6 +57,7 @@ interface RecentSubmission {
 export default function ProfilePage() {
   const { profile, isLoading, signOut } = useRequireAuth()
   const { userBadges, isLoading: badgesLoading } = useUserBadges(profile?.id)
+  const { events: pointEvents, isLoading: pointEventsLoading, hasMore, loadMore } = usePointEvents(profile?.id)
   const [recentSubmissions, setRecentSubmissions] = useState<RecentSubmission[]>([])
   const [loadingSubmissions, setLoadingSubmissions] = useState(true)
 
@@ -290,6 +295,71 @@ export default function ProfilePage() {
               </div>
             ) : (
               <p className="text-sm text-foreground-muted">No recent activity. Start reporting scores!</p>
+            )}
+          </div>
+        </Card>
+
+        {/* Point History */}
+        <Card className="mb-6 border-2 border-border">
+          <div className="p-4">
+            <div className="mb-4 flex items-center gap-2">
+              <History className="h-5 w-5 text-neon-yellow" />
+              <h3 className="font-semibold text-foreground">Point History</h3>
+            </div>
+            {pointEventsLoading && pointEvents.length === 0 ? (
+              <div className="flex justify-center py-4">
+                <Loader2 className="h-5 w-5 animate-spin text-foreground-muted" />
+              </div>
+            ) : pointEvents.length > 0 ? (
+              <div className="space-y-2">
+                {pointEvents.map((event) => {
+                  const display = getEventTypeDisplay(event.event_type)
+                  return (
+                    <div
+                      key={event.id}
+                      className="flex items-center justify-between py-2 border-b border-border last:border-0"
+                    >
+                      <div className="flex items-center gap-3">
+                        <span className="text-lg">{display.icon}</span>
+                        <div>
+                          <p className={cn('font-medium text-sm', display.color)}>
+                            {display.label}
+                          </p>
+                          <p className="text-xs text-foreground-muted">
+                            {formatEventTime(event.created_at)}
+                          </p>
+                        </div>
+                      </div>
+                      <span
+                        className={cn(
+                          'font-bold font-display',
+                          event.points >= 0 ? 'text-neon-green' : 'text-neon-pink'
+                        )}
+                      >
+                        {event.points >= 0 ? '+' : ''}{event.points} pts
+                      </span>
+                    </div>
+                  )
+                })}
+                {hasMore && (
+                  <button
+                    onClick={loadMore}
+                    disabled={pointEventsLoading}
+                    className="w-full flex items-center justify-center gap-2 py-2 text-sm text-neon-blue hover:text-neon-blue/80 transition-colors disabled:opacity-50"
+                  >
+                    {pointEventsLoading ? (
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                    ) : (
+                      <>
+                        <ChevronDown className="h-4 w-4" />
+                        Load More
+                      </>
+                    )}
+                  </button>
+                )}
+              </div>
+            ) : (
+              <p className="text-sm text-foreground-muted">No point history yet. Earn points by reporting scores!</p>
             )}
           </div>
         </Card>

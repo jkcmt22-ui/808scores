@@ -21,6 +21,8 @@ import { addToQueue, isOnline, onOnlineStatusChange } from '@/lib/offline-queue'
 import { cn } from '@/lib/utils'
 import { getOvertimePeriods } from '@/lib/sport-periods'
 import type { PeriodsConfig, SubmissionType as DBSubmissionType } from '@/types/database'
+import { awardSubmissionPoints } from '@/lib/points/ledger'
+import type { PointsBreakdown } from '@/lib/points/calculator'
 
 type SubmissionType = 'period_score' | 'final_score' | 'live_update' | 'event'
 
@@ -115,6 +117,38 @@ export default function SubmitPage({ params }: SubmitPageProps) {
     if (game.golden_game) points *= 3
 
     return points
+  }
+
+  // Build a points breakdown for the ledger
+  const buildPointsBreakdown = (): PointsBreakdown => {
+    let base = 0
+    if (submissionType === 'final_score') base = 10
+    else if (submissionType === 'period_score') base = 5
+    else if (submissionType === 'live_update') base = 5
+
+    const photoBonus = hasPhoto ? 3 : 0
+    const locationBonus = hasLocation ? 2 : 0
+    const goldenGameMultiplier = game.golden_game ? 3 : 1
+
+    const subtotal = base + photoBonus + locationBonus
+    const total = subtotal * goldenGameMultiplier
+
+    const breakdown: string[] = [`Base: ${base} pts`]
+    if (photoBonus > 0) breakdown.push(`Photo bonus: +${photoBonus} pts`)
+    if (locationBonus > 0) breakdown.push(`At game bonus: +${locationBonus} pts`)
+    if (game.golden_game) breakdown.push('Golden game: 3x')
+
+    return {
+      base,
+      firstToReport: 0,
+      photoBonus,
+      locationBonus,
+      streakMultiplier: 1,
+      trustedMultiplier: 1,
+      goldenGameMultiplier,
+      total,
+      breakdown,
+    }
   }
 
   const handleSubmit = async () => {
@@ -228,19 +262,36 @@ export default function SubmitPage({ params }: SubmitPageProps) {
         if (gameError) console.error('Error updating game:', gameError)
       }
 
-      // Update user points if they have a profile
+      // Award points via the ledger (this handles the audit trail)
       if (profile) {
-        const newPoints = (profile.total_points || 0) + calculatePoints()
-        const userUpdate = {
-          total_points: newPoints,
-          submission_count: (profile.submission_count || 0) + 1,
+        // Get the submission ID from the response
+        const { data: submissionData } = await supabase
+          .from('submissions')
+          .select('id')
+          .eq('game_id', gameId)
+          .eq('user_id', user.id)
+          .order('created_at', { ascending: false })
+          .limit(1)
+          .single() as { data: { id: string } | null }
+
+        const submissionId = submissionData?.id
+        if (submissionId) {
+          const pointsBreakdown = buildPointsBreakdown()
+          const { error: pointsError } = await awardSubmissionPoints(
+            user.id,
+            submissionId,
+            pointsBreakdown
+          )
+          if (pointsError) console.error('Error awarding points via ledger:', pointsError)
         }
-        const { error: profileError } = await supabase
+
+        // Update submission count separately (not handled by ledger)
+        const { error: countError } = await supabase
           .from('users')
-          .update(userUpdate as never)
+          .update({ submission_count: (profile.submission_count || 0) + 1 } as never)
           .eq('id', user.id)
 
-        if (profileError) console.error('Error updating profile:', profileError)
+        if (countError) console.error('Error updating submission count:', countError)
       }
 
       setStep('success')

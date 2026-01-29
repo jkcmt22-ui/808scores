@@ -34,6 +34,7 @@ interface GameFormData {
   status: GameStatus
   game_type: GameType
   streaming_url: string
+  predictions_enabled: boolean
 }
 
 const initialFormData: GameFormData = {
@@ -45,6 +46,7 @@ const initialFormData: GameFormData = {
   status: 'scheduled',
   game_type: 'regular_season',
   streaming_url: '',
+  predictions_enabled: false,
 }
 
 // Get start of week (Sunday)
@@ -306,7 +308,7 @@ export default function ScheduleAdminPage() {
   const openEditForm = (game: GameWithTeams) => {
     setEditingGame(game)
     setSelectedDate(new Date(game.scheduled_at))
-    const gameWithStreaming = game as GameWithTeams & { streaming_url?: string | null }
+    const gameExtended = game as GameWithTeams & { streaming_url?: string | null; predictions_enabled?: boolean }
     setFormData({
       sport_id: game.sport_id,
       home_team_id: game.home_team_id,
@@ -315,7 +317,8 @@ export default function ScheduleAdminPage() {
       venue: game.venue || '',
       status: game.status,
       game_type: game.game_type,
-      streaming_url: gameWithStreaming.streaming_url || '',
+      streaming_url: gameExtended.streaming_url || '',
+      predictions_enabled: gameExtended.predictions_enabled || false,
     })
     setShowForm(true)
   }
@@ -361,6 +364,7 @@ export default function ScheduleAdminPage() {
           home_score: 0,
           away_score: 0,
           streaming_url: formData.streaming_url || null,
+          predictions_enabled: formData.predictions_enabled,
         } as never)
 
       if (error) throw error
@@ -400,6 +404,7 @@ export default function ScheduleAdminPage() {
           status: formData.status,
           game_type: formData.game_type,
           streaming_url: formData.streaming_url || null,
+          predictions_enabled: formData.predictions_enabled,
         } as never)
         .eq('id', editingGame.id)
 
@@ -817,6 +822,25 @@ export default function ScheduleAdminPage() {
                       <option value="exhibition">Exhibition</option>
                       <option value="scrimmage">Scrimmage</option>
                     </select>
+                  </div>
+                </div>
+
+                {/* Predictions Toggle */}
+                <div className="flex items-center gap-3 p-3 border-2 border-border bg-background-secondary">
+                  <input
+                    type="checkbox"
+                    id="predictions_enabled"
+                    checked={formData.predictions_enabled}
+                    onChange={(e) => setFormData((prev) => ({ ...prev, predictions_enabled: e.target.checked }))}
+                    className="h-5 w-5 border-2 border-border bg-background text-neon-yellow focus:ring-neon-yellow"
+                  />
+                  <div>
+                    <label htmlFor="predictions_enabled" className="block text-sm font-medium text-foreground cursor-pointer">
+                      Enable Predictions
+                    </label>
+                    <p className="text-xs text-foreground-muted">
+                      Allow users to predict the final score and earn points
+                    </p>
                   </div>
                 </div>
 
