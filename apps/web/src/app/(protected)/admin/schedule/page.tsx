@@ -17,6 +17,7 @@ import {
   MapPin,
   Copy,
   Trash2,
+  BarChart3,
 } from 'lucide-react'
 import { Button, Badge, Input, Card } from '@/components/ui'
 import { useAuth } from '@/hooks'
@@ -24,6 +25,7 @@ import { createClient } from '@/lib/supabase/client'
 import { cn } from '@/lib/utils'
 import { adminCache } from '@/lib/admin-cache'
 import type { GameWithTeams, Sport, School, GameStatus, GameType } from '@/types/database'
+import { getHomeSchool, getAwaySchool } from '@/types/database'
 
 interface GameFormData {
   sport_id: string
@@ -156,13 +158,14 @@ export default function ScheduleAdminPage() {
 
     setIsLoading(true)
 
+    // After migration 072, games reference teams instead of schools
     const { data, error } = await supabase
       .from('games')
       .select(`
         *,
         sport:sports(*),
-        home_team:schools!games_home_team_id_fkey(*),
-        away_team:schools!games_away_team_id_fkey(*)
+        home_team:teams!games_home_team_id_fkey(*, school:schools(*)),
+        away_team:teams!games_away_team_id_fkey(*, school:schools(*))
       `)
       .gte('scheduled_at', currentWeekStart.toISOString())
       .lte('scheduled_at', weekEnd.toISOString())
@@ -234,16 +237,18 @@ export default function ScheduleAdminPage() {
   const filteredGames = useMemo(() => {
     return games.filter((game) => {
       const matchesSport = sportFilter === 'all' || game.sport_id === sportFilter
+      const homeSchool = getHomeSchool(game)
+      const awaySchool = getAwaySchool(game)
       const matchesLeague =
         leagueFilter === 'all' ||
-        game.home_team.league === leagueFilter ||
-        game.away_team.league === leagueFilter
+        homeSchool.league === leagueFilter ||
+        awaySchool.league === leagueFilter
       const matchesSearch =
         searchTerm === '' ||
-        game.home_team.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        game.away_team.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        game.home_team.short_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        game.away_team.short_name.toLowerCase().includes(searchTerm.toLowerCase())
+        homeSchool.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        awaySchool.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        homeSchool.short_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        awaySchool.short_name.toLowerCase().includes(searchTerm.toLowerCase())
 
       return matchesSport && matchesLeague && matchesSearch
     })
@@ -680,6 +685,7 @@ export default function ScheduleAdminPage() {
                             onEdit={() => openEditForm(game)}
                             onDelete={() => handleDeleteGame(game.id)}
                             onDuplicate={(days) => handleDuplicateGame(game, days)}
+                            onStats={() => router.push(`/admin/games/${game.id}/stats`)}
                           />
                         ))}
                       </div>
@@ -882,13 +888,19 @@ function ScheduleGameRow({
   onEdit,
   onDelete,
   onDuplicate,
+  onStats,
 }: {
   game: GameWithTeams
   onEdit: () => void
   onDelete: () => void
   onDuplicate: (days: number) => void
+  onStats: () => void
 }) {
   const [showDuplicateMenu, setShowDuplicateMenu] = useState(false)
+
+  // After migration 072: Get school data from team or directly
+  const homeSchool = getHomeSchool(game)
+  const awaySchool = getAwaySchool(game)
 
   const gameTime = new Date(game.scheduled_at).toLocaleTimeString('en-US', {
     hour: 'numeric',
@@ -924,9 +936,9 @@ function ScheduleGameRow({
       {/* Teams */}
       <div className="flex-1 min-w-0">
         <div className="flex items-center gap-2 font-display text-sm">
-          <span className="text-foreground font-bold truncate">{game.away_team.short_name}</span>
+          <span className="text-foreground font-bold truncate">{awaySchool.short_name}</span>
           <span className="text-foreground-muted">@</span>
-          <span className="text-foreground font-bold truncate">{game.home_team.short_name}</span>
+          <span className="text-foreground font-bold truncate">{homeSchool.short_name}</span>
         </div>
         {game.venue && (
           <div className="flex items-center gap-1 text-xs text-foreground-subtle mt-0.5">
@@ -954,6 +966,15 @@ function ScheduleGameRow({
 
       {/* Actions */}
       <div className="flex gap-1 flex-shrink-0">
+        <Button
+          variant="ghost"
+          size="icon"
+          className="h-8 w-8 text-neon-blue hover:text-neon-blue"
+          onClick={onStats}
+          title="Enter Stats"
+        >
+          <BarChart3 className="h-4 w-4" />
+        </Button>
         <div className="relative">
           <Button
             variant="ghost"

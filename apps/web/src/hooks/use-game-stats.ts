@@ -10,7 +10,15 @@ import type {
   PlayerGameStats
 } from '@/types/database'
 
+// Team with school for game details
+interface TeamWithSchoolForStats {
+  id: string
+  school_id: string
+  school: School
+}
+
 // Game with full team details
+// After migration 072, home_team and away_team are TeamWithSchool objects
 export interface GameWithDetails {
   id: string
   sport_id: string
@@ -22,8 +30,8 @@ export interface GameWithDetails {
   home_score: number
   away_score: number
   sport: Sport
-  home_team: School
-  away_team: School
+  home_team: TeamWithSchoolForStats
+  away_team: TeamWithSchoolForStats
 }
 
 // Player with their stats for a specific game
@@ -77,13 +85,14 @@ export function useGameStats(options: UseGameStatsOptions): UseGameStatsReturn {
       setError(null)
 
       // Fetch game with teams and sport
+      // After migration 072, games reference teams instead of schools
       const { data: gameData, error: gameError } = await supabase
         .from('games')
         .select(`
           *,
           sport:sports(*),
-          home_team:schools!games_home_team_id_fkey(*),
-          away_team:schools!games_away_team_id_fkey(*)
+          home_team:teams!games_home_team_id_fkey(*, school:schools(*)),
+          away_team:teams!games_away_team_id_fkey(*, school:schools(*))
         `)
         .eq('id', gameId)
         .single()
@@ -100,21 +109,12 @@ export function useGameStats(options: UseGameStatsOptions): UseGameStatsReturn {
       const year = gameDate.getFullYear()
       const seasonYear = month >= 8 ? `${year}-${year + 1}` : `${year - 1}-${year}`
 
-      // Fetch team IDs for roster lookup
-      const { data: teamsData } = await supabase
-        .from('teams')
-        .select('id, school_id')
-        .eq('sport_id', gameWithDetails.sport_id)
-        .eq('season_year', seasonYear)
-        .in('school_id', [gameWithDetails.home_team_id, gameWithDetails.away_team_id])
-
-      const teams = (teamsData || []) as Array<{ id: string; school_id: string }>
-      const homeTeamIds = teams
-        .filter(t => t.school_id === gameWithDetails.home_team_id)
-        .map(t => t.id)
-      const awayTeamIds = teams
-        .filter(t => t.school_id === gameWithDetails.away_team_id)
-        .map(t => t.id)
+      // After migration 072, games.home_team_id references teams table directly
+      // home_team and away_team objects include school data
+      const homeTeamIds = [gameWithDetails.home_team_id]
+      const awayTeamIds = [gameWithDetails.away_team_id]
+      const homeSchoolId = gameWithDetails.home_team.school_id
+      const awaySchoolId = gameWithDetails.away_team.school_id
 
       // Helper to fetch players for a team
       const fetchTeamPlayers = async (
@@ -179,8 +179,8 @@ export function useGameStats(options: UseGameStatsOptions): UseGameStatsReturn {
 
       // Fetch players for both teams in parallel
       const [homePlayers, awayPlayers] = await Promise.all([
-        fetchTeamPlayers(gameWithDetails.home_team_id, homeTeamIds),
-        fetchTeamPlayers(gameWithDetails.away_team_id, awayTeamIds),
+        fetchTeamPlayers(homeSchoolId, homeTeamIds),
+        fetchTeamPlayers(awaySchoolId, awayTeamIds),
       ])
 
       // Fetch existing stats for this game
@@ -226,12 +226,12 @@ export function useGameStats(options: UseGameStatsOptions): UseGameStatsReturn {
       awayPlayersWithStats.sort(sortByJersey)
 
       setHomeRoster({
-        school: gameWithDetails.home_team,
+        school: gameWithDetails.home_team.school,
         players: homePlayersWithStats,
       })
 
       setAwayRoster({
-        school: gameWithDetails.away_team,
+        school: gameWithDetails.away_team.school,
         players: awayPlayersWithStats,
       })
 

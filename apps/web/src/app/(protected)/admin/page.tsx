@@ -41,6 +41,7 @@ import { adminCache } from '@/lib/admin-cache'
 import { perf } from '@/lib/perf'
 import { getPeriodOptions, getPeriodTypeLabel, isInningsBased, type PeriodOption } from '@/lib/sport-periods'
 import type { GameWithTeams, Sport, School, GameStatus, GameType, TrustedReporterCode, PeriodsConfig } from '@/types/database'
+import { getHomeSchool, getAwaySchool } from '@/types/database'
 
 type TabType = 'games' | 'create' | 'applications' | 'codes' | 'users'
 
@@ -218,13 +219,14 @@ export default function AdminPage() {
     setMessage(null)
 
     try {
+      // After migration 072, games reference teams instead of schools
       const { data: gamesData, error: gamesError } = await supabase
         .from('games')
         .select(`
           *,
           sport:sports(*),
-          home_team:schools!games_home_team_id_fkey(*),
-          away_team:schools!games_away_team_id_fkey(*)
+          home_team:teams!games_home_team_id_fkey(*, school:schools(*)),
+          away_team:teams!games_away_team_id_fkey(*, school:schools(*))
         `)
         .order('scheduled_at', { ascending: false })
         .limit(100)
@@ -384,10 +386,12 @@ export default function AdminPage() {
   // Filter and sort games
   const filteredGames = useMemo(() => {
     const filtered = games.filter((game) => {
+      const homeSchool = getHomeSchool(game)
+      const awaySchool = getAwaySchool(game)
       const matchesSearch =
         searchTerm === '' ||
-        game.home_team.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        game.away_team.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        homeSchool.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        awaySchool.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
         game.sport.name.toLowerCase().includes(searchTerm.toLowerCase())
 
       const matchesStatus =
@@ -464,14 +468,15 @@ export default function AdminPage() {
 
       console.log('Creating game with data:', gameData)
 
+      // After migration 072, games reference teams instead of schools
       const { data: newGame, error } = await supabase
         .from('games')
         .insert(gameData as never)
         .select(`
           *,
           sport:sports(*),
-          home_team:schools!games_home_team_id_fkey(*),
-          away_team:schools!games_away_team_id_fkey(*)
+          home_team:teams!games_home_team_id_fkey(*, school:schools(*)),
+          away_team:teams!games_away_team_id_fkey(*, school:schools(*))
         `)
         .single()
 
@@ -521,6 +526,7 @@ export default function AdminPage() {
         // streaming_url: formData.streaming_url || null,
       }
 
+      // After migration 072, games reference teams instead of schools
       const { data: updatedGame, error } = await supabase
         .from('games')
         .update(updateData as never)
@@ -528,8 +534,8 @@ export default function AdminPage() {
         .select(`
           *,
           sport:sports(*),
-          home_team:schools!games_home_team_id_fkey(*),
-          away_team:schools!games_away_team_id_fkey(*)
+          home_team:teams!games_home_team_id_fkey(*, school:schools(*)),
+          away_team:teams!games_away_team_id_fkey(*, school:schools(*))
         `)
         .single()
 
@@ -944,7 +950,7 @@ export default function AdminPage() {
         {editingGame && (
           <Card className="mb-6 p-4">
             <h2 className="font-display font-bold text-lg mb-4 neon-text-blue">
-              Edit: {editingGame.away_team.short_name} @ {editingGame.home_team.short_name}
+              Edit: {getAwaySchool(editingGame).short_name} @ {getHomeSchool(editingGame).short_name}
             </h2>
             <GameForm
               formData={formData}
@@ -1515,6 +1521,10 @@ function GameRow({
   const [quickAwayScore, setQuickAwayScore] = useState(game.away_score)
   const [isSaving, setIsSaving] = useState(false)
 
+  // After migration 072: Get school data from team or directly
+  const homeSchool = getHomeSchool(game)
+  const awaySchool = getAwaySchool(game)
+
   const handleQuickSave = async () => {
     setIsSaving(true)
     try {
@@ -1574,7 +1584,7 @@ function GameRow({
           {/* Teams & Score - Quick Edit Mode */}
           {isQuickEditing ? (
             <div className="flex items-center gap-2 font-display">
-              <span className="text-foreground font-bold">{game.away_team.short_name}</span>
+              <span className="text-foreground font-bold">{awaySchool.short_name}</span>
               <div className="flex items-center gap-1">
                 <button
                   onClick={() => setQuickAwayScore(Math.max(0, quickAwayScore - 1))}
@@ -1598,7 +1608,7 @@ function GameRow({
                 </button>
               </div>
               <span className="text-foreground-muted">@</span>
-              <span className="text-foreground font-bold">{game.home_team.short_name}</span>
+              <span className="text-foreground font-bold">{homeSchool.short_name}</span>
               <div className="flex items-center gap-1">
                 <button
                   onClick={() => setQuickHomeScore(Math.max(0, quickHomeScore - 1))}
@@ -1628,10 +1638,10 @@ function GameRow({
               onClick={() => setIsQuickEditing(true)}
               title="Click to quick edit score"
             >
-              <span className="text-foreground font-bold">{game.away_team.short_name}</span>
+              <span className="text-foreground font-bold">{awaySchool.short_name}</span>
               <span className="text-neon-blue font-bold mx-2">{game.away_score}</span>
               <span className="text-foreground-muted">@</span>
-              <span className="text-foreground font-bold mx-2">{game.home_team.short_name}</span>
+              <span className="text-foreground font-bold mx-2">{homeSchool.short_name}</span>
               <span className="text-neon-pink font-bold">{game.home_score}</span>
             </div>
           )}

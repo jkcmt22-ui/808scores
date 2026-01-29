@@ -32,6 +32,7 @@ import { useGame, useAuth } from '@/hooks'
 import { createClient } from '@/lib/supabase/client'
 import { cn, formatGameTime, isGameLive, isGameFinal } from '@/lib/utils'
 import type { GameType, SubmissionWithUser } from '@/types/database'
+import { getHomeSchool, getAwaySchool } from '@/types/database'
 
 interface GamePageProps {
   params: Promise<{ id: string }>
@@ -97,12 +98,16 @@ export function GameClient({ params }: GamePageProps) {
     const isFinal = game.status === 'final'
     const sportName = game.sport.display_name || game.sport.name
 
+    // After migration 072: Get school data from team or directly
+    const homeSchool = getHomeSchool(game)
+    const awaySchool = getAwaySchool(game)
+
     // Build share text
-    let shareText = `${game.away_team.short_name} vs ${game.home_team.short_name}`
+    let shareText = `${awaySchool.short_name} vs ${homeSchool.short_name}`
     if (isLive) {
-      shareText = `LIVE: ${game.away_team.short_name} ${game.away_score} - ${game.home_team.short_name} ${game.home_score} | ${sportName}`
+      shareText = `LIVE: ${awaySchool.short_name} ${game.away_score} - ${homeSchool.short_name} ${game.home_score} | ${sportName}`
     } else if (isFinal) {
-      shareText = `Final: ${game.away_team.short_name} ${game.away_score} - ${game.home_team.short_name} ${game.home_score} | ${sportName}`
+      shareText = `Final: ${awaySchool.short_name} ${game.away_score} - ${homeSchool.short_name} ${game.home_score} | ${sportName}`
     }
 
     const shareUrl = `https://www.hawaiisportscenter.com/game/${id}`
@@ -230,6 +235,10 @@ export function GameClient({ params }: GamePageProps) {
   const overtimeDisplay = getOvertimeDisplay(game.overtime_count)
   const sportName = game.sport.display_name || game.sport.name
 
+  // After migration 072: Get school data from team or directly
+  const homeSchool = getHomeSchool(game)
+  const awaySchool = getAwaySchool(game)
+
   return (
     <div className="min-h-screen bg-background">
       {/* Header */}
@@ -272,7 +281,7 @@ export function GameClient({ params }: GamePageProps) {
           <Breadcrumbs
             items={[
               { label: sportName, href: `/standings?sport=${game.sport.code}` },
-              { label: `${game.away_team.short_name} vs ${game.home_team.short_name}` },
+              { label: `${awaySchool.short_name} vs ${homeSchool.short_name}` },
             ]}
           />
         </div>
@@ -327,16 +336,16 @@ export function GameClient({ params }: GamePageProps) {
           <div className="space-y-4">
             {/* Away Team */}
             <div className="flex items-center justify-between">
-              <Link href={`/school/${game.away_team.id}`} className="flex items-center gap-4 flex-1 min-w-0 hover:opacity-80 transition-opacity">
+              <Link href={`/school/${awaySchool.id}`} className="flex items-center gap-4 flex-1 min-w-0 hover:opacity-80 transition-opacity">
                 <div className="flex h-14 w-14 items-center justify-center bg-background-tertiary text-lg font-display font-black text-neon-blue border-2 border-neon-blue/30">
-                  {game.away_team.short_name.slice(0, 2).toUpperCase()}
+                  {awaySchool.short_name.slice(0, 2).toUpperCase()}
                 </div>
                 <div className="min-w-0">
                   <p className="font-display font-bold text-lg text-foreground truncate">
-                    {game.away_team.name}
+                    {awaySchool.name}
                   </p>
                   <p className="text-xs text-foreground-subtle font-display">
-                    {game.away_team.league} &bull; {game.away_team.island}
+                    {awaySchool.league} &bull; {awaySchool.island}
                   </p>
                 </div>
               </Link>
@@ -350,16 +359,16 @@ export function GameClient({ params }: GamePageProps) {
 
             {/* Home Team */}
             <div className="flex items-center justify-between">
-              <Link href={`/school/${game.home_team.id}`} className="flex items-center gap-4 flex-1 min-w-0 hover:opacity-80 transition-opacity">
+              <Link href={`/school/${homeSchool.id}`} className="flex items-center gap-4 flex-1 min-w-0 hover:opacity-80 transition-opacity">
                 <div className="flex h-14 w-14 items-center justify-center bg-background-tertiary text-lg font-display font-black text-neon-pink border-2 border-neon-pink/30">
-                  {game.home_team.short_name.slice(0, 2).toUpperCase()}
+                  {homeSchool.short_name.slice(0, 2).toUpperCase()}
                 </div>
                 <div className="min-w-0">
                   <p className="font-display font-bold text-lg text-foreground truncate">
-                    {game.home_team.name}
+                    {homeSchool.name}
                   </p>
                   <p className="text-xs text-foreground-subtle font-display">
-                    {game.home_team.league} &bull; {game.home_team.island}
+                    {homeSchool.league} &bull; {homeSchool.island}
                   </p>
                 </div>
               </Link>
@@ -416,8 +425,8 @@ export function GameClient({ params }: GamePageProps) {
               <RemindMeButton
                 gameId={id}
                 scheduledAt={game.scheduled_at}
-                homeTeam={game.home_team.short_name}
-                awayTeam={game.away_team.short_name}
+                homeTeam={homeSchool.short_name}
+                awayTeam={awaySchool.short_name}
                 sport={sportName}
               />
             )}
@@ -426,13 +435,13 @@ export function GameClient({ params }: GamePageProps) {
             </div>
           </div>
           <ShareButtons
-            title={`${game.away_team.short_name} vs ${game.home_team.short_name}`}
+            title={`${awaySchool.short_name} vs ${homeSchool.short_name}`}
             text={
               isLive
-                ? `LIVE: ${game.away_team.short_name} ${game.away_score} - ${game.home_team.short_name} ${game.home_score} | ${sportName}`
+                ? `LIVE: ${awaySchool.short_name} ${game.away_score} - ${homeSchool.short_name} ${game.home_score} | ${sportName}`
                 : isFinal
-                ? `Final: ${game.away_team.short_name} ${game.away_score} - ${game.home_team.short_name} ${game.home_score} | ${sportName}`
-                : `${game.away_team.short_name} vs ${game.home_team.short_name} | ${sportName}`
+                ? `Final: ${awaySchool.short_name} ${game.away_score} - ${homeSchool.short_name} ${game.home_score} | ${sportName}`
+                : `${awaySchool.short_name} vs ${homeSchool.short_name} | ${sportName}`
             }
             url={`/game/${id}`}
           />
@@ -517,13 +526,13 @@ export function GameClient({ params }: GamePageProps) {
                     <PredictionForm
                       gameId={id}
                       userId={user?.id}
-                      homeTeam={game.home_team}
-                      awayTeam={game.away_team}
+                      homeTeam={homeSchool}
+                      awayTeam={awaySchool}
                     />
                     <AudienceExpectation
                       gameId={id}
-                      homeTeam={game.home_team}
-                      awayTeam={game.away_team}
+                      homeTeam={homeSchool}
+                      awayTeam={awaySchool}
                     />
                   </>
                 )}
@@ -540,8 +549,8 @@ export function GameClient({ params }: GamePageProps) {
                     </div>
                     <AudienceExpectation
                       gameId={id}
-                      homeTeam={game.home_team}
-                      awayTeam={game.away_team}
+                      homeTeam={homeSchool}
+                      awayTeam={awaySchool}
                     />
                   </>
                 )}
@@ -551,8 +560,8 @@ export function GameClient({ params }: GamePageProps) {
                   <PredictionResults
                     gameId={id}
                     userId={user?.id}
-                    homeTeam={game.home_team}
-                    awayTeam={game.away_team}
+                    homeTeam={homeSchool}
+                    awayTeam={awaySchool}
                     actualHomeScore={game.home_score}
                     actualAwayScore={game.away_score}
                   />
@@ -670,14 +679,14 @@ export function GameClient({ params }: GamePageProps) {
           <div className="space-y-2">
             {/* Away Team School */}
             <Link
-              href={`/school/${game.away_team.id}`}
+              href={`/school/${awaySchool.id}`}
               className="flex items-center justify-between p-3 border-2 border-border bg-background-secondary hover:border-neon-blue transition-colors"
             >
               <div className="flex items-center gap-3">
                 <Building2 className="h-4 w-4 text-neon-blue" />
                 <div>
-                  <p className="font-display font-bold text-sm">{game.away_team.name}</p>
-                  <p className="text-xs text-foreground-muted">{game.away_team.league}</p>
+                  <p className="font-display font-bold text-sm">{awaySchool.name}</p>
+                  <p className="text-xs text-foreground-muted">{awaySchool.league}</p>
                 </div>
               </div>
               <ChevronRight className="h-4 w-4 text-foreground-muted" />
@@ -685,14 +694,14 @@ export function GameClient({ params }: GamePageProps) {
 
             {/* Home Team School */}
             <Link
-              href={`/school/${game.home_team.id}`}
+              href={`/school/${homeSchool.id}`}
               className="flex items-center justify-between p-3 border-2 border-border bg-background-secondary hover:border-neon-pink transition-colors"
             >
               <div className="flex items-center gap-3">
                 <Building2 className="h-4 w-4 text-neon-pink" />
                 <div>
-                  <p className="font-display font-bold text-sm">{game.home_team.name}</p>
-                  <p className="text-xs text-foreground-muted">{game.home_team.league}</p>
+                  <p className="font-display font-bold text-sm">{homeSchool.name}</p>
+                  <p className="text-xs text-foreground-muted">{homeSchool.league}</p>
                 </div>
               </div>
               <ChevronRight className="h-4 w-4 text-foreground-muted" />

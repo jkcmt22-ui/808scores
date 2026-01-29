@@ -11,6 +11,7 @@ import { useGames, useAuth, useFavoriteTeams, useFavoriteSports } from '@/hooks'
 import { formatFullDate, isScoreOverdue } from '@/lib/utils'
 import { Calendar, ChevronDown, ChevronUp, ChevronLeft, ChevronRight, Star, AlertCircle, RefreshCw } from 'lucide-react'
 import type { GameType, GameWithTeams } from '@/types/database'
+import { getHomeSchool, getAwaySchool } from '@/types/database'
 
 // Non-competitive game types shown in the "Other Games" section
 const OTHER_GAME_TYPES: GameType[] = ['exhibition', 'scrimmage']
@@ -59,9 +60,12 @@ function sortByFavorites(
   const others: GameWithTeams[] = []
 
   games.forEach((game) => {
+    // After migration 072: Get school data from team or directly
+    const homeSchool = getHomeSchool(game)
+    const awaySchool = getAwaySchool(game)
     const isFavorite =
-      favoriteTeamIds.includes(game.home_team.id) ||
-      favoriteTeamIds.includes(game.away_team.id) ||
+      favoriteTeamIds.includes(homeSchool.id) ||
+      favoriteTeamIds.includes(awaySchool.id) ||
       favoriteSportIds.includes(game.sport.id)
 
     if (isFavorite) {
@@ -164,11 +168,15 @@ export default function HomePage() {
 
   const filteredGames = useMemo(() => {
     if (!showFavoritesOnly || !hasFavorites) return games
-    return games.filter((game) =>
-      favoriteTeamIds.includes(game.home_team.id) ||
-      favoriteTeamIds.includes(game.away_team.id) ||
-      favoriteSportIds.includes(game.sport.id)
-    )
+    return games.filter((game) => {
+      const homeSchool = getHomeSchool(game)
+      const awaySchool = getAwaySchool(game)
+      return (
+        favoriteTeamIds.includes(homeSchool.id) ||
+        favoriteTeamIds.includes(awaySchool.id) ||
+        favoriteSportIds.includes(game.sport.id)
+      )
+    })
   }, [games, showFavoritesOnly, hasFavorites, favoriteTeamIds, favoriteSportIds])
 
   // Categorize games by status, but check for overdue games first

@@ -28,6 +28,7 @@ import { createClient } from '@/lib/supabase/client'
 import { cn, formatGameTime, formatGameDate } from '@/lib/utils'
 import { getSportEmoji } from '@/lib/sport-utils'
 import type { School, GameWithTeams, Sport } from '@/types/database'
+import { getHomeSchool, getAwaySchool } from '@/types/database'
 
 interface SchoolPageProps {
   params: Promise<{ id: string }>
@@ -82,35 +83,53 @@ export function SchoolClient({ params }: SchoolPageProps) {
         if (schoolError) throw schoolError
         if (!schoolData) throw new Error('School not found')
 
-        // Fetch upcoming games (where school is home or away)
-        const now = new Date().toISOString()
-        const { data: upcomingData } = await supabase
-          .from('games')
-          .select(`
-            *,
-            sport:sports(*),
-            home_team:schools!games_home_team_id_fkey(*),
-            away_team:schools!games_away_team_id_fkey(*)
-          `)
-          .or(`home_team_id.eq.${id},away_team_id.eq.${id}`)
-          .gte('scheduled_at', now)
-          .in('status', ['scheduled', 'in_progress'])
-          .order('scheduled_at', { ascending: true })
-          .limit(10)
+        // After migration 072, games reference teams, so we need to filter by team's school_id
+        // First get all team IDs for this school
+        const { data: schoolTeams } = await supabase
+          .from('teams')
+          .select('id')
+          .eq('school_id', id)
 
-        // Fetch recent games (completed)
-        const { data: recentData } = await supabase
-          .from('games')
-          .select(`
-            *,
-            sport:sports(*),
-            home_team:schools!games_home_team_id_fkey(*),
-            away_team:schools!games_away_team_id_fkey(*)
-          `)
-          .or(`home_team_id.eq.${id},away_team_id.eq.${id}`)
-          .eq('status', 'final')
-          .order('scheduled_at', { ascending: false })
-          .limit(15)
+        const teamIds = ((schoolTeams || []) as Array<{ id: string }>).map(t => t.id)
+
+        // Fetch upcoming games (where school's team is home or away)
+        const now = new Date().toISOString()
+        let upcomingData: any[] = []
+        let recentData: any[] = []
+
+        if (teamIds.length > 0) {
+          const { data: upcoming } = await supabase
+            .from('games')
+            .select(`
+              *,
+              sport:sports(*),
+              home_team:teams!games_home_team_id_fkey(*, school:schools(*)),
+              away_team:teams!games_away_team_id_fkey(*, school:schools(*))
+            `)
+            .or(teamIds.map(tid => `home_team_id.eq.${tid},away_team_id.eq.${tid}`).join(','))
+            .gte('scheduled_at', now)
+            .in('status', ['scheduled', 'in_progress'])
+            .order('scheduled_at', { ascending: true })
+            .limit(10)
+
+          upcomingData = upcoming || []
+
+          // Fetch recent games (completed)
+          const { data: recent } = await supabase
+            .from('games')
+            .select(`
+              *,
+              sport:sports(*),
+              home_team:teams!games_home_team_id_fkey(*, school:schools(*)),
+              away_team:teams!games_away_team_id_fkey(*, school:schools(*))
+            `)
+            .or(teamIds.map(tid => `home_team_id.eq.${tid},away_team_id.eq.${tid}`).join(','))
+            .eq('status', 'final')
+            .order('scheduled_at', { ascending: false })
+            .limit(15)
+
+          recentData = recent || []
+        }
 
         // Get unique sports from games
         const allGames = [...(upcomingData || []), ...(recentData || [])] as GameWithTeams[]
@@ -168,13 +187,15 @@ export function SchoolClient({ params }: SchoolPageProps) {
   }
 
   // Get opponent for display
+  // After migration 072: home_team_id points to teams table, not schools
   const getOpponent = (game: GameWithTeams): School => {
-    return game.home_team_id === id ? game.away_team : game.home_team
+    const homeSchool = getHomeSchool(game)
+    return homeSchool.id === id ? getAwaySchool(game) : homeSchool
   }
 
   // Check if school is home team
   const isHomeTeam = (game: GameWithTeams): boolean => {
-    return game.home_team_id === id
+    return getHomeSchool(game).id === id
   }
 
   if (isLoading) {
@@ -496,7 +517,10 @@ interface ScheduleGameRowProps {
 }
 
 function ScheduleGameRow({ game, schoolId }: ScheduleGameRowProps) {
-  const opponent = game.home_team_id === schoolId ? game.away_team : game.home_team
+  // After migration 072: home_team_id points to teams table, use helpers to get school
+  const homeSchool = getHomeSchool(game as GameWithTeams)
+  const awaySchool = getAwaySchool(game as GameWithTeams)
+  const opponent = homeSchool.id === schoolId ? awaySchool : homeSchool
   const isHome = game.isHome
   const isFinal = game.status === 'final'
   const isLive = game.status === 'in_progress'

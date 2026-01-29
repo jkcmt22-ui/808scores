@@ -6,6 +6,7 @@ import { GameCard, SportFilter } from '@/components/game'
 import { useLiveGames, useAuth, useFavoriteTeams, useFavoriteSports } from '@/hooks'
 import { Radio, Loader2, Star } from 'lucide-react'
 import type { GameWithTeams } from '@/types/database'
+import { getHomeSchool, getAwaySchool } from '@/types/database'
 
 // Sort games with favorites first
 function sortByFavorites(
@@ -17,9 +18,12 @@ function sortByFavorites(
   const others: GameWithTeams[] = []
 
   games.forEach((game) => {
+    // After migration 072: Get school data from team or directly
+    const homeSchool = getHomeSchool(game)
+    const awaySchool = getAwaySchool(game)
     const isFavorite =
-      favoriteTeamIds.includes(game.home_team.id) ||
-      favoriteTeamIds.includes(game.away_team.id) ||
+      favoriteTeamIds.includes(homeSchool.id) ||
+      favoriteTeamIds.includes(awaySchool.id) ||
       favoriteSportIds.includes(game.sport.id)
 
     if (isFavorite) {

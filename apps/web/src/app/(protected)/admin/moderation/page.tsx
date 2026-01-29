@@ -61,6 +61,7 @@ export default function ModerationPage() {
       const from = page * PAGE_SIZE
       const to = from + PAGE_SIZE - 1
 
+      // After migration 072, games reference teams instead of schools
       const { data, error } = await supabase
         .from('chat_messages')
         .select(`
@@ -70,8 +71,8 @@ export default function ModerationPage() {
             id,
             scheduled_at,
             status,
-            home_team:schools!games_home_team_id_fkey(id, name, short_name),
-            away_team:schools!games_away_team_id_fkey(id, name, short_name),
+            home_team:teams!games_home_team_id_fkey(id, school:schools(id, name, short_name)),
+            away_team:teams!games_away_team_id_fkey(id, school:schools(id, name, short_name)),
             sport:sports(id, name, code)
           )
         `)

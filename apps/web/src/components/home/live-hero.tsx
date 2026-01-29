@@ -6,6 +6,7 @@ import { ChevronLeft, ChevronRight, Zap } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { getSportEmoji } from '@/lib/sport-utils'
 import type { GameWithTeams } from '@/types/database'
+import { getHomeSchool, getAwaySchool } from '@/types/database'
 
 interface LiveHeroProps {
   games: GameWithTeams[]
@@ -31,6 +32,10 @@ export function LiveHero({ games }: LiveHeroProps) {
 
   const currentGame = games[currentIndex]
   const sportEmoji = getSportEmoji(currentGame.sport.code)
+
+  // After migration 072: Get school data from team or directly
+  const homeSchool = getHomeSchool(currentGame)
+  const awaySchool = getAwaySchool(currentGame)
 
   const goToPrevious = () => {
     setIsAutoPlaying(false)
@@ -126,13 +131,13 @@ export function LiveHero({ games }: LiveHeroProps) {
             <div className="flex-1 text-center">
               <div className="flex items-center justify-center gap-3 mb-2">
                 <div className="h-12 w-12 flex items-center justify-center bg-background-tertiary border-2 border-neon-blue/30 font-display font-black text-neon-blue">
-                  {currentGame.away_team.short_name.slice(0, 2).toUpperCase()}
+                  {awaySchool.short_name.slice(0, 2).toUpperCase()}
                 </div>
                 <div className="text-left">
                   <p className="font-display font-bold text-foreground text-sm truncate max-w-[120px]">
-                    {currentGame.away_team.short_name}
+                    {awaySchool.short_name}
                   </p>
-                  <p className="text-[10px] text-foreground-subtle">{currentGame.away_team.league}</p>
+                  <p className="text-[10px] text-foreground-subtle">{awaySchool.league}</p>
                 </div>
               </div>
               <div
@@ -154,12 +159,12 @@ export function LiveHero({ games }: LiveHeroProps) {
               <div className="flex items-center justify-center gap-3 mb-2">
                 <div className="text-right">
                   <p className="font-display font-bold text-foreground text-sm truncate max-w-[120px]">
-                    {currentGame.home_team.short_name}
+                    {homeSchool.short_name}
                   </p>
-                  <p className="text-[10px] text-foreground-subtle">{currentGame.home_team.league}</p>
+                  <p className="text-[10px] text-foreground-subtle">{homeSchool.league}</p>
                 </div>
                 <div className="h-12 w-12 flex items-center justify-center bg-background-tertiary border-2 border-neon-pink/30 font-display font-black text-neon-pink">
-                  {currentGame.home_team.short_name.slice(0, 2).toUpperCase()}
+                  {homeSchool.short_name.slice(0, 2).toUpperCase()}
                 </div>
               </div>
               <div

@@ -7,6 +7,7 @@ import { ArrowLeft, Search, Loader2, Radio, Calendar } from 'lucide-react'
 import { GameCardCompact } from '@/components/game'
 import { Input, Button } from '@/components/ui'
 import { useGames } from '@/hooks'
+import { getHomeSchool, getAwaySchool } from '@/types/database'
 
 export default function SelectGamePage() {
   const router = useRouter()
@@ -30,13 +31,16 @@ export default function SelectGamePage() {
     setSelectedDate(today)
   }
 
-  const filteredGames = games.filter(
-    (game) =>
-      game.home_team.name.toLowerCase().includes(search.toLowerCase()) ||
-      game.away_team.name.toLowerCase().includes(search.toLowerCase()) ||
-      game.home_team.short_name.toLowerCase().includes(search.toLowerCase()) ||
-      game.away_team.short_name.toLowerCase().includes(search.toLowerCase())
-  )
+  const filteredGames = games.filter((game) => {
+    const homeSchool = getHomeSchool(game)
+    const awaySchool = getAwaySchool(game)
+    return (
+      homeSchool.name.toLowerCase().includes(search.toLowerCase()) ||
+      awaySchool.name.toLowerCase().includes(search.toLowerCase()) ||
+      homeSchool.short_name.toLowerCase().includes(search.toLowerCase()) ||
+      awaySchool.short_name.toLowerCase().includes(search.toLowerCase())
+    )
+  })
 
   // Group by status
   const liveGames = filteredGames.filter((g) => g.status === 'in_progress')

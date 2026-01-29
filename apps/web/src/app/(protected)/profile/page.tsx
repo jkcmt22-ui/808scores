@@ -45,8 +45,8 @@ interface RecentSubmission {
   id: string
   game: {
     id: string
-    home_team: { short_name: string }
-    away_team: { short_name: string }
+    home_team: { school: { short_name: string } }
+    away_team: { school: { short_name: string } }
     sport: { name: string }
   }
   points_earned: number
@@ -69,6 +69,7 @@ export default function ProfilePage() {
       if (!supabase) return
 
       try {
+        // After migration 072, games reference teams instead of schools
         const { data: submissions } = await supabase
           .from('submissions')
           .select(`
@@ -78,8 +79,8 @@ export default function ProfilePage() {
             created_at,
             game:games(
               id,
-              home_team:schools!games_home_team_id_fkey(short_name),
-              away_team:schools!games_away_team_id_fkey(short_name),
+              home_team:teams!games_home_team_id_fkey(school:schools(short_name)),
+              away_team:teams!games_away_team_id_fkey(school:schools(short_name)),
               sport:sports(name)
             )
           `)
@@ -277,7 +278,7 @@ export default function ProfilePage() {
                   >
                     <div>
                       <p className="font-medium text-foreground">
-                        {sub.game.away_team.short_name} @ {sub.game.home_team.short_name}
+                        {sub.game.away_team?.school?.short_name || 'TBD'} @ {sub.game.home_team?.school?.short_name || 'TBD'}
                       </p>
                       <p className="text-xs text-foreground-muted">{sub.game.sport.name}</p>
                     </div>

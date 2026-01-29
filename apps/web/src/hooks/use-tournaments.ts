@@ -13,6 +13,7 @@ import type {
   TournamentBracket,
   TournamentRound,
 } from '@/types/database'
+import { getHomeSchool, getAwaySchool } from '@/types/database'
 
 interface UseTournamentsOptions {
   sportId?: string
@@ -129,13 +130,14 @@ export function useTournament(tournamentId: string) {
           .eq('tournament_id', tournamentId)
           .order('seed', { ascending: true, nullsFirst: false }),
         // Fetch tournament games
+        // After migration 072, games reference teams instead of schools
         supabase
           .from('games')
           .select(`
             *,
             sport:sports(*),
-            home_team:schools!games_home_team_id_fkey(*),
-            away_team:schools!games_away_team_id_fkey(*)
+            home_team:teams!games_home_team_id_fkey(*, school:schools(*)),
+            away_team:teams!games_away_team_id_fkey(*, school:schools(*))
           `)
           .eq('tournament_id', tournamentId)
           .order('scheduled_at', { ascending: true }),
@@ -288,8 +290,9 @@ export function useTournamentBracket(tournamentId: string) {
         id: game.id,
         round,
         position: game.bracket_position || 0,
-        homeTeam: game.home_team,
-        awayTeam: game.away_team,
+        // After migration 072: use helper to get school from team
+        homeTeam: getHomeSchool(game),
+        awayTeam: getAwaySchool(game),
         homeScore: game.status === 'scheduled' ? null : game.home_score,
         awayScore: game.status === 'scheduled' ? null : game.away_score,
         homeSeed: teamSeeds.get(game.home_team_id) || null,

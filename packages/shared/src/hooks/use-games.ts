@@ -48,13 +48,15 @@ export function useGames(supabase: TypedSupabaseClient | null, options: UseGames
     setError(null)
 
     try {
+      // After migration 072, games reference teams instead of schools
+      // The query now fetches team with nested school data
       let query = supabase
         .from('games')
         .select(`
           *,
           sport:sports(*),
-          home_team:schools!games_home_team_id_fkey(*),
-          away_team:schools!games_away_team_id_fkey(*)
+          home_team:teams!games_home_team_id_fkey(*, school:schools(*)),
+          away_team:teams!games_away_team_id_fkey(*, school:schools(*))
         `)
         .order('scheduled_at', { ascending: true })
 
@@ -275,13 +277,14 @@ export function useLiveGames(supabase: TypedSupabaseClient | null) {
         // Ignore errors - function may not exist yet or user may not have permission
       }
 
+      // After migration 072, games reference teams instead of schools
       const { data, error } = await supabase
         .from('games')
         .select(`
           *,
           sport:sports(*),
-          home_team:schools!games_home_team_id_fkey(*),
-          away_team:schools!games_away_team_id_fkey(*)
+          home_team:teams!games_home_team_id_fkey(*, school:schools(*)),
+          away_team:teams!games_away_team_id_fkey(*, school:schools(*))
         `)
         .eq('status', 'in_progress')
         .order('scheduled_at', { ascending: true })
@@ -358,13 +361,14 @@ export function useGame(supabase: TypedSupabaseClient | null, gameId: string) {
     const fetchGame = async () => {
       setIsLoading(true)
 
+      // After migration 072, games reference teams instead of schools
       const { data, error: queryError } = await supabase
         .from('games')
         .select(`
           *,
           sport:sports(*),
-          home_team:schools!games_home_team_id_fkey(*),
-          away_team:schools!games_away_team_id_fkey(*)
+          home_team:teams!games_home_team_id_fkey(*, school:schools(*)),
+          away_team:teams!games_away_team_id_fkey(*, school:schools(*))
         `)
         .eq('id', gameId)
         .single()

@@ -72,6 +72,7 @@ export interface Database {
           league: string | null
           division: string | null
           colors: Json | null
+          logo_url: string | null
           created_at: string
         }
         Insert: Omit<Database['public']['Tables']['schools']['Row'], 'id' | 'created_at'>
@@ -701,17 +702,19 @@ export interface Database {
           school_id: string
           sport_id: string
           gender: SportGender
+          level: 'varsity' | 'jv' | 'freshman'  // Competition level
           division: string | null
           league: string | null
+          region: string | null  // "East" or "West" for OIA
           season_year: string
           is_active: boolean
           is_beta: boolean
-          beta_features: Json
+          beta_features: Record<string, boolean> | null
           created_at: string
           updated_at: string
         }
-        Insert: Omit<Database['public']['Tables']['teams']['Row'], 'id' | 'created_at' | 'updated_at'>
-        Update: Partial<Database['public']['Tables']['teams']['Insert']>
+        Insert: Omit<Database['public']['Tables']['teams']['Row'], 'id' | 'created_at' | 'updated_at' | 'is_active' | 'is_beta' | 'beta_features' | 'region' | 'level'> & { level?: 'varsity' | 'jv' | 'freshman' }
+        Update: Partial<Database['public']['Tables']['teams']['Insert']> & { region?: string | null; level?: 'varsity' | 'jv' | 'freshman' }
       }
       team_managers: {
         Row: {
@@ -790,13 +793,48 @@ export type TrustedReporterCode = Database['public']['Tables']['trusted_reporter
 export type Tournament = Database['public']['Tables']['tournaments']['Row']
 export type TournamentTeam = Database['public']['Tables']['tournament_teams']['Row']
 
+// Team level type
+export type TeamLevel = 'varsity' | 'jv' | 'freshman'
+
+// Team with school relation (used in game queries after migration)
+export interface TeamWithSchool extends Team {
+  school: School
+}
+
 // Extended types with relations
+// NOTE: After migration 072, games.home_team_id and away_team_id reference teams, not schools.
+// The GameWithTeams type supports both patterns during transition:
+// - Legacy: home_team/away_team are School objects directly
+// - New: home_team/away_team are TeamWithSchool objects with nested school
 export interface GameWithTeams extends Game {
-  home_team: School
-  away_team: School
+  home_team: School | TeamWithSchool
+  away_team: School | TeamWithSchool
   sport: Sport
   scores?: GameScore[]
   tournament?: Tournament | null
+}
+
+// Type guard to check if game uses new team structure
+export function gameHasTeamWithSchool(game: GameWithTeams): game is GameWithTeams & {
+  home_team: TeamWithSchool
+  away_team: TeamWithSchool
+} {
+  return 'school' in game.home_team && 'school' in game.away_team
+}
+
+// Helper to get school from either structure
+export function getHomeSchool(game: GameWithTeams): School {
+  if ('school' in game.home_team) {
+    return game.home_team.school
+  }
+  return game.home_team as School
+}
+
+export function getAwaySchool(game: GameWithTeams): School {
+  if ('school' in game.away_team) {
+    return game.away_team.school
+  }
+  return game.away_team as School
 }
 
 export interface SubmissionWithUser extends Submission {

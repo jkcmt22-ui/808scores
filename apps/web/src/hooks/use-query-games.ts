@@ -21,13 +21,14 @@ export function useQueryGames(options: {
     queryFn: async () => {
       const supabase = createClient()
       if (!supabase) throw new Error('Supabase client not available')
+      // After migration 072, games reference teams instead of schools
       let query = supabase
         .from('games')
         .select(`
           *,
           sport:sports(*),
-          home_team:schools!games_home_team_id_fkey(*),
-          away_team:schools!games_away_team_id_fkey(*)
+          home_team:teams!games_home_team_id_fkey(*, school:schools(*)),
+          away_team:teams!games_away_team_id_fkey(*, school:schools(*))
         `)
         .order('scheduled_at', { ascending: true })
         .limit(limit)
@@ -64,13 +65,14 @@ export function useQueryLiveGames() {
     queryFn: async () => {
       const supabase = createClient()
       if (!supabase) throw new Error('Supabase client not available')
+      // After migration 072, games reference teams instead of schools
       const { data, error } = await supabase
         .from('games')
         .select(`
           *,
           sport:sports(*),
-          home_team:schools!games_home_team_id_fkey(*),
-          away_team:schools!games_away_team_id_fkey(*)
+          home_team:teams!games_home_team_id_fkey(*, school:schools(*)),
+          away_team:teams!games_away_team_id_fkey(*, school:schools(*))
         `)
         .eq('status', 'in_progress')
         .order('scheduled_at', { ascending: true })
@@ -92,13 +94,14 @@ export function useQueryGame(gameId: string) {
     queryFn: async () => {
       const supabase = createClient()
       if (!supabase) throw new Error('Supabase client not available')
+      // After migration 072, games reference teams instead of schools
       const { data, error } = await supabase
         .from('games')
         .select(`
           *,
           sport:sports(*),
-          home_team:schools!games_home_team_id_fkey(*),
-          away_team:schools!games_away_team_id_fkey(*),
+          home_team:teams!games_home_team_id_fkey(*, school:schools(*)),
+          away_team:teams!games_away_team_id_fkey(*, school:schools(*)),
           tournament:tournaments(*)
         `)
         .eq('id', gameId)

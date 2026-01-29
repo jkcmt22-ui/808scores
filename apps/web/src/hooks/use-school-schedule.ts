@@ -59,27 +59,41 @@ export function useSchoolSchedule(
       const seasonStart = `${targetSeason}-01-01`
       const seasonEnd = `${parseInt(targetSeason) + 1}-01-01`
 
-      // Fetch all games for this school in the season
-      const { data: gamesData, error: gamesError } = await supabase
-        .from('games')
-        .select(`
-          *,
-          home_team:schools!games_home_team_id_fkey(*),
-          away_team:schools!games_away_team_id_fkey(*),
-          sport:sports!games_sport_id_fkey(*)
-        `)
-        .or(`home_team_id.eq.${schoolId},away_team_id.eq.${schoolId}`)
-        .gte('scheduled_at', seasonStart)
-        .lt('scheduled_at', seasonEnd)
-        .order('scheduled_at', { ascending: true })
+      // After migration 072, games reference teams, so we need to filter by team's school_id
+      // First get all team IDs for this school
+      const { data: schoolTeams } = await supabase
+        .from('teams')
+        .select('id')
+        .eq('school_id', schoolId)
 
-      if (gamesError) throw gamesError
+      const teamIds = ((schoolTeams || []) as Array<{ id: string }>).map(t => t.id)
+
+      let gamesData: any[] = []
+      if (teamIds.length > 0) {
+        const { data, error } = await supabase
+          .from('games')
+          .select(`
+            *,
+            home_team:teams!games_home_team_id_fkey(*, school:schools(*)),
+            away_team:teams!games_away_team_id_fkey(*, school:schools(*)),
+            sport:sports!games_sport_id_fkey(*)
+          `)
+          .or(teamIds.map(tid => `home_team_id.eq.${tid},away_team_id.eq.${tid}`).join(','))
+          .gte('scheduled_at', seasonStart)
+          .lt('scheduled_at', seasonEnd)
+          .order('scheduled_at', { ascending: true })
+
+        if (error) throw error
+        gamesData = data || []
+      }
 
       const games = gamesData as GameWithTeams[]
 
       // Process games to add isHome and result
+      // After migration, check if home_team's school_id matches the schoolId
       const processedGames: ScheduleGame[] = games.map(game => {
-        const isHome = game.home_team_id === schoolId
+        const homeTeam = game.home_team as any
+        const isHome = homeTeam?.school_id === schoolId || homeTeam?.id === schoolId
 
         let result: 'W' | 'L' | 'T' | null = null
         if (game.status === 'final') {

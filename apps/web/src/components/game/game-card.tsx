@@ -7,6 +7,7 @@ import { Badge } from '@/components/ui'
 import { cn, formatGameTime, isGameLive, isGameFinal, isScoreOverdue } from '@/lib/utils'
 import { getSportEmoji } from '@/lib/sport-utils'
 import type { GameWithTeams, GameType } from '@/types/database'
+import { getHomeSchool, getAwaySchool } from '@/types/database'
 
 // Game with optional message count (from hooks that fetch it)
 type GameWithOptionalCount = GameWithTeams & { message_count?: number }
@@ -49,6 +50,10 @@ export const GameCard = React.memo(function GameCard({ game, showSport = false }
   const isScheduled = game.status === 'scheduled'
   const gameTypeBadge = getGameTypeBadge(game.game_type, game.tournament_id)
   const overtimeDisplay = getOvertimeDisplay(game.overtime_count)
+
+  // After migration 072: Get school data from team or directly
+  const homeSchool = getHomeSchool(game)
+  const awaySchool = getAwaySchool(game)
 
   // Check if game is overdue for score submission
   const scoreOverdue = isScoreOverdue(game.scheduled_at, game.status, game.is_verified)
@@ -126,10 +131,10 @@ export const GameCard = React.memo(function GameCard({ game, showSport = false }
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3 flex-1 min-w-0">
               <div className="flex h-9 w-9 items-center justify-center bg-background-tertiary text-xs font-display font-black text-neon-blue border-2 border-neon-blue/30">
-                {game.away_team.short_name.slice(0, 2).toUpperCase()}
+                {awaySchool.short_name.slice(0, 2).toUpperCase()}
               </div>
               <span className="font-display font-bold text-foreground truncate">
-                {game.away_team.short_name}
+                {awaySchool.short_name}
               </span>
             </div>
             <div className={cn(
@@ -144,10 +149,10 @@ export const GameCard = React.memo(function GameCard({ game, showSport = false }
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3 flex-1 min-w-0">
               <div className="flex h-9 w-9 items-center justify-center bg-background-tertiary text-xs font-display font-black text-neon-pink border-2 border-neon-pink/30">
-                {game.home_team.short_name.slice(0, 2).toUpperCase()}
+                {homeSchool.short_name.slice(0, 2).toUpperCase()}
               </div>
               <span className="font-display font-bold text-foreground truncate">
-                {game.home_team.short_name}
+                {homeSchool.short_name}
               </span>
             </div>
             <div className={cn(
@@ -204,6 +209,10 @@ export function GameCardCompact({ game }: { game: GameWithOptionalCount }) {
   const isLive = isGameLive(game.status)
   const isScheduled = game.status === 'scheduled'
 
+  // After migration 072: Get school data from team or directly
+  const homeSchool = getHomeSchool(game)
+  const awaySchool = getAwaySchool(game)
+
   return (
     <Link href={`/game/${game.id}`}>
       <div className={cn(
@@ -215,9 +224,9 @@ export function GameCardCompact({ game }: { game: GameWithOptionalCount }) {
             <span className="h-2 w-2 rounded-full bg-live animate-live-pulse" />
           )}
           <div className="text-sm font-mono">
-            <span className="font-semibold text-foreground">{game.away_team.short_name}</span>
+            <span className="font-semibold text-foreground">{awaySchool.short_name}</span>
             <span className="mx-2 text-foreground-subtle">@</span>
-            <span className="font-semibold text-foreground">{game.home_team.short_name}</span>
+            <span className="font-semibold text-foreground">{homeSchool.short_name}</span>
           </div>
         </div>
         <div className="flex items-center gap-3">

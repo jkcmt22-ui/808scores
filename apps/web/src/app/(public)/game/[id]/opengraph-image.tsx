@@ -22,18 +22,26 @@ export default async function OGImage({ params }: { params: { id: string } }) {
   if (supabaseUrl && supabaseKey) {
     const supabase = createClient(supabaseUrl, supabaseKey)
 
+    // After migration 072, games reference teams instead of schools
     const { data } = await supabase
       .from('games')
       .select(`
         *,
         sport:sports(name, display_name, code),
-        home_team:schools!games_home_team_id_fkey(name, short_name),
-        away_team:schools!games_away_team_id_fkey(name, short_name)
+        home_team:teams!games_home_team_id_fkey(school:schools(name, short_name)),
+        away_team:teams!games_away_team_id_fkey(school:schools(name, short_name))
       `)
       .eq('id', id)
       .single()
 
-    game = data
+    // Transform to expected structure for backward compatibility
+    if (data) {
+      game = {
+        ...data,
+        home_team: data.home_team?.school || data.home_team,
+        away_team: data.away_team?.school || data.away_team,
+      }
+    }
   }
 
   // Fallback if no game found

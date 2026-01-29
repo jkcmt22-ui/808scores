@@ -21,6 +21,7 @@ import { addToQueue, isOnline, onOnlineStatusChange } from '@/lib/offline-queue'
 import { cn } from '@/lib/utils'
 import { getOvertimePeriods } from '@/lib/sport-periods'
 import type { PeriodsConfig, SubmissionType as DBSubmissionType } from '@/types/database'
+import { getHomeSchool, getAwaySchool } from '@/types/database'
 import { awardSubmissionPoints } from '@/lib/points/ledger'
 import type { PointsBreakdown } from '@/lib/points/calculator'
 
@@ -98,6 +99,10 @@ export default function SubmitPage({ params }: SubmitPageProps) {
     )
   }
 
+  // After migration 072: Get school data from team or directly
+  const homeSchool = getHomeSchool(game)
+  const awaySchool = getAwaySchool(game)
+
   const regularPeriods = periodsConfig.names || ['Q1', 'Q2', 'Q3', 'Q4']
   const overtimePeriods = periodsConfig.overtime ? getOvertimePeriods(periodsConfig) : []
   const periods = showOvertimePeriods ? [...regularPeriods, ...overtimePeriods] : regularPeriods
@@ -173,7 +178,7 @@ export default function SubmitPage({ params }: SubmitPageProps) {
       try {
         await addToQueue({
           gameId,
-          gameName: `${game.away_team.short_name} @ ${game.home_team.short_name}`,
+          gameName: `${awaySchool.short_name} @ ${homeSchool.short_name}`,
           submissionType: submissionType as 'period_score' | 'final_score' | 'live_update',
           period: submissionType === 'final_score' ? null : fullPeriod,
           homeScore: parseInt(homeScore),
@@ -406,10 +411,10 @@ export default function SubmitPage({ params }: SubmitPageProps) {
               {/* Away Team */}
               <div className="flex items-center gap-4">
                 <div className="flex h-12 w-12 items-center justify-center bg-background-tertiary text-sm font-bold font-display text-neon-blue border-2 border-neon-blue/30">
-                  {game.away_team.short_name.slice(0, 2).toUpperCase()}
+                  {awaySchool.short_name.slice(0, 2).toUpperCase()}
                 </div>
                 <div className="flex-1">
-                  <p className="mb-1 text-sm font-medium text-foreground">{game.away_team.short_name}</p>
+                  <p className="mb-1 text-sm font-medium text-foreground">{awaySchool.short_name}</p>
                   <Input
                     type="number"
                     inputMode="numeric"
@@ -424,10 +429,10 @@ export default function SubmitPage({ params }: SubmitPageProps) {
               {/* Home Team */}
               <div className="flex items-center gap-4">
                 <div className="flex h-12 w-12 items-center justify-center bg-background-tertiary text-sm font-bold font-display text-neon-pink border-2 border-neon-pink/30">
-                  {game.home_team.short_name.slice(0, 2).toUpperCase()}
+                  {homeSchool.short_name.slice(0, 2).toUpperCase()}
                 </div>
                 <div className="flex-1">
-                  <p className="mb-1 text-sm font-medium text-foreground">{game.home_team.short_name}</p>
+                  <p className="mb-1 text-sm font-medium text-foreground">{homeSchool.short_name}</p>
                   <Input
                     type="number"
                     inputMode="numeric"
@@ -514,7 +519,7 @@ export default function SubmitPage({ params }: SubmitPageProps) {
                 <div className="text-center">
                   <p className="text-sm text-foreground-muted">{game.sport.display_name || game.sport.name}</p>
                   <p className="font-semibold text-foreground">
-                    {game.away_team.short_name} @ {game.home_team.short_name}
+                    {awaySchool.short_name} @ {homeSchool.short_name}
                   </p>
                 </div>
 
@@ -694,7 +699,7 @@ export default function SubmitPage({ params }: SubmitPageProps) {
             <div>
               <p className="text-sm text-foreground-muted">{game.sport.display_name || game.sport.name}</p>
               <p className="font-semibold font-display text-foreground">
-                {game.away_team.short_name} @ {game.home_team.short_name}
+                {awaySchool.short_name} @ {homeSchool.short_name}
               </p>
             </div>
             {game.golden_game && (

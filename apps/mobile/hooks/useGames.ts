@@ -2,6 +2,20 @@ import { useEffect, useState, useCallback } from 'react'
 import { useSupabase } from '../contexts/SupabaseContext'
 
 // Types inline to avoid shared package React issues
+// After migration 072, home_team and away_team are TeamWithSchool objects
+interface SchoolData {
+  id: string
+  name: string
+  short_name: string
+  island: string
+}
+
+interface TeamWithSchool {
+  id: string
+  school_id: string
+  school: SchoolData
+}
+
 export interface GameWithTeamsAndCount {
   id: string
   sport_id: string
@@ -15,18 +29,8 @@ export interface GameWithTeamsAndCount {
   away_score: number
   is_overtime: boolean
   game_type: string
-  home_team: {
-    id: string
-    name: string
-    short_name: string
-    island: string
-  }
-  away_team: {
-    id: string
-    name: string
-    short_name: string
-    island: string
-  }
+  home_team: TeamWithSchool
+  away_team: TeamWithSchool
   sport: {
     id: string
     name: string
@@ -35,6 +39,11 @@ export interface GameWithTeamsAndCount {
     gender: string
   }
   message_count: number
+}
+
+// Helper to get school from team
+export function getSchoolFromTeam(team: TeamWithSchool): SchoolData {
+  return team.school
 }
 
 interface UseGamesOptions {
@@ -59,13 +68,14 @@ export function useGames(options: UseGamesOptions = {}) {
     setError(null)
 
     try {
+      // After migration 072, games reference teams instead of schools
       let query = supabase
         .from('games')
         .select(`
           *,
           sport:sports(*),
-          home_team:schools!games_home_team_id_fkey(*),
-          away_team:schools!games_away_team_id_fkey(*)
+          home_team:teams!games_home_team_id_fkey(*, school:schools(*)),
+          away_team:teams!games_away_team_id_fkey(*, school:schools(*))
         `)
         .order('scheduled_at', { ascending: true })
 
@@ -133,13 +143,14 @@ export function useLiveGames() {
 
   useEffect(() => {
     const fetchLiveGames = async () => {
+      // After migration 072, games reference teams instead of schools
       const { data, error } = await supabase
         .from('games')
         .select(`
           *,
           sport:sports(*),
-          home_team:schools!games_home_team_id_fkey(*),
-          away_team:schools!games_away_team_id_fkey(*)
+          home_team:teams!games_home_team_id_fkey(*, school:schools(*)),
+          away_team:teams!games_away_team_id_fkey(*, school:schools(*))
         `)
         .eq('status', 'in_progress')
         .order('scheduled_at', { ascending: true })
@@ -214,13 +225,14 @@ export function useGame(gameId: string) {
     const fetchGame = async () => {
       setIsLoading(true)
 
+      // After migration 072, games reference teams instead of schools
       const { data, error: queryError } = await supabase
         .from('games')
         .select(`
           *,
           sport:sports(*),
-          home_team:schools!games_home_team_id_fkey(*),
-          away_team:schools!games_away_team_id_fkey(*)
+          home_team:teams!games_home_team_id_fkey(*, school:schools(*)),
+          away_team:teams!games_away_team_id_fkey(*, school:schools(*))
         `)
         .eq('id', gameId)
         .single()

@@ -7,6 +7,7 @@ import { createClient } from '@/lib/supabase/client'
 import { getSportEmoji } from '@/lib/sport-utils'
 import { formatGameTime } from '@/lib/utils'
 import type { GameWithTeams } from '@/types/database'
+import { getHomeSchool, getAwaySchool } from '@/types/database'
 
 interface ComingSoonProps {
   maxGames?: number
@@ -32,13 +33,14 @@ export function ComingSoon({ maxGames = 5 }: ComingSoonProps) {
       const tomorrow = new Date(now)
       tomorrow.setHours(tomorrow.getHours() + 24)
 
+      // After migration 072, games reference teams instead of schools
       const { data, error } = await supabase
         .from('games')
         .select(`
           *,
           sport:sports(*),
-          home_team:schools!games_home_team_id_fkey(*),
-          away_team:schools!games_away_team_id_fkey(*)
+          home_team:teams!games_home_team_id_fkey(*, school:schools(*)),
+          away_team:teams!games_away_team_id_fkey(*, school:schools(*))
         `)
         .eq('status', 'scheduled')
         .gte('scheduled_at', now.toISOString())
@@ -108,7 +110,7 @@ export function ComingSoon({ maxGames = 5 }: ComingSoonProps) {
           {/* Preview of next game when collapsed */}
           {!isExpanded && nextGame && (
             <span className="text-xs text-foreground-muted truncate hidden sm:inline">
-              — {nextGame.away_team.short_name} @ {nextGame.home_team.short_name} {formatRelativeTime(nextGame.scheduled_at)}
+              — {getAwaySchool(nextGame).short_name} @ {getHomeSchool(nextGame).short_name} {formatRelativeTime(nextGame.scheduled_at)}
             </span>
           )}
         </div>
@@ -137,7 +139,7 @@ export function ComingSoon({ maxGames = 5 }: ComingSoonProps) {
                   </span>
                   <div className="min-w-0 flex-1">
                     <p className="font-display font-bold text-sm truncate">
-                      {game.away_team.short_name} @ {game.home_team.short_name}
+                      {getAwaySchool(game).short_name} @ {getHomeSchool(game).short_name}
                     </p>
                     <p className="text-xs text-foreground-muted">
                       {game.sport.display_name || game.sport.name}

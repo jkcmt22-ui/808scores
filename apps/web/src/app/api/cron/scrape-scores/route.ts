@@ -45,6 +45,58 @@ async function findSchoolId(supabase: SupabaseClient, shortName: string): Promis
   return data.id
 }
 
+// After migration 072: Find or create team ID for a school+sport+season combination
+async function findOrCreateTeamId(
+  supabase: SupabaseClient,
+  schoolId: string,
+  sportId: string,
+  gender: string,
+  scheduledAt: Date
+): Promise<string | null> {
+  // Determine season year from scheduled_at (August 1 cutoff)
+  const month = scheduledAt.getMonth() + 1 // 0-indexed
+  const year = scheduledAt.getFullYear()
+  const seasonYear = month >= 8
+    ? `${year}-${year + 1}`
+    : `${year - 1}-${year}`
+
+  // Try to find existing team
+  const { data: existingTeam } = await supabase
+    .from('teams')
+    .select('id')
+    .eq('school_id', schoolId)
+    .eq('sport_id', sportId)
+    .eq('gender', gender)
+    .eq('level', 'varsity')
+    .eq('season_year', seasonYear)
+    .single()
+
+  if (existingTeam) {
+    return existingTeam.id
+  }
+
+  // Create team if it doesn't exist
+  const { data: newTeam, error } = await supabase
+    .from('teams')
+    .insert({
+      school_id: schoolId,
+      sport_id: sportId,
+      gender,
+      level: 'varsity',
+      season_year: seasonYear,
+      is_active: true,
+    })
+    .select('id')
+    .single()
+
+  if (error) {
+    console.error(`Failed to create team for school ${schoolId}, sport ${sportId}:`, error)
+    return null
+  }
+
+  return newTeam.id
+}
+
 // Check if game already exists (by external_id first, then by teams and date)
 async function findExistingGame(
   supabase: SupabaseClient,
@@ -210,12 +262,42 @@ async function upsertGame(
   scoreChanged?: boolean
   previousStatus?: string
 }> {
-  // Find team IDs
-  const homeTeamId = await findSchoolId(supabase, game.homeTeam)
-  const awayTeamId = await findSchoolId(supabase, game.awayTeam)
+  // Find school IDs first
+  const homeSchoolId = await findSchoolId(supabase, game.homeTeam)
+  const awaySchoolId = await findSchoolId(supabase, game.awayTeam)
+
+  if (!homeSchoolId || !awaySchoolId) {
+    console.warn(`Skipping game - missing school: ${game.awayTeam} @ ${game.homeTeam}`)
+    return { action: 'skipped', homeTeamId: undefined, awayTeamId: undefined }
+  }
+
+  // Get sport gender for team lookup
+  const { data: sportData } = await supabase
+    .from('sports')
+    .select('gender')
+    .eq('id', game.sportId)
+    .single()
+
+  const gender = sportData?.gender || 'coed'
+
+  // After migration 072: Find or create team IDs for each school
+  const homeTeamId = await findOrCreateTeamId(
+    supabase,
+    homeSchoolId,
+    game.sportId,
+    gender,
+    game.scheduledAt
+  )
+  const awayTeamId = await findOrCreateTeamId(
+    supabase,
+    awaySchoolId,
+    game.sportId,
+    gender,
+    game.scheduledAt
+  )
 
   if (!homeTeamId || !awayTeamId) {
-    console.warn(`Skipping game - missing team: ${game.awayTeam} @ ${game.homeTeam}`)
+    console.warn(`Skipping game - failed to find/create team: ${game.awayTeam} @ ${game.homeTeam}`)
     return { action: 'skipped', homeTeamId: undefined, awayTeamId: undefined }
   }
 
