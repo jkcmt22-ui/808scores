@@ -866,6 +866,27 @@ export interface Database {
         Insert: Omit<Database['public']['Tables']['team_managers']['Row'], 'id' | 'created_at' | 'granted_at' | 'is_active'>
         Update: Partial<Database['public']['Tables']['team_managers']['Insert']>
       }
+      seasons: {
+        Row: {
+          id: string
+          year: string              // "2025-2026" format
+          display_name: string | null
+          start_date: string | null
+          end_date: string | null
+          is_current: boolean
+          status: 'planning' | 'active' | 'completed'
+          sports_enabled: string[]  // Array of sport UUIDs
+          created_at: string
+          updated_at: string
+          created_by: string | null
+        }
+        Insert: Omit<Database['public']['Tables']['seasons']['Row'], 'id' | 'created_at' | 'updated_at' | 'is_current' | 'status' | 'sports_enabled'> & {
+          is_current?: boolean
+          status?: 'planning' | 'active' | 'completed'
+          sports_enabled?: string[]
+        }
+        Update: Partial<Database['public']['Tables']['seasons']['Insert']>
+      }
     }
   }
 }
@@ -907,6 +928,10 @@ export type PredictionResult = Database['public']['Tables']['prediction_results'
 export type Team = Database['public']['Tables']['teams']['Row']
 export type TeamRosterEntry = Database['public']['Tables']['team_rosters']['Row']
 export type TeamManager = Database['public']['Tables']['team_managers']['Row']
+export type Season = Database['public']['Tables']['seasons']['Row']
+
+// Season status type
+export type SeasonStatus = 'planning' | 'active' | 'completed'
 
 // Team gender type for UI
 export type TeamGender = 'boys' | 'girls' | 'coed'
