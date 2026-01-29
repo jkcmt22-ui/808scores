@@ -200,9 +200,12 @@ export default function AdminUsersPage() {
         type: 'success',
         text: `${fieldLabels[field]} ${newValue ? 'granted' : 'revoked'} successfully`,
       })
-    } catch (err) {
+    } catch (err: unknown) {
       console.error('Error updating user role:', err)
-      setMessage({ type: 'error', text: 'Failed to update user role' })
+      const errorMessage = err instanceof Error ? err.message :
+        (err && typeof err === 'object' && 'message' in err) ? String((err as {message: unknown}).message) :
+        'Failed to update user role'
+      setMessage({ type: 'error', text: errorMessage })
     }
   }
 
