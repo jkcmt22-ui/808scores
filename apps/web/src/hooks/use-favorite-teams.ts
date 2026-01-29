@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useMemo } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import type { School } from '@/types/database'
 
@@ -26,7 +26,7 @@ export function useFavoriteTeams(userId: string | undefined): UseFavoriteTeamsRe
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
-  const supabase = createClient()
+  const supabase = useMemo(() => createClient(), [])
 
   // Fetch favorite teams
   useEffect(() => {

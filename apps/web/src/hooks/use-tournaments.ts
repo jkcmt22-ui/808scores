@@ -108,48 +108,47 @@ export function useTournament(tournamentId: string) {
     setError(null)
 
     try {
-      // Fetch tournament with sport
-      const { data: tournamentData, error: tournamentError } = await supabase
-        .from('tournaments')
-        .select(`
-          *,
-          sport:sports(*)
-        `)
-        .eq('id', tournamentId)
-        .single()
+      // Fetch all data in parallel
+      const [tournamentResult, teamsResult, gamesResult] = await Promise.all([
+        // Fetch tournament with sport
+        supabase
+          .from('tournaments')
+          .select(`
+            *,
+            sport:sports(*)
+          `)
+          .eq('id', tournamentId)
+          .single(),
+        // Fetch tournament teams with schools
+        supabase
+          .from('tournament_teams')
+          .select(`
+            *,
+            school:schools(*)
+          `)
+          .eq('tournament_id', tournamentId)
+          .order('seed', { ascending: true, nullsFirst: false }),
+        // Fetch tournament games
+        supabase
+          .from('games')
+          .select(`
+            *,
+            sport:sports(*),
+            home_team:schools!games_home_team_id_fkey(*),
+            away_team:schools!games_away_team_id_fkey(*)
+          `)
+          .eq('tournament_id', tournamentId)
+          .order('scheduled_at', { ascending: true }),
+      ])
 
-      if (tournamentError) throw tournamentError
-
-      // Fetch tournament teams with schools
-      const { data: teamsData, error: teamsError } = await supabase
-        .from('tournament_teams')
-        .select(`
-          *,
-          school:schools(*)
-        `)
-        .eq('tournament_id', tournamentId)
-        .order('seed', { ascending: true, nullsFirst: false })
-
-      if (teamsError) throw teamsError
-
-      // Fetch tournament games
-      const { data: gamesData, error: gamesError } = await supabase
-        .from('games')
-        .select(`
-          *,
-          sport:sports(*),
-          home_team:schools!games_home_team_id_fkey(*),
-          away_team:schools!games_away_team_id_fkey(*)
-        `)
-        .eq('tournament_id', tournamentId)
-        .order('scheduled_at', { ascending: true })
-
-      if (gamesError) throw gamesError
+      if (tournamentResult.error) throw tournamentResult.error
+      if (teamsResult.error) throw teamsResult.error
+      if (gamesResult.error) throw gamesResult.error
 
       setTournament({
-        ...(tournamentData as Tournament & { sport: import('@/types/database').Sport }),
-        teams: teamsData as TournamentTeamWithSchool[],
-        games: gamesData as GameWithTeams[],
+        ...(tournamentResult.data as Tournament & { sport: import('@/types/database').Sport }),
+        teams: teamsResult.data as TournamentTeamWithSchool[],
+        games: gamesResult.data as GameWithTeams[],
       } as TournamentWithDetails)
     } catch (err) {
       console.error('Error fetching tournament:', err)

@@ -100,7 +100,7 @@ export function useGameStats(options: UseGameStatsOptions): UseGameStatsReturn {
       const year = gameDate.getFullYear()
       const seasonYear = month >= 8 ? `${year}-${year + 1}` : `${year - 1}-${year}`
 
-      // First, get team IDs for both schools
+      // Fetch team IDs for roster lookup
       const { data: teamsData } = await supabase
         .from('teams')
         .select('id, school_id')
@@ -177,9 +177,11 @@ export function useGameStats(options: UseGameStatsOptions): UseGameStatsReturn {
         return []
       }
 
-      // Fetch players for both teams
-      let homePlayers = await fetchTeamPlayers(gameWithDetails.home_team_id, homeTeamIds)
-      let awayPlayers = await fetchTeamPlayers(gameWithDetails.away_team_id, awayTeamIds)
+      // Fetch players for both teams in parallel
+      const [homePlayers, awayPlayers] = await Promise.all([
+        fetchTeamPlayers(gameWithDetails.home_team_id, homeTeamIds),
+        fetchTeamPlayers(gameWithDetails.away_team_id, awayTeamIds),
+      ])
 
       // Fetch existing stats for this game
       const { data: statsData, error: statsError } = await supabase
@@ -200,13 +202,13 @@ export function useGameStats(options: UseGameStatsOptions): UseGameStatsReturn {
       }
 
       // Merge stats into player lists
-      homePlayers = homePlayers.map(p => ({
+      const homePlayersWithStats = homePlayers.map(p => ({
         ...p,
         stats: statsMap.get(p.player.id) || null,
         isStarter: statsMap.get(p.player.id)?.is_starter ?? p.isStarter,
       }))
 
-      awayPlayers = awayPlayers.map(p => ({
+      const awayPlayersWithStats = awayPlayers.map(p => ({
         ...p,
         stats: statsMap.get(p.player.id) || null,
         isStarter: statsMap.get(p.player.id)?.is_starter ?? p.isStarter,
@@ -220,17 +222,17 @@ export function useGameStats(options: UseGameStatsOptions): UseGameStatsReturn {
         return a.player.last_name.localeCompare(b.player.last_name)
       }
 
-      homePlayers.sort(sortByJersey)
-      awayPlayers.sort(sortByJersey)
+      homePlayersWithStats.sort(sortByJersey)
+      awayPlayersWithStats.sort(sortByJersey)
 
       setHomeRoster({
         school: gameWithDetails.home_team,
-        players: homePlayers,
+        players: homePlayersWithStats,
       })
 
       setAwayRoster({
         school: gameWithDetails.away_team,
-        players: awayPlayers,
+        players: awayPlayersWithStats,
       })
 
       setExistingStats(statsMap)
