@@ -12,7 +12,7 @@ import {
 } from 'lucide-react'
 import { Button, Card, Badge, Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui'
 import { TeamAssignmentPanel } from '@/components/admin/standings/TeamAssignmentPanel'
-import { StandingsPreview } from '@/components/admin/standings/StandingsPreview'
+import { StandingsPreview, type RecordEdit } from '@/components/admin/standings/StandingsPreview'
 import { createClient } from '@/lib/supabase/client'
 import { cn } from '@/lib/utils'
 import { LEAGUES } from '@/lib/league-config'
@@ -139,14 +139,52 @@ export default function AdminStandingsPage() {
       return
     }
 
+    // Convert season to INT for season_standings lookup
+    const seasonYearInt = parseInt(selectedSeason.split('-')[1])
+
     try {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const { data, error } = await (supabase.rpc as any)('get_computed_standings', {
-        p_sport_id: selectedSportId,
-        p_gender: selectedSport.gender,
-        p_season_year: selectedSeason,
-        p_league: selectedLeague
-      })
+      // Fetch both computed standings and manual overrides in parallel
+      const [computedResult, manualResult] = await Promise.all([
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        (supabase.rpc as any)('get_computed_standings', {
+          p_sport_id: selectedSportId,
+          p_gender: selectedSport.gender,
+          p_season_year: selectedSeason,
+          p_league: selectedLeague
+        }),
+        // Fetch manual overrides from season_standings
+        supabase
+          .from('season_standings')
+          .select('school_id, overall_wins, overall_losses, overall_ties, league_wins, league_losses, league_ties')
+          .eq('sport_id', selectedSportId)
+          .eq('season_year', seasonYearInt)
+      ])
+
+      const { data, error } = computedResult
+      const manualOverrides = new Map<string, {
+        overall_wins: number
+        overall_losses: number
+        overall_ties: number
+        league_wins: number
+        league_losses: number
+        league_ties: number
+      }>()
+
+      // Build map of manual overrides by school_id
+      if (manualResult.data) {
+        type ManualOverride = {
+          school_id: string
+          overall_wins: number
+          overall_losses: number
+          overall_ties: number
+          league_wins: number
+          league_losses: number
+          league_ties: number
+        }
+        for (const row of manualResult.data as ManualOverride[]) {
+          manualOverrides.set(row.school_id, row)
+        }
+      }
 
       if (error) {
         console.error('Error fetching standings:', error)
@@ -179,13 +217,24 @@ export default function AdminStandingsPage() {
 
         if (filtered.length > 0) {
           const teams: TeamStanding[] = filtered.map(r => {
-            const gamesPlayed = r.overall_wins + r.overall_losses + r.overall_ties
+            // Check for manual override
+            const manual = manualOverrides.get(r.school_id)
+
+            // Use manual values if they exist, otherwise use computed
+            const overallWins = manual?.overall_wins ?? r.overall_wins
+            const overallLosses = manual?.overall_losses ?? r.overall_losses
+            const overallTies = manual?.overall_ties ?? r.overall_ties
+            const leagueWins = manual?.league_wins ?? r.league_wins
+            const leagueLosses = manual?.league_losses ?? r.league_losses
+            const leagueTies = manual?.league_ties ?? r.league_ties
+
+            const gamesPlayed = overallWins + overallLosses + overallTies
             const winPct = gamesPlayed > 0
-              ? (r.overall_wins + r.overall_ties * 0.5) / gamesPlayed
+              ? (overallWins + overallTies * 0.5) / gamesPlayed
               : 0
-            const leagueGamesPlayed = r.league_wins + r.league_losses + r.league_ties
+            const leagueGamesPlayed = leagueWins + leagueLosses + leagueTies
             const leagueWinPct = leagueGamesPlayed > 0
-              ? (r.league_wins + r.league_ties * 0.5) / leagueGamesPlayed
+              ? (leagueWins + leagueTies * 0.5) / leagueGamesPlayed
               : 0
 
             return {
@@ -201,18 +250,18 @@ export default function AdminStandingsPage() {
                 logo_url: null,
                 created_at: ''
               },
-              wins: r.overall_wins,
-              losses: r.overall_losses,
-              ties: r.overall_ties,
+              wins: overallWins,
+              losses: overallLosses,
+              ties: overallTies,
               winPct,
               pointsFor: r.points_for,
               pointsAgainst: r.points_against,
               pointDiff: r.points_for - r.points_against,
               streak: '-',
               gamesPlayed,
-              leagueWins: r.league_wins,
-              leagueLosses: r.league_losses,
-              leagueTies: r.league_ties,
+              leagueWins,
+              leagueLosses,
+              leagueTies,
               leagueWinPct,
               leagueGamesPlayed
             }
@@ -333,6 +382,75 @@ export default function AdminStandingsPage() {
       return newMap
     })
   }, [])
+
+  // Save a single team's record to season_standings
+  const saveTeamRecord = useCallback(async (edit: RecordEdit) => {
+    if (!supabase || !selectedSportId || !selectedSeason) {
+      throw new Error('Missing required data')
+    }
+
+    // Find the team for this school
+    const team = teams.find(t => t.school.id === edit.schoolId)
+    if (!team) {
+      throw new Error('Team not found')
+    }
+
+    // Convert season_year format to INT (e.g., "2025-2026" -> 2026)
+    const seasonYearInt = parseInt(selectedSeason.split('-')[1])
+
+    // Check if a manual standing already exists
+    const { data: existing } = await supabase
+      .from('season_standings')
+      .select('id')
+      .eq('team_id', team.id)
+      .eq('sport_id', selectedSportId)
+      .eq('season_year', seasonYearInt)
+      .single()
+
+    if (existing) {
+      // Update existing record
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const { error } = await (supabase as any)
+        .from('season_standings')
+        .update({
+          overall_wins: edit.overallWins,
+          overall_losses: edit.overallLosses,
+          overall_ties: edit.overallTies,
+          league_wins: edit.leagueWins,
+          league_losses: edit.leagueLosses,
+          league_ties: edit.leagueTies,
+          league: `${selectedLeague} ${selectedDivision}${selectedRegion ? ` ${selectedRegion}` : ''}`,
+          updated_at: new Date().toISOString(),
+        })
+        .eq('id', (existing as { id: string }).id)
+
+      if (error) throw error
+    } else {
+      // Insert new record
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const { error } = await (supabase as any)
+        .from('season_standings')
+        .insert({
+          school_id: edit.schoolId,
+          team_id: team.id,
+          sport_id: selectedSportId,
+          season_year: seasonYearInt,
+          league: `${selectedLeague} ${selectedDivision}${selectedRegion ? ` ${selectedRegion}` : ''}`,
+          overall_wins: edit.overallWins,
+          overall_losses: edit.overallLosses,
+          overall_ties: edit.overallTies,
+          league_wins: edit.leagueWins,
+          league_losses: edit.leagueLosses,
+          league_ties: edit.leagueTies,
+        })
+
+      if (error) throw error
+    }
+
+    // Refresh standings after save
+    setMessage({ type: 'success', text: `Saved record for ${team.school.short_name}` })
+    fetchStandings()
+  }, [supabase, selectedSportId, selectedSeason, selectedLeague, selectedDivision, selectedRegion, teams, fetchStandings])
 
   // Save all changes
   const saveChanges = async () => {
@@ -622,6 +740,8 @@ export default function AdminStandingsPage() {
               league={selectedLeague}
               division={selectedDivision}
               region={selectedRegion}
+              editable={true}
+              onSaveRecord={saveTeamRecord}
             />
           </div>
         )}
