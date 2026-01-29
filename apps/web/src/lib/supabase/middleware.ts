@@ -93,6 +93,17 @@ export async function updateSession(request: NextRequest) {
     }
   }
 
+  // Redirect authenticated users AWAY from beta-landing to main app
+  if (path === '/beta-landing' && user) {
+    // Check if they have beta access
+    if (userData && (userData.has_beta_access || userData.is_admin || userData.is_super_admin)) {
+      // User has access - redirect to main app
+      const url = request.nextUrl.clone()
+      url.pathname = '/'
+      return NextResponse.redirect(url)
+    }
+  }
+
   // Check beta access for non-public routes
   if (!isPublicPath) {
     if (user && userData) {

@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { Zap, Trophy, Radio, Lock, Check, Heart, Gift, Award, Users } from 'lucide-react'
 import { Button } from '@/components/ui/button'
@@ -12,6 +12,32 @@ export default function BetaLandingPage() {
   const [code, setCode] = useState('')
   const [isVerifying, setIsVerifying] = useState(false)
   const [error, setError] = useState<string | null>(null)
+
+  // Redirect authenticated users with beta access away from this page
+  useEffect(() => {
+    const checkAuthAndRedirect = async () => {
+      const supabase = createClient()
+      if (!supabase) return
+
+      const { data: { user } } = await supabase.auth.getUser()
+      if (user) {
+        // Check if user has beta access
+        const { data: profile } = await supabase
+          .from('users')
+          .select('has_beta_access, is_admin, is_super_admin')
+          .eq('id', user.id)
+          .single()
+
+        const p = profile as { has_beta_access: boolean; is_admin: boolean; is_super_admin: boolean } | null
+        if (p && (p.has_beta_access || p.is_admin || p.is_super_admin)) {
+          // User is authenticated with access - redirect to main app
+          router.replace('/')
+        }
+      }
+    }
+
+    checkAuthAndRedirect()
+  }, [router])
 
   const handleSubmitCode = async (e: React.FormEvent) => {
     e.preventDefault()
