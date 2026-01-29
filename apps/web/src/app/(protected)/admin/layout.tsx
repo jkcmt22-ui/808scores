@@ -11,6 +11,7 @@ import {
   ClipboardList,
   MessageSquare,
   Calendar,
+  CalendarDays,
   Gift,
   Award,
   ChevronLeft,
@@ -31,6 +32,8 @@ import { logAuthState, logLoadingStart, logLoadingEnd, logRender } from '@/lib/n
 
 const adminNavItems = [
   { href: '/admin', label: 'Dashboard', icon: LayoutDashboard, exact: true },
+  { href: '/admin/seasons', label: 'Seasons', icon: CalendarDays },
+  { href: '/admin/users', label: 'Users', icon: Users },
   { href: '/admin/analytics', label: 'Analytics', icon: BarChart3, superAdminOnly: true },
   { href: '/admin/beta-codes', label: 'Beta Codes', icon: Key, superAdminOnly: true },
   { href: '/admin/standings', label: 'Standings', icon: ListOrdered },
