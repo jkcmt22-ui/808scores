@@ -153,6 +153,8 @@ export default function AdminPage() {
   const [dateSortOrder, setDateSortOrder] = useState<'desc' | 'asc'>('desc')
   const [loadedTabs, setLoadedTabs] = useState<Set<TabType>>(new Set())
   const hasLoadedCommonDataRef = useRef(false)
+  const tabFetchTimesRef = useRef<Record<TabType, number>>({} as Record<TabType, number>)
+  const TAB_STALE_MS = 60000 // Refetch tab data if older than 60 seconds
 
   // Check if user has admin access (must be an admin or super admin)
   const isSuperAdmin = profile?.is_super_admin === true
@@ -261,6 +263,7 @@ export default function AdminPage() {
           user:users(display_name, email, phone, reputation_score, submission_count, verified_count)
         `)
         .order('created_at', { ascending: false })
+        .limit(100)
 
       if (appsError) {
         console.error('Applications fetch error:', appsError)
@@ -288,6 +291,7 @@ export default function AdminPage() {
         .from('trusted_reporter_codes')
         .select('*')
         .order('created_at', { ascending: false })
+        .limit(100)
 
       if (codesError) {
         console.error('Codes fetch error:', codesError)
@@ -341,9 +345,14 @@ export default function AdminPage() {
       fetchCommonData()
     }
 
-    // Load tab-specific data if not already loaded
-    if (!loadedTabs.has(activeTab)) {
+    // Load tab-specific data if not already loaded or if stale
+    const lastFetch = tabFetchTimesRef.current[activeTab] || 0
+    const isStale = Date.now() - lastFetch > TAB_STALE_MS
+    const needsFetch = !loadedTabs.has(activeTab) || isStale
+
+    if (needsFetch && activeTab !== 'create') {
       setLoadedTabs(prev => new Set(prev).add(activeTab))
+      tabFetchTimesRef.current[activeTab] = Date.now()
 
       switch (activeTab) {
         case 'games':
@@ -358,15 +367,13 @@ export default function AdminPage() {
         case 'users':
           fetchUsers()
           break
-        case 'create':
-          // Create tab doesn't need data fetch
-          break
       }
     }
   }, [hasAdminAccess, authLoading, activeTab, loadedTabs, fetchCommonData, fetchGames, fetchApplications, fetchCodes, fetchUsers])
 
-  // Refresh current tab data
+  // Refresh current tab data (force refresh, update timestamp)
   const handleRefresh = useCallback(() => {
+    tabFetchTimesRef.current[activeTab] = Date.now()
     switch (activeTab) {
       case 'games':
         fetchGames()

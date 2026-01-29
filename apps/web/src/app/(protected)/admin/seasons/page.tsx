@@ -69,19 +69,25 @@ export default function AdminSeasonsPage() {
 
       if (sportsError) throw sportsError
 
-      // Get team counts per season
-      const seasonsWithCounts: SeasonWithCounts[] = []
-      for (const season of (seasonsData || []) as Season[]) {
-        const { count } = await supabase
-          .from('teams')
-          .select('*', { count: 'exact', head: true })
-          .eq('season_year', season.year)
+      // Get team counts per season in a single query (avoid N+1)
+      const seasonYears = (seasonsData || []).map((s: Season) => s.year)
+      const { data: teamsData } = await supabase
+        .from('teams')
+        .select('season_year')
+        .in('season_year', seasonYears)
+        .eq('is_active', true)
 
-        seasonsWithCounts.push({
-          ...season,
-          team_count: count || 0,
-        })
+      // Count teams per season in JS
+      const countsByYear: Record<string, number> = {}
+      for (const team of teamsData || []) {
+        const year = (team as { season_year: string }).season_year
+        countsByYear[year] = (countsByYear[year] || 0) + 1
       }
+
+      const seasonsWithCounts: SeasonWithCounts[] = (seasonsData || []).map((season: Season) => ({
+        ...season,
+        team_count: countsByYear[season.year] || 0,
+      }))
 
       setSeasons(seasonsWithCounts)
       setSports((sportsData || []) as Sport[])
