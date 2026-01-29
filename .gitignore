@@ -50,3 +50,6 @@ next-env.d.ts
 
 # turbo
 .turbo
+
+# backups
+backups/

@@ -10,11 +10,14 @@ import {
   RefreshCw,
   ChevronDown,
 } from 'lucide-react'
-import { Button, Card, Badge } from '@/components/ui'
+import { Button, Card, Badge, Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui'
+import { TeamAssignmentPanel } from '@/components/admin/standings/TeamAssignmentPanel'
+import { StandingsPreview } from '@/components/admin/standings/StandingsPreview'
 import { createClient } from '@/lib/supabase/client'
 import { cn } from '@/lib/utils'
 import { LEAGUES } from '@/lib/league-config'
 import type { Sport, School, Team } from '@/types/database'
+import type { LeagueStandings, TeamStanding } from '@/lib/standings-calculator'
 
 interface TeamWithSchool extends Team {
   school: School
@@ -39,18 +42,30 @@ const DIVISION_OPTIONS: Record<string, string[]> = {
 // Region options (OIA only)
 const REGION_OPTIONS = ['East', 'West']
 
+// All league codes
+const LEAGUE_CODES = Object.keys(LEAGUES) as (keyof typeof LEAGUES)[]
+
 export default function AdminStandingsPage() {
   const router = useRouter()
   const supabase = useMemo(() => createClient(), [])
 
-  // State
+  // Core selection state
   const [sports, setSports] = useState<Sport[]>([])
   const [teams, setTeams] = useState<TeamWithSchool[]>([])
   const [selectedSportId, setSelectedSportId] = useState<string>('')
   const [selectedSeason, setSelectedSeason] = useState<string>('2025-2026')
+  const [selectedLeague, setSelectedLeague] = useState<string>('OIA')
+  const [selectedDivision, setSelectedDivision] = useState<string>('Division I')
+  const [selectedRegion, setSelectedRegion] = useState<string | null>(null)
+
+  // UI state
   const [isLoading, setIsLoading] = useState(true)
   const [isSaving, setIsSaving] = useState(false)
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null)
+
+  // Computed standings
+  const [standings, setStandings] = useState<LeagueStandings | null>(null)
+  const [isLoadingStandings, setIsLoadingStandings] = useState(false)
 
   // Track pending changes
   const [pendingChanges, setPendingChanges] = useState<Map<string, Partial<Team>>>(new Map())
@@ -69,7 +84,6 @@ export default function AdminStandingsPage() {
       if (!error && data) {
         const sportsData = data as Sport[]
         setSports(sportsData)
-        // Default to first sport
         if (sportsData.length > 0 && !selectedSportId) {
           setSelectedSportId(sportsData[0].id)
         }
@@ -103,7 +117,7 @@ export default function AdminStandingsPage() {
       setMessage({ type: 'error', text: `Failed to load teams: ${error.message}` })
     } else {
       setTeams(data as TeamWithSchool[])
-      setPendingChanges(new Map()) // Clear pending changes
+      setPendingChanges(new Map())
     }
 
     setIsLoading(false)
@@ -113,35 +127,212 @@ export default function AdminStandingsPage() {
     fetchTeams()
   }, [fetchTeams])
 
+  // Fetch computed standings for current selection
+  const fetchStandings = useCallback(async () => {
+    if (!supabase || !selectedSportId || !selectedSeason) return
+
+    setIsLoadingStandings(true)
+
+    const selectedSport = sports.find(s => s.id === selectedSportId)
+    if (!selectedSport) {
+      setIsLoadingStandings(false)
+      return
+    }
+
+    try {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const { data, error } = await (supabase.rpc as any)('get_computed_standings', {
+        p_sport_id: selectedSportId,
+        p_gender: selectedSport.gender,
+        p_season_year: selectedSeason,
+        p_league: selectedLeague
+      })
+
+      if (error) {
+        console.error('Error fetching standings:', error)
+        setStandings(null)
+      } else {
+        // Filter to current division and region
+        const rows = data as {
+          school_id: string
+          school_name: string
+          school_short_name: string
+          league: string | null
+          division: string | null
+          region: string | null
+          overall_wins: number
+          overall_losses: number
+          overall_ties: number
+          league_wins: number
+          league_losses: number
+          league_ties: number
+          points_for: number
+          points_against: number
+        }[]
+
+        const filtered = rows.filter(r => {
+          if (r.division !== selectedDivision) return false
+          if (selectedRegion && r.region !== selectedRegion) return false
+          if (!selectedRegion && r.region) return false
+          return true
+        })
+
+        if (filtered.length > 0) {
+          const teams: TeamStanding[] = filtered.map(r => {
+            const gamesPlayed = r.overall_wins + r.overall_losses + r.overall_ties
+            const winPct = gamesPlayed > 0
+              ? (r.overall_wins + r.overall_ties * 0.5) / gamesPlayed
+              : 0
+            const leagueGamesPlayed = r.league_wins + r.league_losses + r.league_ties
+            const leagueWinPct = leagueGamesPlayed > 0
+              ? (r.league_wins + r.league_ties * 0.5) / leagueGamesPlayed
+              : 0
+
+            return {
+              school: {
+                id: r.school_id,
+                name: r.school_name,
+                short_name: r.school_short_name,
+                mascot: null,
+                island: '',
+                league: r.league,
+                division: r.division,
+                colors: null,
+                logo_url: null,
+                created_at: ''
+              },
+              wins: r.overall_wins,
+              losses: r.overall_losses,
+              ties: r.overall_ties,
+              winPct,
+              pointsFor: r.points_for,
+              pointsAgainst: r.points_against,
+              pointDiff: r.points_for - r.points_against,
+              streak: '-',
+              gamesPlayed,
+              leagueWins: r.league_wins,
+              leagueLosses: r.league_losses,
+              leagueTies: r.league_ties,
+              leagueWinPct,
+              leagueGamesPlayed
+            }
+          })
+
+          // Sort by league win%, then overall
+          teams.sort((a, b) => {
+            if (b.leagueWinPct !== a.leagueWinPct) return b.leagueWinPct - a.leagueWinPct
+            if (b.leagueWins !== a.leagueWins) return b.leagueWins - a.leagueWins
+            return b.winPct - a.winPct
+          })
+
+          let displayName = `${selectedLeague} ${selectedDivision}`
+          if (selectedRegion) displayName += ` ${selectedRegion}`
+
+          setStandings({
+            league: selectedLeague,
+            division: selectedDivision,
+            region: selectedRegion,
+            displayName,
+            teams
+          })
+        } else {
+          setStandings(null)
+        }
+      }
+    } catch (err) {
+      console.error('Error fetching standings:', err)
+      setStandings(null)
+    } finally {
+      setIsLoadingStandings(false)
+    }
+  }, [supabase, selectedSportId, selectedSeason, selectedLeague, selectedDivision, selectedRegion, sports])
+
+  useEffect(() => {
+    fetchStandings()
+  }, [fetchStandings])
+
   // Get selected sport info
   const selectedSport = useMemo(() =>
     sports.find(s => s.id === selectedSportId),
     [sports, selectedSportId]
   )
 
-  // Handle field change
-  const handleFieldChange = (teamId: string, field: keyof Team, value: string | null) => {
-    setPendingChanges(prev => {
-      const newMap = new Map(prev)
-      const existing = newMap.get(teamId) || {}
-      newMap.set(teamId, { ...existing, [field]: value })
-      return newMap
-    })
-  }
-
   // Get effective value (pending or current)
-  const getEffectiveValue = (team: TeamWithSchool, field: keyof Team): string | null => {
+  const getEffectiveValue = useCallback((team: TeamWithSchool, field: keyof Team): string | null => {
     const pending = pendingChanges.get(team.id)
     if (pending && field in pending) {
       return pending[field] as string | null
     }
     return team[field] as string | null
-  }
+  }, [pendingChanges])
 
-  // Check if team has pending changes
-  const hasChanges = (teamId: string): boolean => {
-    return pendingChanges.has(teamId)
-  }
+  // Teams assigned to current selection
+  const assignedTeams = useMemo(() => {
+    return teams.filter(team => {
+      const league = getEffectiveValue(team, 'league')
+      const division = getEffectiveValue(team, 'division')
+      const region = getEffectiveValue(team, 'region')
+
+      if (league !== selectedLeague) return false
+      if (division !== selectedDivision) return false
+      if (selectedRegion) {
+        return region === selectedRegion
+      } else {
+        return !region
+      }
+    }).sort((a, b) =>
+      a.school.short_name.localeCompare(b.school.short_name)
+    )
+  }, [teams, selectedLeague, selectedDivision, selectedRegion, getEffectiveValue])
+
+  // Teams available to assign (not in current selection)
+  const availableTeams = useMemo(() => {
+    return teams.filter(team => {
+      const league = getEffectiveValue(team, 'league')
+      const division = getEffectiveValue(team, 'division')
+      const region = getEffectiveValue(team, 'region')
+
+      // Available if not assigned to current selection
+      if (league === selectedLeague && division === selectedDivision) {
+        if (selectedRegion) {
+          return region !== selectedRegion
+        } else {
+          return region !== null
+        }
+      }
+      return true
+    }).sort((a, b) =>
+      a.school.short_name.localeCompare(b.school.short_name)
+    )
+  }, [teams, selectedLeague, selectedDivision, selectedRegion, getEffectiveValue])
+
+  // Assign team to current selection
+  const handleAssign = useCallback((teamId: string) => {
+    setPendingChanges(prev => {
+      const newMap = new Map(prev)
+      const updates: Partial<Team> = {
+        league: selectedLeague,
+        division: selectedDivision,
+        region: selectedRegion ?? null
+      }
+      newMap.set(teamId, { ...(newMap.get(teamId) || {}), ...updates })
+      return newMap
+    })
+  }, [selectedLeague, selectedDivision, selectedRegion])
+
+  // Unassign team from current selection
+  const handleUnassign = useCallback((teamId: string) => {
+    setPendingChanges(prev => {
+      const newMap = new Map(prev)
+      const updates: Partial<Team> = {
+        league: null,
+        division: null,
+        region: null
+      }
+      newMap.set(teamId, { ...(newMap.get(teamId) || {}), ...updates })
+      return newMap
+    })
+  }, [])
 
   // Save all changes
   const saveChanges = async () => {
@@ -174,8 +365,8 @@ export default function AdminStandingsPage() {
       } else {
         setMessage({ type: 'success', text: `Saved ${totalChanges} team(s)` })
         setPendingChanges(new Map())
-        // Refresh teams
         fetchTeams()
+        fetchStandings()
       }
     } catch (err) {
       setMessage({ type: 'error', text: 'Failed to save changes' })
@@ -184,45 +375,65 @@ export default function AdminStandingsPage() {
     }
   }
 
-  // Group teams by league for display
-  const teamsByLeague = useMemo(() => {
-    const grouped = new Map<string, TeamWithSchool[]>()
-
-    for (const team of teams) {
-      const league = getEffectiveValue(team, 'league') || 'Unassigned'
-      if (!grouped.has(league)) {
-        grouped.set(league, [])
-      }
-      grouped.get(league)!.push(team)
+  // Handle league change
+  const handleLeagueChange = (league: string) => {
+    setSelectedLeague(league)
+    // Reset division to first available
+    const divisions = DIVISION_OPTIONS[league] || []
+    setSelectedDivision(divisions[0] || 'Division I')
+    // Reset region
+    if (LEAGUES[league as keyof typeof LEAGUES]?.hasRegional) {
+      setSelectedRegion('East')
+    } else {
+      setSelectedRegion(null)
     }
+  }
 
-    // Sort teams within each league by school name
-    for (const [, leagueTeams] of grouped) {
-      leagueTeams.sort((a, b) =>
-        a.school.short_name.localeCompare(b.school.short_name)
-      )
+  // Handle division change
+  const handleDivisionChange = (division: string) => {
+    setSelectedDivision(division)
+    // Reset region if needed
+    const leagueConfig = LEAGUES[selectedLeague as keyof typeof LEAGUES]
+    if (leagueConfig?.hasRegional && leagueConfig.regionalDivisions?.includes(division)) {
+      setSelectedRegion('East')
+    } else {
+      setSelectedRegion(null)
     }
+  }
 
-    return grouped
-  }, [teams, pendingChanges])
+  // Check if current division needs region
+  const needsRegion = useMemo(() => {
+    const leagueConfig = LEAGUES[selectedLeague as keyof typeof LEAGUES]
+    return leagueConfig?.hasRegional && leagueConfig.regionalDivisions?.includes(selectedDivision)
+  }, [selectedLeague, selectedDivision])
 
-  // Get available leagues
-  const leagueOptions = Object.keys(LEAGUES)
+  // Context string for header
+  const contextString = useMemo(() => {
+    const parts = [selectedSeason]
+    if (selectedSport) parts.push(selectedSport.display_name || selectedSport.name)
+    parts.push(selectedLeague)
+    parts.push(selectedDivision)
+    if (selectedRegion) parts.push(selectedRegion)
+    return parts.join(' • ')
+  }, [selectedSeason, selectedSport, selectedLeague, selectedDivision, selectedRegion])
 
   return (
-    <div className="p-4 pb-24">
-      {/* Header */}
-      <div className="sticky top-0 z-20 -mx-4 px-4 py-3 bg-background border-b-2 border-border mb-4">
-        <div className="flex items-center justify-between gap-4 flex-wrap">
+    <div className="flex flex-col h-full">
+      {/* Pinned Header */}
+      <div className="sticky top-0 z-20 bg-background border-b-2 border-border">
+        {/* Context Bar */}
+        <div className="px-4 py-2 bg-neon-blue/10 border-b border-neon-blue/20">
+          <p className="text-xs font-mono text-neon-blue uppercase tracking-wider">
+            Editing: {contextString}
+          </p>
+        </div>
+
+        {/* Actions Bar */}
+        <div className="px-4 py-3 flex items-center justify-between gap-4 flex-wrap">
           <div>
             <h1 className="font-display font-bold text-lg neon-text-yellow uppercase tracking-wider">
               Team Assignments
             </h1>
-            {selectedSport && (
-              <p className="text-xs text-foreground-muted mt-1">
-                Editing: {selectedSport.display_name || selectedSport.name} {selectedSeason}
-              </p>
-            )}
           </div>
 
           <div className="flex items-center gap-2">
@@ -234,7 +445,10 @@ export default function AdminStandingsPage() {
             <Button
               variant="outline"
               size="sm"
-              onClick={fetchTeams}
+              onClick={() => {
+                fetchTeams()
+                fetchStandings()
+              }}
               disabled={isLoading}
             >
               <RefreshCw className={cn("h-4 w-4 mr-2", isLoading && "animate-spin")} />
@@ -257,7 +471,7 @@ export default function AdminStandingsPage() {
         {/* Message */}
         {message && (
           <div className={cn(
-            'mt-3 flex items-center gap-2 p-2 text-sm border-2',
+            'mx-4 mb-3 flex items-center gap-2 p-2 text-sm border-2',
             message.type === 'success'
               ? 'bg-neon-green/10 border-neon-green/30 text-neon-green'
               : 'bg-neon-pink/10 border-neon-pink/30 text-neon-pink'
@@ -272,8 +486,9 @@ export default function AdminStandingsPage() {
         )}
       </div>
 
-      {/* Filters */}
-      <Card className="p-4 mb-4">
+      {/* Navigation Area */}
+      <div className="p-4 space-y-4 border-b border-border bg-background-secondary">
+        {/* Sport and Season Row */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           {/* Sport selector */}
           <div>
@@ -317,134 +532,103 @@ export default function AdminStandingsPage() {
             </div>
           </div>
         </div>
-      </Card>
 
-      {/* Loading state */}
-      {isLoading && (
-        <div className="flex justify-center py-12">
-          <Loader2 className="h-8 w-8 animate-spin text-neon-yellow" />
+        {/* League Tabs */}
+        <div>
+          <label className="block text-xs font-display uppercase tracking-wider text-foreground-muted mb-2">
+            League
+          </label>
+          <Tabs defaultValue={selectedLeague} value={selectedLeague} onValueChange={handleLeagueChange}>
+            <TabsList aria-label="Select league" className="w-full flex-wrap">
+              {LEAGUE_CODES.map(code => (
+                <TabsTrigger key={code} value={code}>
+                  {code}
+                </TabsTrigger>
+              ))}
+            </TabsList>
+          </Tabs>
         </div>
-      )}
 
-      {/* Teams table */}
-      {!isLoading && teams.length > 0 && (
-        <div className="space-y-6">
-          {Array.from(teamsByLeague.entries()).map(([league, leagueTeams]) => (
-            <Card key={league} className="overflow-hidden">
-              <div className="p-3 border-b-2 border-border bg-background-secondary">
-                <h3 className="font-display font-bold text-neon-blue uppercase tracking-wider">
-                  {league} ({leagueTeams.length} teams)
-                </h3>
-              </div>
+        {/* Division and Region Row */}
+        <div className="flex flex-wrap gap-4">
+          {/* Division Tabs */}
+          <div className="flex-1 min-w-[200px]">
+            <label className="block text-xs font-display uppercase tracking-wider text-foreground-muted mb-2">
+              Division
+            </label>
+            <Tabs defaultValue={selectedDivision} value={selectedDivision} onValueChange={handleDivisionChange}>
+              <TabsList aria-label="Select division" className="flex-wrap">
+                {(DIVISION_OPTIONS[selectedLeague] || []).map(div => (
+                  <TabsTrigger key={div} value={div}>
+                    {div}
+                  </TabsTrigger>
+                ))}
+              </TabsList>
+            </Tabs>
+          </div>
 
-              <div className="overflow-x-auto">
-                <table className="w-full text-sm">
-                  <thead>
-                    <tr className="border-b-2 border-border bg-background-tertiary">
-                      <th className="p-3 text-left font-display text-xs font-bold text-foreground-muted uppercase tracking-wider">
-                        School
-                      </th>
-                      <th className="p-3 text-left font-display text-xs font-bold text-foreground-muted uppercase tracking-wider">
-                        League
-                      </th>
-                      <th className="p-3 text-left font-display text-xs font-bold text-foreground-muted uppercase tracking-wider">
-                        Division
-                      </th>
-                      <th className="p-3 text-left font-display text-xs font-bold text-foreground-muted uppercase tracking-wider">
-                        Region
-                      </th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {leagueTeams.map(team => {
-                      const effectiveLeague = getEffectiveValue(team, 'league')
-                      const effectiveDivision = getEffectiveValue(team, 'division')
-                      const effectiveRegion = getEffectiveValue(team, 'region')
-                      const changed = hasChanges(team.id)
-
-                      return (
-                        <tr
-                          key={team.id}
-                          className={cn(
-                            'border-b border-border hover:bg-background-tertiary transition-colors',
-                            changed && 'bg-neon-yellow/10'
-                          )}
-                        >
-                          <td className="p-3">
-                            <div className="flex items-center gap-2">
-                              {changed && (
-                                <div className="w-2 h-2 rounded-full bg-neon-yellow" title="Unsaved changes" />
-                              )}
-                              <span className="font-display font-bold text-foreground">
-                                {team.school.short_name}
-                              </span>
-                              <span className="text-xs text-foreground-muted">
-                                ({team.gender})
-                              </span>
-                            </div>
-                          </td>
-                          <td className="p-3">
-                            <select
-                              value={effectiveLeague || ''}
-                              onChange={(e) => handleFieldChange(team.id, 'league', e.target.value || null)}
-                              className="w-full h-8 px-2 border border-border bg-background text-foreground text-sm"
-                            >
-                              <option value="">-- None --</option>
-                              {leagueOptions.map(l => (
-                                <option key={l} value={l}>{l}</option>
-                              ))}
-                            </select>
-                          </td>
-                          <td className="p-3">
-                            <select
-                              value={effectiveDivision || ''}
-                              onChange={(e) => handleFieldChange(team.id, 'division', e.target.value || null)}
-                              className="w-full h-8 px-2 border border-border bg-background text-foreground text-sm"
-                              disabled={!effectiveLeague}
-                            >
-                              <option value="">-- None --</option>
-                              {effectiveLeague && DIVISION_OPTIONS[effectiveLeague]?.map(d => (
-                                <option key={d} value={d}>{d}</option>
-                              ))}
-                            </select>
-                          </td>
-                          <td className="p-3">
-                            <select
-                              value={effectiveRegion || ''}
-                              onChange={(e) => handleFieldChange(team.id, 'region', e.target.value || null)}
-                              className="w-full h-8 px-2 border border-border bg-background text-foreground text-sm"
-                              disabled={effectiveLeague !== 'OIA'}
-                            >
-                              <option value="">-- None --</option>
-                              {effectiveLeague === 'OIA' && REGION_OPTIONS.map(r => (
-                                <option key={r} value={r}>{r}</option>
-                              ))}
-                            </select>
-                          </td>
-                        </tr>
-                      )
-                    })}
-                  </tbody>
-                </table>
-              </div>
-            </Card>
-          ))}
+          {/* Region Tabs (OIA only) */}
+          {needsRegion && (
+            <div>
+              <label className="block text-xs font-display uppercase tracking-wider text-foreground-muted mb-2">
+                Region
+              </label>
+              <Tabs defaultValue="East" value={selectedRegion || 'East'} onValueChange={setSelectedRegion}>
+                <TabsList aria-label="Select region">
+                  {REGION_OPTIONS.map(reg => (
+                    <TabsTrigger key={reg} value={reg}>
+                      {reg}
+                    </TabsTrigger>
+                  ))}
+                </TabsList>
+              </Tabs>
+            </div>
+          )}
         </div>
-      )}
+      </div>
 
-      {/* Empty state */}
-      {!isLoading && teams.length === 0 && (
-        <Card className="p-8 text-center">
-          <AlertCircle className="mx-auto mb-4 h-12 w-12 text-foreground-muted" />
-          <h3 className="font-display font-bold text-foreground mb-2">No Teams Found</h3>
-          <p className="text-sm text-foreground-muted">
-            No teams found for {selectedSport?.display_name || 'this sport'} in {selectedSeason}.
-          </p>
-        </Card>
-      )}
+      {/* Main Content - Side by Side Panels */}
+      <div className="flex-1 p-4 overflow-hidden">
+        {isLoading ? (
+          <div className="flex justify-center py-12">
+            <Loader2 className="h-8 w-8 animate-spin text-neon-yellow" />
+          </div>
+        ) : teams.length === 0 ? (
+          <Card className="p-8 text-center">
+            <AlertCircle className="mx-auto mb-4 h-12 w-12 text-foreground-muted" />
+            <h3 className="font-display font-bold text-foreground mb-2">No Teams Found</h3>
+            <p className="text-sm text-foreground-muted">
+              No teams found for {selectedSport?.display_name || 'this sport'} in {selectedSeason}.
+            </p>
+          </Card>
+        ) : (
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 h-full">
+            {/* Team Assignment Panel */}
+            <TeamAssignmentPanel
+              assignedTeams={assignedTeams}
+              availableTeams={availableTeams}
+              onAssign={handleAssign}
+              onUnassign={handleUnassign}
+              isLoading={isLoading}
+              league={selectedLeague}
+              division={selectedDivision}
+              region={selectedRegion}
+            />
 
-      {/* Back button */}
-      <div className="mt-6">
+            {/* Standings Preview */}
+            <StandingsPreview
+              standings={standings}
+              isLoading={isLoadingStandings}
+              league={selectedLeague}
+              division={selectedDivision}
+              region={selectedRegion}
+            />
+          </div>
+        )}
+      </div>
+
+      {/* Footer */}
+      <div className="p-4 border-t border-border bg-background-secondary flex-shrink-0">
         <Button variant="outline" onClick={() => router.push('/admin')}>
           Back to Admin
         </Button>
