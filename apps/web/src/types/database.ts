@@ -807,6 +807,62 @@ export interface Database {
         Insert: Omit<Database['public']['Tables']['player_game_stats']['Row'], 'id' | 'created_at' | 'updated_at' | 'points' | 'is_starter'> & { points?: number; is_starter?: boolean }
         Update: Partial<Database['public']['Tables']['player_game_stats']['Insert']>
       }
+      // Teams and team rosters (migration 042)
+      teams: {
+        Row: {
+          id: string
+          school_id: string
+          sport_id: string
+          gender: 'boys' | 'girls' | 'coed'
+          division: string | null
+          league: string | null
+          season_year: string  // "2025-2026"
+          is_active: boolean
+          is_beta: boolean
+          beta_features: Record<string, boolean> | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: Omit<Database['public']['Tables']['teams']['Row'], 'id' | 'created_at' | 'updated_at' | 'is_active' | 'is_beta' | 'beta_features'>
+        Update: Partial<Database['public']['Tables']['teams']['Insert']>
+      }
+      team_rosters: {
+        Row: {
+          id: string
+          team_id: string
+          player_id: string
+          jersey_number: number | null
+          position: string | null
+          grade: string | null
+          is_captain: boolean
+          is_starter: boolean
+          season_year: string
+          is_active: boolean
+          created_at: string
+          updated_at: string
+        }
+        Insert: Omit<Database['public']['Tables']['team_rosters']['Row'], 'id' | 'created_at' | 'updated_at' | 'is_captain' | 'is_starter' | 'is_active'>
+        Update: Partial<Database['public']['Tables']['team_rosters']['Insert']>
+      }
+      team_managers: {
+        Row: {
+          id: string
+          user_id: string
+          team_id: string
+          role: 'owner' | 'head_coach' | 'assistant_coach' | 'manager' | 'assistant'
+          can_edit_roster: boolean
+          can_edit_schedule: boolean
+          can_submit_scores: boolean
+          can_post_updates: boolean
+          can_manage_coaches: boolean
+          granted_by: string | null
+          granted_at: string
+          is_active: boolean
+          created_at: string
+        }
+        Insert: Omit<Database['public']['Tables']['team_managers']['Row'], 'id' | 'created_at' | 'granted_at' | 'is_active'>
+        Update: Partial<Database['public']['Tables']['team_managers']['Insert']>
+      }
     }
   }
 }
@@ -845,6 +901,12 @@ export type PlayerGameStats = Database['public']['Tables']['player_game_stats'][
 export type PointEvent = Database['public']['Tables']['point_events']['Row']
 export type GamePrediction = Database['public']['Tables']['game_predictions']['Row']
 export type PredictionResult = Database['public']['Tables']['prediction_results']['Row']
+export type Team = Database['public']['Tables']['teams']['Row']
+export type TeamRosterEntry = Database['public']['Tables']['team_rosters']['Row']
+export type TeamManager = Database['public']['Tables']['team_managers']['Row']
+
+// Team gender type for UI
+export type TeamGender = 'boys' | 'girls' | 'coed'
 
 // Extended types with relations
 export interface GameWithTeams extends Game {

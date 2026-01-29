@@ -57,3 +57,14 @@ export {
   getEventTypeDisplay,
   formatEventTime,
 } from './use-point-events'
+
+// Team rosters (new system with gender scoping)
+export {
+  useTeamRoster,
+  useTeamRosterMutations,
+  getCurrentSeasonYear,
+  parseSeasonYear,
+  type TeamGender,
+  type TeamRosterPlayer,
+  type TeamWithRoster,
+} from './use-team-roster'
