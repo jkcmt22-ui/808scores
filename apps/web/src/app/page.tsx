@@ -9,7 +9,7 @@ import { QuickAccess, TournamentBanner, ComingSoon, LiveHero, WelcomeBanner } fr
 import { GlobalSearch } from '@/components/search/global-search'
 import { useGames, useAuth, useFavoriteTeams, useFavoriteSports } from '@/hooks'
 import { formatFullDate, isScoreOverdue } from '@/lib/utils'
-import { Calendar, ChevronDown, ChevronUp, ChevronLeft, ChevronRight, Star } from 'lucide-react'
+import { Calendar, ChevronDown, ChevronUp, ChevronLeft, ChevronRight, Star, AlertCircle, RefreshCw } from 'lucide-react'
 import type { GameType, GameWithTeams } from '@/types/database'
 
 // Non-competitive game types shown in the "Other Games" section
@@ -142,7 +142,7 @@ export default function HomePage() {
   }
 
   // Fetch all games once (50% fewer queries than fetching twice)
-  const { games: allGames, isLoading } = useGames({
+  const { games: allGames, isLoading, error: gamesError, refetch } = useGames({
     date: selectedDate,
     sportCode: selectedSport,
     // No game type filters - fetch everything
@@ -325,6 +325,28 @@ export default function HomePage() {
           </div>
         )}
 
+        {/* Error State */}
+        {!isLoading && gamesError && (
+          <div className="flex flex-col items-center justify-center py-12 text-center animate-fade-in">
+            <div className="scoreboard-panel p-6 mb-4">
+              <AlertCircle className="h-10 w-10 text-neon-pink mx-auto" />
+            </div>
+            <h3 className="mb-2 font-display text-lg font-black text-foreground uppercase tracking-widest">
+              Unable to Load Games
+            </h3>
+            <p className="text-sm text-foreground-muted max-w-xs font-display mb-4">
+              There was a problem loading games. Please check your connection and try again.
+            </p>
+            <button
+              onClick={() => refetch()}
+              className="flex items-center gap-2 px-4 py-2 border-2 border-neon-blue bg-neon-blue/10 text-neon-blue font-display text-sm font-bold uppercase tracking-wider hover:bg-neon-blue/20 transition-colors"
+            >
+              <RefreshCw className="h-4 w-4" />
+              Try Again
+            </button>
+          </div>
+        )}
+
         {/* Needs Score Section (Overdue games) */}
         {!isLoading && overdueGames.length > 0 && (
           <section className="mb-6 animate-fade-in">
@@ -500,7 +522,7 @@ export default function HomePage() {
         )}
 
         {/* Empty State for Main Games */}
-        {!isLoading && games.length === 0 && (
+        {!isLoading && !gamesError && games.length === 0 && (
           <div className="flex flex-col items-center justify-center py-16 text-center animate-fade-in">
             <div className="scoreboard-panel p-8 mb-4">
               <div className="score-led text-5xl mb-4 neon-text-pink">--</div>
