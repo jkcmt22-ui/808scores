@@ -807,7 +807,7 @@ export interface Database {
         Insert: Omit<Database['public']['Tables']['player_game_stats']['Row'], 'id' | 'created_at' | 'updated_at' | 'points' | 'is_starter'> & { points?: number; is_starter?: boolean }
         Update: Partial<Database['public']['Tables']['player_game_stats']['Insert']>
       }
-      // Teams and team rosters (migration 042)
+      // Teams and team rosters (migration 042, updated in 064)
       teams: {
         Row: {
           id: string
@@ -816,6 +816,7 @@ export interface Database {
           gender: 'boys' | 'girls' | 'coed'
           division: string | null
           league: string | null
+          region: string | null  // "East" or "West" for OIA
           season_year: string  // "2025-2026"
           is_active: boolean
           is_beta: boolean
@@ -823,8 +824,8 @@ export interface Database {
           created_at: string
           updated_at: string
         }
-        Insert: Omit<Database['public']['Tables']['teams']['Row'], 'id' | 'created_at' | 'updated_at' | 'is_active' | 'is_beta' | 'beta_features'>
-        Update: Partial<Database['public']['Tables']['teams']['Insert']>
+        Insert: Omit<Database['public']['Tables']['teams']['Row'], 'id' | 'created_at' | 'updated_at' | 'is_active' | 'is_beta' | 'beta_features' | 'region'>
+        Update: Partial<Database['public']['Tables']['teams']['Insert']> & { region?: string | null }
       }
       team_rosters: {
         Row: {

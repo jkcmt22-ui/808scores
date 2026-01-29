@@ -2,8 +2,8 @@
 
 import { useState, useEffect, useMemo, useCallback } from 'react'
 import { createClient } from '@/lib/supabase/client'
-import type { GameWithTeams, School, Sport } from '@/types/database'
-import { calculateStandings, type LeagueStandings, type TeamStanding } from '@/lib/standings-calculator'
+import type { School, Sport } from '@/types/database'
+import { type LeagueStandings, type TeamStanding } from '@/lib/standings-calculator'
 
 interface UseStandingsOptions {
   sportCode?: string
@@ -19,20 +19,33 @@ interface UseStandingsReturn {
   refetch: () => void
 }
 
-interface SeasonStandingRow {
-  id: string
+// Row type returned by get_computed_standings RPC
+interface ComputedStandingRow {
   school_id: string
-  sport_id: string
-  season_year: number
-  league: string
-  league_wins: number
-  league_losses: number
-  league_ties: number
+  school_name: string
+  school_short_name: string
+  league: string | null
+  division: string | null
+  region: string | null
   overall_wins: number
   overall_losses: number
   overall_ties: number
-  points: number | null
-  school: School
+  league_wins: number
+  league_losses: number
+  league_ties: number
+  points_for: number
+  points_against: number
+}
+
+// Helper to convert season year to TEXT format (e.g., "2025-2026")
+function getSeasonYearText(year: number, season: string | null): string {
+  // Fall sports span two calendar years (e.g., fall 2025 = "2025-2026")
+  // Winter sports also span (e.g., winter 2025-26 = "2025-2026")
+  // Spring sports are single year (e.g., spring 2026 = "2025-2026")
+  if (season === 'spring') {
+    return `${year - 1}-${year}`
+  }
+  return `${year}-${year + 1}`
 }
 
 export function useStandings(options: UseStandingsOptions = {}): UseStandingsReturn {
@@ -61,7 +74,6 @@ export function useStandings(options: UseStandingsOptions = {}): UseStandingsRet
       }))
 
       // Fetch sport by code if specified
-      let sportId: string | null = null
       let currentSport: Sport | null = null
       if (sportCode) {
         const { data: sportData, error: sportError } = await supabase
@@ -73,14 +85,201 @@ export function useStandings(options: UseStandingsOptions = {}): UseStandingsRet
         if (sportError) throw sportError
         currentSport = sportData as Sport
         setSport(currentSport)
-        sportId = currentSport.id
       }
 
-      // Determine target season year
-      // If a specific season is provided, use it
-      // Otherwise, if showing all sports, fetch both current and previous year
-      const targetSeason = season ? parseInt(season) : currentYear
+      // If no sport selected, can't compute standings
+      if (!currentSport) {
+        setStandings([])
+        setIsLoading(false)
+        return
+      }
 
+      // Determine target season year in TEXT format
+      const targetYear = season ? parseInt(season) : currentYear
+      const seasonYearText = getSeasonYearText(targetYear, currentSport.season)
+
+      // Call the new computed standings function
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const { data: standingsData, error: standingsError } = await (supabase.rpc as any)('get_computed_standings', {
+        p_sport_id: currentSport.id,
+        p_gender: currentSport.gender,
+        p_season_year: seasonYearText,
+        p_league: league || null
+      })
+
+      if (standingsError) {
+        // If function doesn't exist, fall back to legacy behavior
+        if (standingsError.message.includes('function') || standingsError.code === '42883') {
+          console.warn('get_computed_standings function not found, falling back to legacy')
+          await fetchLegacyStandings(currentSport, targetYear, league)
+          return
+        }
+        throw standingsError
+      }
+
+      const rows = standingsData as ComputedStandingRow[]
+
+      // Group standings by league -> division -> region
+      const groupedStandings = new Map<string, {
+        league: string
+        division: string | null
+        region: string | null
+        teams: TeamStanding[]
+      }>()
+
+      for (const row of rows) {
+        // Create group key
+        const leagueKey = row.league || 'Other'
+        const divisionKey = row.division || ''
+        const regionKey = row.region || ''
+        const groupKey = `${leagueKey}|${divisionKey}|${regionKey}`
+
+        if (!groupedStandings.has(groupKey)) {
+          groupedStandings.set(groupKey, {
+            league: leagueKey,
+            division: row.division,
+            region: row.region,
+            teams: []
+          })
+        }
+
+        // Calculate win percentages
+        const gamesPlayed = row.overall_wins + row.overall_losses + row.overall_ties
+        const winPct = gamesPlayed > 0
+          ? (row.overall_wins + row.overall_ties * 0.5) / gamesPlayed
+          : 0
+
+        const leagueGamesPlayed = row.league_wins + row.league_losses + row.league_ties
+        const leagueWinPct = leagueGamesPlayed > 0
+          ? (row.league_wins + row.league_ties * 0.5) / leagueGamesPlayed
+          : 0
+
+        // Fetch school colors (we need to make a separate call for this)
+        // For now, create a minimal school object
+        const school: School = {
+          id: row.school_id,
+          name: row.school_name,
+          short_name: row.school_short_name,
+          mascot: null,
+          island: '',
+          league: row.league,
+          division: row.division,
+          colors: null,
+          logo_url: null,
+          created_at: ''
+        }
+
+        groupedStandings.get(groupKey)!.teams.push({
+          school,
+          wins: row.overall_wins,
+          losses: row.overall_losses,
+          ties: row.overall_ties,
+          winPct,
+          pointsFor: row.points_for,
+          pointsAgainst: row.points_against,
+          pointDiff: row.points_for - row.points_against,
+          streak: '-', // Not computed by the function for performance
+          gamesPlayed,
+          leagueWins: row.league_wins,
+          leagueLosses: row.league_losses,
+          leagueTies: row.league_ties,
+          leagueWinPct,
+          leagueGamesPlayed
+        })
+      }
+
+      // Convert to LeagueStandings array
+      const result: LeagueStandings[] = []
+      for (const [, group] of groupedStandings) {
+        // Sort teams by league win%, then league wins, then overall win%
+        group.teams.sort((a, b) => {
+          if (b.leagueWinPct !== a.leagueWinPct) return b.leagueWinPct - a.leagueWinPct
+          if (b.leagueWins !== a.leagueWins) return b.leagueWins - a.leagueWins
+          if (b.winPct !== a.winPct) return b.winPct - a.winPct
+          if (b.pointDiff !== a.pointDiff) return b.pointDiff - a.pointDiff
+          return b.pointsFor - a.pointsFor
+        })
+
+        // Create display name
+        let displayName = group.league
+        if (group.division) {
+          displayName += ` ${group.division}`
+        }
+        if (group.region) {
+          displayName += ` ${group.region}`
+        }
+
+        result.push({
+          league: group.league,
+          division: group.division,
+          region: group.region,
+          displayName,
+          teams: group.teams
+        })
+      }
+
+      // Sort groups by league name, then division, then region
+      result.sort((a, b) => {
+        const leagueOrder = ['OIA', 'ILH', 'BIIF', 'MIL', 'KIF', 'Other']
+        const aLeagueIdx = leagueOrder.indexOf(a.league)
+        const bLeagueIdx = leagueOrder.indexOf(b.league)
+
+        if (aLeagueIdx !== bLeagueIdx) {
+          return (aLeagueIdx === -1 ? 999 : aLeagueIdx) - (bLeagueIdx === -1 ? 999 : bLeagueIdx)
+        }
+
+        // Open division first, then Division I, II, III
+        const divOrder = ['Open', 'Division I', 'Division II', 'Division III']
+        const aDivIdx = a.division ? divOrder.indexOf(a.division) : -1
+        const bDivIdx = b.division ? divOrder.indexOf(b.division) : -1
+
+        if (aDivIdx !== bDivIdx) {
+          return (aDivIdx === -1 ? 999 : aDivIdx) - (bDivIdx === -1 ? 999 : bDivIdx)
+        }
+
+        // East before West
+        if (a.region && b.region) {
+          return a.region.localeCompare(b.region)
+        }
+
+        return 0
+      })
+
+      // Fetch school colors in bulk
+      const schoolIds = rows.map(r => r.school_id)
+      if (schoolIds.length > 0) {
+        const { data: schoolsData } = await supabase
+          .from('schools')
+          .select('id, colors')
+          .in('id', schoolIds)
+
+        if (schoolsData) {
+          const colorsMap = new Map((schoolsData as { id: string; colors: unknown }[]).map(s => [s.id, s.colors]))
+          for (const group of result) {
+            for (const team of group.teams) {
+              const colors = colorsMap.get(team.school.id)
+              if (colors) {
+                team.school.colors = colors as School['colors']
+              }
+            }
+          }
+        }
+      }
+
+      setStandings(result)
+    } catch (err) {
+      console.error('Error fetching standings:', err)
+      setError(err instanceof Error ? err.message : 'Failed to fetch standings')
+    } finally {
+      setIsLoading(false)
+    }
+  }, [supabase, sportCode, league, season])
+
+  // Legacy fallback function for when get_computed_standings doesn't exist
+  const fetchLegacyStandings = async (currentSport: Sport, targetYear: number, leagueFilter: string | undefined) => {
+    if (!supabase) return
+
+    try {
       // First, try to fetch from season_standings table
       let standingsQuery = supabase
         .from('season_standings')
@@ -88,29 +287,35 @@ export function useStandings(options: UseStandingsOptions = {}): UseStandingsRet
           *,
           school:schools(*)
         `)
+        .eq('season_year', targetYear)
+        .eq('sport_id', currentSport.id)
 
-      // If no specific sport, fetch both current year and previous year for comprehensive view
-      if (!sportId && !season) {
-        standingsQuery = standingsQuery.or(`season_year.eq.${currentYear},season_year.eq.${currentYear - 1}`)
-      } else {
-        standingsQuery = standingsQuery.eq('season_year', targetSeason)
-      }
-
-      if (sportId) {
-        standingsQuery = standingsQuery.eq('sport_id', sportId)
-      }
-
-      if (league) {
-        standingsQuery = standingsQuery.eq('league', league)
+      if (leagueFilter) {
+        standingsQuery = standingsQuery.eq('league', leagueFilter)
       }
 
       const { data: standingsData, error: standingsError } = await standingsQuery
 
       if (standingsError) throw standingsError
 
+      interface SeasonStandingRow {
+        id: string
+        school_id: string
+        sport_id: string
+        season_year: number
+        league: string
+        league_wins: number
+        league_losses: number
+        league_ties: number
+        overall_wins: number
+        overall_losses: number
+        overall_ties: number
+        points: number | null
+        school: School
+      }
+
       const seasonStandings = standingsData as SeasonStandingRow[]
 
-      // If we have pre-computed standings, use them
       if (seasonStandings && seasonStandings.length > 0) {
         // Group by league
         const groupedByLeague = new Map<string, TeamStanding[]>()
@@ -184,62 +389,13 @@ export function useStandings(options: UseStandingsOptions = {}): UseStandingsRet
         return
       }
 
-      // Fallback: Calculate from games if no pre-computed standings
-      let gamesQuery = supabase
-        .from('games')
-        .select(`
-          *,
-          home_team:schools!games_home_team_id_fkey(*),
-          away_team:schools!games_away_team_id_fkey(*),
-          sport:sports!games_sport_id_fkey(*)
-        `)
-        .eq('status', 'final')
-        .eq('game_type', 'regular_season')
-
-      if (sportId) {
-        gamesQuery = gamesQuery.eq('sport_id', sportId)
-      }
-
-      // Filter by season (year from scheduled_at)
-      const seasonStart = `${targetSeason}-01-01`
-      const seasonEnd = `${targetSeason + 1}-01-01`
-      gamesQuery = gamesQuery
-        .gte('scheduled_at', seasonStart)
-        .lt('scheduled_at', seasonEnd)
-
-      const { data: gamesData, error: gamesError } = await gamesQuery
-
-      if (gamesError) throw gamesError
-
-      // Fetch all schools
-      let schoolsQuery = supabase.from('schools').select('*')
-
-      if (league) {
-        schoolsQuery = schoolsQuery.eq('league', league)
-      }
-
-      const { data: schoolsData, error: schoolsError } = await schoolsQuery
-
-      if (schoolsError) throw schoolsError
-
-      const games = gamesData as GameWithTeams[]
-      const schools = schoolsData as School[]
-
-      // Filter standings by league if specified
-      let calculatedStandings = calculateStandings(games, schools)
-
-      if (league) {
-        calculatedStandings = calculatedStandings.filter(s => s.league === league)
-      }
-
-      setStandings(calculatedStandings)
+      // If no pre-computed standings, set empty
+      setStandings([])
     } catch (err) {
-      console.error('Error fetching standings:', err)
+      console.error('Error in legacy standings:', err)
       setError(err instanceof Error ? err.message : 'Failed to fetch standings')
-    } finally {
-      setIsLoading(false)
     }
-  }, [supabase, sportCode, league, season])
+  }
 
   useEffect(() => {
     fetchStandings()

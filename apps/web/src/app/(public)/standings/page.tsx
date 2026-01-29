@@ -7,7 +7,6 @@ import { cn } from '@/lib/utils'
 import { getCategoryEmoji, getSportEmoji } from '@/lib/sport-utils'
 import { useSports } from '@/hooks/use-sports'
 import { useStandings } from '@/hooks/use-standings'
-import { LeagueFilter } from '@/components/filters/league-filter'
 import { LEAGUES } from '@/lib/league-config'
 
 // Season configuration for grouping sports
@@ -17,6 +16,9 @@ const SEASON_LABELS: Record<string, string> = {
   winter: 'WINTER 2025-26',
   spring: 'SPRING 2025'
 }
+
+// League tabs configuration
+const LEAGUE_TABS = ['All', 'OIA', 'ILH', 'BIIF', 'MIL', 'KIF']
 
 // Get season year based on sport season type
 function getSeasonYear(season: string | null): number {
@@ -64,13 +66,22 @@ export default function StandingsPage() {
   )
   const seasonYear = selectedSport ? getSeasonYear(selectedSport.season) : undefined
 
+  // Fetch standings - pass league filter to API if not 'All'
   const { standings, sport: currentSport, isLoading: standingsLoading, error } = useStandings({
     sportCode: effectiveSportCode || undefined,
-    league: selectedLeague || undefined,
+    league: undefined, // Always fetch all, filter client-side for instant switching
     season: seasonYear?.toString()
   })
 
   const isLoading = sportsLoading || standingsLoading
+
+  // Filter standings by selected league (client-side for instant switching)
+  const filteredStandings = useMemo(() => {
+    if (!selectedLeague || selectedLeague === 'All') {
+      return standings
+    }
+    return standings.filter(s => s.league === selectedLeague)
+  }, [standings, selectedLeague])
 
   // Group sports by season for dropdown
   const sportsByseason = useMemo(() => {
@@ -97,6 +108,9 @@ export default function StandingsPage() {
     return grouped
   }, [sports])
 
+  // Check if the current sport is soccer (for tie display)
+  const isSoccer = effectiveSportCode === 'soccer' || effectiveSportCode === 'boys-soccer' || effectiveSportCode === 'girls-soccer'
+
   return (
     <>
       <Header title="Standings" />
@@ -110,7 +124,11 @@ export default function StandingsPage() {
           <div className="relative">
             <select
               value={effectiveSportCode || ''}
-              onChange={(e) => setSelectedSportCode(e.target.value || null)}
+              onChange={(e) => {
+                setSelectedSportCode(e.target.value || null)
+                // Reset league filter when changing sports
+                setSelectedLeague(null)
+              }}
               className={cn(
                 'w-full md:w-80 appearance-none bg-background-tertiary border-2 px-4 py-3 pr-10',
                 'font-display text-sm font-bold uppercase tracking-wide',
@@ -145,15 +163,41 @@ export default function StandingsPage() {
         </div>
       </div>
 
-      {/* League filter */}
-      <div className="px-4 py-3 border-b border-border bg-background">
-        <label className="text-xs text-foreground-muted block mb-2 font-display uppercase tracking-wider">
-          Filter by League
-        </label>
-        <LeagueFilter
-          selected={selectedLeague}
-          onChange={setSelectedLeague}
-        />
+      {/* League tabs */}
+      <div className="border-b border-border bg-background">
+        <div className="px-4 py-3">
+          <label className="text-xs text-foreground-muted block mb-2 font-display uppercase tracking-wider">
+            Filter by League
+          </label>
+          <div className="flex flex-wrap gap-2">
+            {LEAGUE_TABS.map(tab => {
+              const isActive = (tab === 'All' && !selectedLeague) || selectedLeague === tab
+              const hasTeams = tab === 'All' || standings.some(s => s.league === tab)
+
+              return (
+                <button
+                  key={tab}
+                  onClick={() => setSelectedLeague(tab === 'All' ? null : tab)}
+                  disabled={!hasTeams && tab !== 'All'}
+                  className={cn(
+                    'px-4 py-2 font-display text-xs font-bold uppercase tracking-wider border-2 transition-all',
+                    isActive
+                      ? 'border-neon-yellow bg-neon-yellow/20 text-neon-yellow'
+                      : hasTeams
+                        ? 'border-border text-foreground-muted hover:border-foreground-muted hover:text-foreground'
+                        : 'border-border/50 text-foreground-subtle cursor-not-allowed opacity-50'
+                  )}
+                  style={isActive ? {
+                    textShadow: '0 0 10px var(--neon-yellow)',
+                    boxShadow: '0 0 10px rgba(255, 230, 0, 0.3)'
+                  } : undefined}
+                >
+                  {tab}
+                </button>
+              )
+            })}
+          </div>
+        </div>
       </div>
 
       <main className="px-4 pb-24 grid-bg">
@@ -180,10 +224,10 @@ export default function StandingsPage() {
           </div>
         )}
 
-        {/* Standings tables */}
-        {!isLoading && !error && standings.length > 0 && (
-          <div className="space-y-4 mt-4">
-            {standings.map((leagueStanding) => (
+        {/* Standings tables - grouped by league then division */}
+        {!isLoading && !error && filteredStandings.length > 0 && (
+          <div className="space-y-6 mt-4">
+            {filteredStandings.map((leagueStanding) => (
               <div key={leagueStanding.displayName} className="scoreboard-panel p-4">
                 <h3 className="mb-4 font-display font-bold text-neon-pink uppercase tracking-wider flex items-center gap-2">
                   {leagueStanding.displayName}
@@ -197,32 +241,50 @@ export default function StandingsPage() {
                   <table className="w-full text-sm">
                     <thead>
                       <tr className="border-b-2 border-border">
-                        <th className="pb-2 text-left font-display text-xs font-bold text-foreground-muted uppercase tracking-wider">Team</th>
-                        <th className="pb-2 text-center font-display text-xs font-bold text-foreground-muted uppercase tracking-wider" title="League Record">LG</th>
-                        <th className="pb-2 text-center font-display text-xs font-bold text-foreground-muted uppercase tracking-wider hidden sm:table-cell" title="Overall Record">OVR</th>
-                        <th className="pb-2 text-center font-display text-xs font-bold text-foreground-muted uppercase tracking-wider" title="League Win Percentage">PCT</th>
-                        <th className="pb-2 text-center font-display text-xs font-bold text-foreground-muted uppercase tracking-wider hidden md:table-cell">PF</th>
-                        <th className="pb-2 text-center font-display text-xs font-bold text-foreground-muted uppercase tracking-wider hidden md:table-cell">PA</th>
-                        <th className="pb-2 text-center font-display text-xs font-bold text-foreground-muted uppercase tracking-wider hidden lg:table-cell">STRK</th>
+                        <th className="pb-2 text-left font-display text-xs font-bold text-foreground-muted uppercase tracking-wider">
+                          Team
+                        </th>
+                        <th className="pb-2 text-center font-display text-xs font-bold text-foreground-muted uppercase tracking-wider" title="Division/League Record">
+                          DIV
+                        </th>
+                        <th className="pb-2 text-center font-display text-xs font-bold text-foreground-muted uppercase tracking-wider hidden sm:table-cell" title="Overall Record">
+                          OVR
+                        </th>
+                        <th className="pb-2 text-center font-display text-xs font-bold text-foreground-muted uppercase tracking-wider" title="Division Win Percentage">
+                          PCT
+                        </th>
+                        <th className="pb-2 text-center font-display text-xs font-bold text-foreground-muted uppercase tracking-wider hidden md:table-cell" title="Points For">
+                          PF
+                        </th>
+                        <th className="pb-2 text-center font-display text-xs font-bold text-foreground-muted uppercase tracking-wider hidden md:table-cell" title="Points Against">
+                          PA
+                        </th>
+                        <th className="pb-2 text-center font-display text-xs font-bold text-foreground-muted uppercase tracking-wider hidden lg:table-cell" title="Point Differential">
+                          DIFF
+                        </th>
                       </tr>
                     </thead>
                     <tbody>
                       {leagueStanding.teams.map((team, index) => {
                         const colors = team.school.colors as { primary?: string } | null
+                        const isTopHalf = index < Math.ceil(leagueStanding.teams.length / 2)
+
                         return (
                           <tr
                             key={team.school.id}
                             className={cn(
                               'border-b border-border hover:bg-background-tertiary transition-colors',
-                              index < 2 && 'bg-neon-green/5'
+                              isTopHalf && 'bg-neon-green/5'
                             )}
                           >
                             <td className="py-3">
                               <Link href={`/school/${team.school.id}`} className="flex items-center gap-2 group">
-                                <span className="text-xs font-display font-bold text-neon-yellow w-4">{index + 1}</span>
+                                <span className="text-xs font-display font-bold text-neon-yellow w-4">
+                                  {index + 1}
+                                </span>
                                 {colors?.primary && (
                                   <div
-                                    className="w-3 h-3 rounded-sm"
+                                    className="w-3 h-3 rounded-sm flex-shrink-0"
                                     style={{ backgroundColor: colors.primary }}
                                   />
                                 )}
@@ -231,21 +293,30 @@ export default function StandingsPage() {
                                 </span>
                               </Link>
                             </td>
-                            <td className="py-3 text-center font-display tabular-nums text-neon-green" title="League Record">
-                              {team.leagueWins}-{team.leagueLosses}{team.leagueTies > 0 ? `-${team.leagueTies}` : ''}
+                            <td className="py-3 text-center font-display tabular-nums text-neon-green" title="Division Record">
+                              {team.leagueWins}-{team.leagueLosses}
+                              {(isSoccer || team.leagueTies > 0) && `-${team.leagueTies}`}
                             </td>
                             <td className="py-3 text-center font-display tabular-nums text-foreground-muted hidden sm:table-cell" title="Overall Record">
-                              {team.wins}-{team.losses}{team.ties > 0 ? `-${team.ties}` : ''}
+                              {team.wins}-{team.losses}
+                              {(isSoccer || team.ties > 0) && `-${team.ties}`}
                             </td>
-                            <td className="py-3 text-center font-display tabular-nums text-foreground" title="League Win %">{team.leagueWinPct.toFixed(3)}</td>
-                            <td className="py-3 text-center font-display tabular-nums text-foreground-subtle hidden md:table-cell">{team.pointsFor}</td>
-                            <td className="py-3 text-center font-display tabular-nums text-foreground-subtle hidden md:table-cell">{team.pointsAgainst}</td>
+                            <td className="py-3 text-center font-display tabular-nums text-foreground" title="Division Win %">
+                              {team.leagueWinPct.toFixed(3)}
+                            </td>
+                            <td className="py-3 text-center font-display tabular-nums text-foreground-subtle hidden md:table-cell">
+                              {team.pointsFor}
+                            </td>
+                            <td className="py-3 text-center font-display tabular-nums text-foreground-subtle hidden md:table-cell">
+                              {team.pointsAgainst}
+                            </td>
                             <td className="py-3 text-center font-display tabular-nums hidden lg:table-cell">
                               <span className={cn(
-                                team.streak.startsWith('W') && 'text-neon-green',
-                                team.streak.startsWith('L') && 'text-neon-pink'
+                                team.pointDiff > 0 && 'text-neon-green',
+                                team.pointDiff < 0 && 'text-neon-pink',
+                                team.pointDiff === 0 && 'text-foreground-muted'
                               )}>
-                                {team.streak}
+                                {team.pointDiff > 0 ? '+' : ''}{team.pointDiff}
                               </span>
                             </td>
                           </tr>
@@ -254,12 +325,43 @@ export default function StandingsPage() {
                     </tbody>
                   </table>
                 </div>
+
+                {/* Division context info */}
+                {leagueStanding.teams.length > 0 && (
+                  <div className="mt-3 pt-3 border-t border-border/50 text-xs text-foreground-subtle">
+                    <span className="text-neon-green/70">Green highlight</span> = playoff position
+                  </div>
+                )}
               </div>
             ))}
           </div>
         )}
 
-        {/* Empty state */}
+        {/* Empty state for selected league */}
+        {!isLoading && !error && filteredStandings.length === 0 && standings.length > 0 && (
+          <div className="flex flex-col items-center justify-center py-16 text-center animate-fade-in">
+            <div className="scoreboard-panel p-8 mb-4">
+              <div className="score-led text-5xl mb-4 neon-text-pink">--</div>
+              <span className="text-4xl">
+                {effectiveSportCode ? getSportEmoji(effectiveSportCode) : getCategoryEmoji('Sports')}
+              </span>
+            </div>
+            <h3 className="mb-2 font-display text-xl font-black text-foreground uppercase tracking-widest">
+              No {selectedLeague} Teams
+            </h3>
+            <p className="text-sm text-foreground-muted max-w-xs font-display">
+              No teams from {selectedLeague} have played {currentSport?.display_name || currentSport?.name || 'this sport'} this season.
+            </p>
+            <button
+              onClick={() => setSelectedLeague(null)}
+              className="mt-4 px-4 py-2 border-2 border-neon-blue text-neon-blue font-display text-xs uppercase tracking-wider hover:bg-neon-blue/20 transition-colors"
+            >
+              View All Leagues
+            </button>
+          </div>
+        )}
+
+        {/* Empty state - no standings at all */}
         {!isLoading && !error && standings.length === 0 && (
           <div className="flex flex-col items-center justify-center py-16 text-center animate-fade-in">
             <div className="scoreboard-panel p-8 mb-4">
