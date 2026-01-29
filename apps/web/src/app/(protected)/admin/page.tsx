@@ -1353,7 +1353,12 @@ export default function AdminPage() {
                           .from('users')
                           .update({ is_admin: newValue } as never)
                           .eq('id', adminUser.id)
-                        if (!error) {
+                        if (error) {
+                          setMessage({
+                            type: 'error',
+                            text: `Failed to update admin status: ${error.message}`,
+                          })
+                        } else {
                           setAdminUsers((prev) =>
                             prev.map((u) =>
                               u.id === adminUser.id ? { ...u, is_admin: newValue } : u
@@ -1375,7 +1380,12 @@ export default function AdminPage() {
                             tier: newValue ? 'trusted' : 'basic',
                           } as never)
                           .eq('id', adminUser.id)
-                        if (!error) {
+                        if (error) {
+                          setMessage({
+                            type: 'error',
+                            text: `Failed to update trusted reporter status: ${error.message}`,
+                          })
+                        } else {
                           setAdminUsers((prev) =>
                             prev.map((u) =>
                               u.id === adminUser.id
@@ -1399,7 +1409,12 @@ export default function AdminPage() {
                             beta_granted_at: newValue ? new Date().toISOString() : null
                           } as never)
                           .eq('id', adminUser.id)
-                        if (!error) {
+                        if (error) {
+                          setMessage({
+                            type: 'error',
+                            text: `Failed to update beta access: ${error.message}`,
+                          })
+                        } else {
                           setAdminUsers((prev) =>
                             prev.map((u) =>
                               u.id === adminUser.id ? { ...u, has_beta_access: newValue } : u
@@ -1432,12 +1447,23 @@ function UserRow({
   currentUserId,
 }: {
   adminUser: AdminUser
-  onToggleAdmin: () => void
-  onToggleTrusted: () => void
-  onToggleBeta: () => void
+  onToggleAdmin: () => Promise<void>
+  onToggleTrusted: () => Promise<void>
+  onToggleBeta: () => Promise<void>
   currentUserId: string
 }) {
+  const [isLoading, setIsLoading] = useState<'admin' | 'trusted' | 'beta' | null>(null)
   const isSelf = adminUser.id === currentUserId
+
+  const handleToggle = async (action: 'admin' | 'trusted' | 'beta', handler: () => Promise<void>) => {
+    if (isLoading) return
+    setIsLoading(action)
+    try {
+      await handler()
+    } finally {
+      setIsLoading(null)
+    }
+  }
 
   return (
     <Card className="border-2 p-4">
@@ -1471,22 +1497,28 @@ function UserRow({
             <Button
               variant={adminUser.is_admin ? 'destructive' : 'outline'}
               size="sm"
-              onClick={onToggleAdmin}
+              onClick={() => handleToggle('admin', onToggleAdmin)}
+              disabled={isLoading !== null}
             >
+              {isLoading === 'admin' && <Loader2 className="h-3 w-3 mr-1 animate-spin" />}
               {adminUser.is_admin ? 'Remove Admin' : 'Make Admin'}
             </Button>
             <Button
               variant={adminUser.is_trusted_reporter ? 'secondary' : 'outline'}
               size="sm"
-              onClick={onToggleTrusted}
+              onClick={() => handleToggle('trusted', onToggleTrusted)}
+              disabled={isLoading !== null}
             >
+              {isLoading === 'trusted' && <Loader2 className="h-3 w-3 mr-1 animate-spin" />}
               {adminUser.is_trusted_reporter ? 'Remove Trusted' : 'Make Trusted'}
             </Button>
             <Button
               variant={adminUser.has_beta_access ? 'secondary' : 'outline'}
               size="sm"
-              onClick={onToggleBeta}
+              onClick={() => handleToggle('beta', onToggleBeta)}
+              disabled={isLoading !== null}
             >
+              {isLoading === 'beta' && <Loader2 className="h-3 w-3 mr-1 animate-spin" />}
               {adminUser.has_beta_access ? 'Revoke Beta' : 'Grant Beta'}
             </Button>
           </div>
