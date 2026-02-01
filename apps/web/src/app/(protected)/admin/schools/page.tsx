@@ -322,7 +322,7 @@ export default function SchoolsAdminPage() {
 
     setIsSaving(true)
 
-    const { error } = await supabase.from('teams').insert({
+    const { data, error } = await supabase.from('teams').insert({
       school_id: managingTeamsFor.id,
       sport_id: sportId,
       gender,
@@ -330,12 +330,13 @@ export default function SchoolsAdminPage() {
       league: managingTeamsFor.league || null,
       season_year: '2025-2026',
       is_active: true,
-    } as never)
+    } as never).select()
 
     if (error) {
       console.error('Error creating team:', error)
-      setMessage({ type: 'error', text: 'Failed to create team' })
+      setMessage({ type: 'error', text: `Failed to create team: ${error.message}` })
     } else {
+      console.log('Created team:', data)
       setMessage({ type: 'success', text: 'Team created' })
       // Refresh teams
       openTeamManagement(managingTeamsFor)
@@ -392,13 +393,14 @@ export default function SchoolsAdminPage() {
       return
     }
 
-    const { error } = await supabase.from('teams').insert(teamsToCreate as never)
+    const { data, error } = await supabase.from('teams').insert(teamsToCreate as never).select()
 
     if (error) {
       console.error('Error creating teams:', error)
-      setMessage({ type: 'error', text: 'Failed to create teams' })
+      setMessage({ type: 'error', text: `Failed to create teams: ${error.message}` })
     } else {
-      setMessage({ type: 'success', text: `Created ${teamsToCreate.length} teams` })
+      console.log('Created teams:', data)
+      setMessage({ type: 'success', text: `Created ${data?.length || teamsToCreate.length} teams` })
       openTeamManagement(managingTeamsFor)
     }
 
