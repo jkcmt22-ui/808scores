@@ -24,7 +24,7 @@ import { useAuth } from '@/hooks'
 import { createClient } from '@/lib/supabase/client'
 import { cn } from '@/lib/utils'
 import { adminCache } from '@/lib/admin-cache'
-import type { GameWithTeams, Sport, School, GameStatus, GameType } from '@/types/database'
+import type { GameWithTeams, Sport, School, GameStatus, GameType, TeamWithSchool } from '@/types/database'
 import { getHomeSchool, getAwaySchool } from '@/types/database'
 
 interface GameFormData {
@@ -128,6 +128,7 @@ export default function ScheduleAdminPage() {
   const [games, setGames] = useState<GameWithTeams[]>([])
   const [sports, setSports] = useState<Sport[]>([])
   const [schools, setSchools] = useState<School[]>([])
+  const [teams, setTeams] = useState<TeamWithSchool[]>([])
   const [isLoading, setIsLoading] = useState(true)
 
   // Filters
@@ -219,6 +220,18 @@ export default function ScheduleAdminPage() {
           adminCache.setSchools(schools)
         }
       }
+
+      // Fetch teams with school info (needed for game creation)
+      const { data: teamsData } = await supabase
+        .from('teams')
+        .select('*, school:schools(*)')
+        .eq('is_active', true)
+        .eq('season_year', '2025-2026')
+        .order('school_id')
+
+      if (teamsData) {
+        setTeams(teamsData as TeamWithSchool[])
+      }
     }
 
     if (hasAdminAccess) {
@@ -293,7 +306,13 @@ export default function ScheduleAdminPage() {
 
   // Form handlers
   const handleFormChange = (field: keyof GameFormData, value: string) => {
-    setFormData((prev) => ({ ...prev, [field]: value }))
+    setFormData((prev) => {
+      // Clear team selections when sport changes (teams are sport-specific)
+      if (field === 'sport_id' && value !== prev.sport_id) {
+        return { ...prev, [field]: value, home_team_id: '', away_team_id: '' }
+      }
+      return { ...prev, [field]: value }
+    })
   }
 
   const openAddForm = (date: Date) => {
@@ -524,6 +543,21 @@ export default function ScheduleAdminPage() {
   // Get unique leagues from schools
   const leagues = [...new Set(schools.map((s) => s.league).filter(Boolean))] as string[]
 
+  // Filter teams by selected sport for the form dropdowns
+  const teamsForSelectedSport = formData.sport_id
+    ? teams.filter((t) => t.sport_id === formData.sport_id)
+    : []
+
+  // Group teams by school for better display
+  const teamOptions = teamsForSelectedSport
+    .map((t) => ({
+      id: t.id,
+      label: `${t.school.short_name} (${t.gender === 'boys' ? 'B' : t.gender === 'girls' ? 'G' : 'Co'})`,
+      schoolName: t.school.name,
+      gender: t.gender,
+    }))
+    .sort((a, b) => a.label.localeCompare(b.label))
+
   return (
     <div className="min-h-screen bg-background">
       {/* Header */}
@@ -742,11 +776,12 @@ export default function ScheduleAdminPage() {
                       value={formData.away_team_id}
                       onChange={(e) => handleFormChange('away_team_id', e.target.value)}
                       className="w-full h-10 px-3 border-2 border-border bg-background text-foreground font-display text-sm"
+                      disabled={!formData.sport_id}
                     >
-                      <option value="">Select team...</option>
-                      {schools.map((school) => (
-                        <option key={school.id} value={school.id}>
-                          {school.short_name}
+                      <option value="">{formData.sport_id ? 'Select team...' : 'Select sport first'}</option>
+                      {teamOptions.map((team) => (
+                        <option key={team.id} value={team.id}>
+                          {team.label}
                         </option>
                       ))}
                     </select>
@@ -757,11 +792,12 @@ export default function ScheduleAdminPage() {
                       value={formData.home_team_id}
                       onChange={(e) => handleFormChange('home_team_id', e.target.value)}
                       className="w-full h-10 px-3 border-2 border-border bg-background text-foreground font-display text-sm"
+                      disabled={!formData.sport_id}
                     >
-                      <option value="">Select team...</option>
-                      {schools.map((school) => (
-                        <option key={school.id} value={school.id}>
-                          {school.short_name}
+                      <option value="">{formData.sport_id ? 'Select team...' : 'Select sport first'}</option>
+                      {teamOptions.map((team) => (
+                        <option key={team.id} value={team.id}>
+                          {team.label}
                         </option>
                       ))}
                     </select>
