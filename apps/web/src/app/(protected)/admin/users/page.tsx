@@ -15,6 +15,7 @@ import {
   ChevronRight,
   History,
   X,
+  Ban,
 } from 'lucide-react'
 import { Button, Card, Badge, Input } from '@/components/ui'
 import { createClient } from '@/lib/supabase/client'
@@ -30,6 +31,7 @@ interface AdminUser {
   is_admin: boolean
   is_trusted_reporter: boolean
   has_beta_access: boolean
+  is_banned: boolean
   tier: string
   reputation_score: number
   submission_count: number
@@ -92,7 +94,7 @@ export default function AdminUsersPage() {
       // Build query
       let query = supabase
         .from('users')
-        .select('id, display_name, email, phone, is_super_admin, is_admin, is_trusted_reporter, has_beta_access, tier, reputation_score, submission_count, created_at', { count: 'exact' })
+        .select('id, display_name, email, phone, is_super_admin, is_admin, is_trusted_reporter, has_beta_access, is_banned, tier, reputation_score, submission_count, created_at', { count: 'exact' })
 
       // Apply search filter
       if (debouncedSearch) {
@@ -156,7 +158,7 @@ export default function AdminUsersPage() {
   // Toggle user role
   const handleToggleRole = async (
     userId: string,
-    field: 'is_admin' | 'is_trusted_reporter' | 'has_beta_access' | 'is_super_admin',
+    field: 'is_admin' | 'is_trusted_reporter' | 'has_beta_access' | 'is_super_admin' | 'is_banned',
     currentValue: boolean
   ) => {
     if (!supabase) return
@@ -179,6 +181,7 @@ export default function AdminUsersPage() {
       is_trusted_reporter: 'Trusted Reporter',
       has_beta_access: 'Beta Access',
       is_super_admin: 'Super Admin',
+      is_banned: 'Ban',
     }
 
     try {
@@ -217,12 +220,13 @@ export default function AdminUsersPage() {
     const oldData = entry.old_data || {}
     const newData = entry.new_data || {}
 
-    const roleFields = ['is_admin', 'is_super_admin', 'is_trusted_reporter', 'has_beta_access']
+    const roleFields = ['is_admin', 'is_super_admin', 'is_trusted_reporter', 'has_beta_access', 'is_banned']
     const labels: Record<string, string> = {
       is_admin: 'Admin',
       is_super_admin: 'Super Admin',
       is_trusted_reporter: 'Trusted Reporter',
       has_beta_access: 'Beta Access',
+      is_banned: 'Ban',
     }
 
     for (const field of roleFields) {
@@ -439,12 +443,12 @@ function UserRow({
 }: {
   user: AdminUser
   isSuperAdmin: boolean
-  onToggleRole: (userId: string, field: 'is_admin' | 'is_trusted_reporter' | 'has_beta_access' | 'is_super_admin', currentValue: boolean) => Promise<void>
+  onToggleRole: (userId: string, field: 'is_admin' | 'is_trusted_reporter' | 'has_beta_access' | 'is_super_admin' | 'is_banned', currentValue: boolean) => Promise<void>
   onViewAuditLog: () => void
 }) {
   const [isLoading, setIsLoading] = useState<string | null>(null)
 
-  const handleToggle = async (field: 'is_admin' | 'is_trusted_reporter' | 'has_beta_access' | 'is_super_admin') => {
+  const handleToggle = async (field: 'is_admin' | 'is_trusted_reporter' | 'has_beta_access' | 'is_super_admin' | 'is_banned') => {
     if (isLoading) return
     setIsLoading(field)
     try {
@@ -485,6 +489,12 @@ function UserRow({
               <Badge className="bg-neon-yellow/20 text-neon-yellow border-neon-yellow/30">
                 <Star className="h-3 w-3 mr-1" />
                 Beta
+              </Badge>
+            )}
+            {user.is_banned && (
+              <Badge className="bg-red-500/20 text-red-500 border-red-500/30">
+                <Ban className="h-3 w-3 mr-1" />
+                Banned
               </Badge>
             )}
           </div>
@@ -576,6 +586,22 @@ function UserRow({
               Super
             </Button>
           )}
+
+          {/* Ban Toggle - any admin */}
+          <Button
+            variant={user.is_banned ? 'destructive' : 'outline'}
+            size="sm"
+            onClick={() => handleToggle('is_banned')}
+            disabled={isLoading !== null || user.is_super_admin}
+            title={user.is_banned ? 'Unban user' : 'Ban user'}
+          >
+            {isLoading === 'is_banned' ? (
+              <Loader2 className="h-3 w-3 mr-1 animate-spin" />
+            ) : (
+              <Ban className="h-3 w-3 mr-1" />
+            )}
+            {user.is_banned ? 'Unban' : 'Ban'}
+          </Button>
 
           {/* Audit Log Button */}
           <Button

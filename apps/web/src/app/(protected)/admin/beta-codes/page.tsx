@@ -28,6 +28,7 @@ export default function BetaCodesPage() {
   const router = useRouter()
   const { user, profile } = useAuth()
   const supabase = createClient()
+  const hasAdminAccess = profile?.is_admin === true || profile?.is_super_admin === true
 
   const [codes, setCodes] = useState<BetaCode[]>([])
   const [isLoading, setIsLoading] = useState(true)
@@ -66,12 +67,12 @@ export default function BetaCodesPage() {
   }
 
   useEffect(() => {
-    if (profile?.is_super_admin) {
+    if (hasAdminAccess) {
       fetchCodes()
     }
-  }, [profile?.is_super_admin])
+  }, [hasAdminAccess])
 
-  // Only super admins can access - check AFTER all hooks
+  // Only admins can access - check AFTER all hooks
   if (profile === undefined) {
     // Still loading profile
     return (
@@ -82,12 +83,12 @@ export default function BetaCodesPage() {
     )
   }
 
-  if (!profile?.is_super_admin) {
+  if (!hasAdminAccess) {
     return (
       <div className="flex min-h-screen flex-col items-center justify-center p-4">
         <AlertCircle className="mb-4 h-12 w-12 text-neon-pink" />
         <h1 className="font-display text-xl font-bold text-foreground">Access Denied</h1>
-        <p className="text-foreground-muted text-sm mt-2">Only super admins can access beta codes</p>
+        <p className="text-foreground-muted text-sm mt-2">You need admin access to manage beta codes</p>
         <Button onClick={() => router.push('/admin')} className="mt-4">Back to Admin</Button>
       </div>
     )

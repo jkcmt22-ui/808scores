@@ -34,8 +34,8 @@ const adminNavItems = [
   { href: '/admin', label: 'Dashboard', icon: LayoutDashboard, exact: true },
   { href: '/admin/seasons', label: 'Seasons', icon: CalendarDays },
   { href: '/admin/users', label: 'Users', icon: Users },
-  { href: '/admin/analytics', label: 'Analytics', icon: BarChart3, superAdminOnly: true },
-  { href: '/admin/beta-codes', label: 'Beta Codes', icon: Key, superAdminOnly: true },
+  { href: '/admin/analytics', label: 'Analytics', icon: BarChart3 },
+  { href: '/admin/beta-codes', label: 'Beta Codes', icon: Key },
   { href: '/admin/standings', label: 'Standings', icon: ListOrdered },
   { href: '/admin/tournaments', label: 'Tournaments', icon: Trophy },
   { href: '/admin/schools', label: 'Schools', icon: GraduationCap },
@@ -62,13 +62,10 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
 
   // ALL HOOKS MUST BE CALLED BEFORE ANY CONDITIONAL RETURNS (Rules of Hooks)
 
-  // Filter nav items based on user role - must be before returns
+  // All nav items are visible to all admins (no superAdminOnly restrictions currently)
   const visibleNavItems = useMemo(() => {
-    return adminNavItems.filter(item => {
-      if (item.superAdminOnly && !isSuperAdmin) return false
-      return true
-    })
-  }, [isSuperAdmin])
+    return adminNavItems
+  }, [])
 
   // Debug: Log render
   logRender('AdminLayout', `authLoading=${authLoading}, hasUser=${!!user}, hasProfile=${!!profile}`)

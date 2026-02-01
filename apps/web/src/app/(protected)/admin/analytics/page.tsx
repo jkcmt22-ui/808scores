@@ -103,6 +103,7 @@ export default function AnalyticsPage() {
   const [error, setError] = useState<string | null>(null)
 
   const isSuperAdmin = profile?.is_super_admin === true
+  const hasAdminAccess = profile?.is_admin === true || isSuperAdmin
 
   const fetchAnalytics = useCallback(async () => {
     if (!supabase) {
@@ -180,16 +181,16 @@ export default function AnalyticsPage() {
   }, [supabase])
 
   useEffect(() => {
-    if (isSuperAdmin) {
+    if (hasAdminAccess) {
       fetchAnalytics()
     }
-  }, [isSuperAdmin, fetchAnalytics])
+  }, [hasAdminAccess, fetchAnalytics])
 
   // NOTE: Basic auth checks (loading, user, profile, admin access) are handled by AdminLayout
-  // Only check for super admin access here since this page has additional requirements
+  // Analytics is available to all admins (both admin and super admin)
 
-  // No super admin access (this is page-specific, not handled by layout)
-  if (!isSuperAdmin) {
+  // No admin access (this is page-specific, not handled by layout)
+  if (!hasAdminAccess) {
     return (
       <div className="flex min-h-[50vh] flex-col items-center justify-center p-4">
         <AlertCircle className="mb-4 h-12 w-12 text-neon-pink" />
@@ -197,7 +198,7 @@ export default function AnalyticsPage() {
           Access Denied
         </h1>
         <p className="mb-4 text-foreground-muted text-sm text-center">
-          Only super admins can view the analytics dashboard.
+          You need admin access to view the analytics dashboard.
         </p>
         <Button onClick={() => router.push('/admin')}>Go to Admin</Button>
       </div>
