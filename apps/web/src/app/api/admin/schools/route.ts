@@ -140,6 +140,33 @@ export async function POST(request: NextRequest) {
       )
     }
 
+    // Auto-create teams for all active sports
+    const { data: activeSports } = await supabase
+      .from('sports')
+      .select('id, gender')
+      .eq('active', true)
+
+    if (activeSports && activeSports.length > 0) {
+      const teamsToCreate = activeSports.map((sport: { id: string; gender: string }) => ({
+        school_id: school.id,
+        sport_id: sport.id,
+        gender: sport.gender,
+        division: division || null,
+        league: league || null,
+        season_year: '2025-2026',
+        is_active: true,
+      }))
+
+      const { error: teamsError } = await supabase
+        .from('teams')
+        .insert(teamsToCreate as never)
+
+      if (teamsError) {
+        console.error('Teams creation error:', teamsError)
+        // Don't fail the request - school was created, just log the teams error
+      }
+    }
+
     return NextResponse.json({
       success: true,
       school,

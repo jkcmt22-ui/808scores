@@ -15,13 +15,14 @@ import {
   X,
   MapPin,
   Users,
+  Trophy,
 } from 'lucide-react'
 import { Button, Badge, Input, Card } from '@/components/ui'
 import { useAuth } from '@/hooks'
 import { createClient } from '@/lib/supabase/client'
 import { cn } from '@/lib/utils'
 import { adminCache } from '@/lib/admin-cache'
-import type { School } from '@/types/database'
+import type { School, Sport, TeamWithSchool } from '@/types/database'
 
 interface SchoolFormData {
   name: string
@@ -57,6 +58,7 @@ export default function SchoolsAdminPage() {
   const supabaseClient = useMemo(() => createClient(), [])
 
   const [schools, setSchools] = useState<School[]>([])
+  const [sports, setSports] = useState<Sport[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [searchTerm, setSearchTerm] = useState('')
   const [islandFilter, setIslandFilter] = useState<string>('all')
@@ -68,12 +70,17 @@ export default function SchoolsAdminPage() {
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null)
   const [logoPreviewUrl, setLogoPreviewUrl] = useState<string | null>(null)
 
+  // Team management
+  const [managingTeamsFor, setManagingTeamsFor] = useState<School | null>(null)
+  const [schoolTeams, setSchoolTeams] = useState<TeamWithSchool[]>([])
+  const [isLoadingTeams, setIsLoadingTeams] = useState(false)
+
   const hasAdminAccess = profile?.is_admin === true || profile?.is_super_admin === true
   const supabase = supabaseClient
 
-  // Fetch schools
+  // Fetch schools and sports
   useEffect(() => {
-    const fetchSchools = async () => {
+    const fetchData = async () => {
       if (!supabase) {
         setIsLoading(false)
         return
@@ -81,22 +88,36 @@ export default function SchoolsAdminPage() {
 
       setIsLoading(true)
 
-      const { data, error } = await supabase
+      // Fetch schools
+      const { data: schoolsData, error: schoolsError } = await supabase
         .from('schools')
         .select('*')
         .order('name')
 
-      if (error) {
-        console.error('Error fetching schools:', error)
-      } else if (data) {
-        setSchools(data as School[])
+      if (schoolsError) {
+        console.error('Error fetching schools:', schoolsError)
+      } else if (schoolsData) {
+        setSchools(schoolsData as School[])
+      }
+
+      // Fetch sports
+      const { data: sportsData, error: sportsError } = await supabase
+        .from('sports')
+        .select('*')
+        .eq('active', true)
+        .order('sort_order')
+
+      if (sportsError) {
+        console.error('Error fetching sports:', sportsError)
+      } else if (sportsData) {
+        setSports(sportsData as Sport[])
       }
 
       setIsLoading(false)
     }
 
     if (hasAdminAccess) {
-      fetchSchools()
+      fetchData()
     } else {
       // User doesn't have admin access, stop loading
       setIsLoading(false)
@@ -255,6 +276,119 @@ export default function SchoolsAdminPage() {
       currentLogoUrl: school.logo_url || null,
     })
     setShowForm(true)
+  }
+
+  // Open team management for a school
+  const openTeamManagement = async (school: School) => {
+    if (!supabase) return
+
+    setManagingTeamsFor(school)
+    setIsLoadingTeams(true)
+
+    const { data, error } = await supabase
+      .from('teams')
+      .select('*, school:schools(*)')
+      .eq('school_id', school.id)
+      .eq('season_year', '2025-2026')
+      .order('sport_id')
+
+    if (error) {
+      console.error('Error fetching teams:', error)
+      setMessage({ type: 'error', text: 'Failed to load teams' })
+    } else {
+      setSchoolTeams(data as TeamWithSchool[])
+    }
+
+    setIsLoadingTeams(false)
+  }
+
+  // Create a team for this school
+  const createTeam = async (sportId: string, gender: string) => {
+    if (!supabase || !managingTeamsFor) return
+
+    setIsSaving(true)
+
+    const { error } = await supabase.from('teams').insert({
+      school_id: managingTeamsFor.id,
+      sport_id: sportId,
+      gender,
+      division: managingTeamsFor.division || null,
+      league: managingTeamsFor.league || null,
+      season_year: '2025-2026',
+      is_active: true,
+    } as never)
+
+    if (error) {
+      console.error('Error creating team:', error)
+      setMessage({ type: 'error', text: 'Failed to create team' })
+    } else {
+      setMessage({ type: 'success', text: 'Team created' })
+      // Refresh teams
+      openTeamManagement(managingTeamsFor)
+    }
+
+    setIsSaving(false)
+  }
+
+  // Toggle team active status
+  const toggleTeamActive = async (teamId: string, currentActive: boolean) => {
+    if (!supabase || !managingTeamsFor) return
+
+    const { error } = await supabase
+      .from('teams')
+      .update({ is_active: !currentActive } as never)
+      .eq('id', teamId)
+
+    if (error) {
+      console.error('Error updating team:', error)
+      setMessage({ type: 'error', text: 'Failed to update team' })
+    } else {
+      setMessage({ type: 'success', text: currentActive ? 'Team deactivated' : 'Team activated' })
+      // Refresh teams
+      openTeamManagement(managingTeamsFor)
+    }
+  }
+
+  // Create all missing teams for a school
+  const createAllTeams = async () => {
+    if (!supabase || !managingTeamsFor) return
+
+    setIsSaving(true)
+
+    // Find which sports don't have teams yet
+    const existingTeamKeys = new Set(
+      schoolTeams.map((t) => `${t.sport_id}-${t.gender}`)
+    )
+
+    const teamsToCreate = sports
+      .filter((sport) => !existingTeamKeys.has(`${sport.id}-${sport.gender}`))
+      .map((sport) => ({
+        school_id: managingTeamsFor.id,
+        sport_id: sport.id,
+        gender: sport.gender,
+        division: managingTeamsFor.division || null,
+        league: managingTeamsFor.league || null,
+        season_year: '2025-2026',
+        is_active: true,
+      }))
+
+    if (teamsToCreate.length === 0) {
+      setMessage({ type: 'success', text: 'All teams already exist' })
+      setIsSaving(false)
+      return
+    }
+
+    const { error } = await supabase.from('teams').insert(teamsToCreate as never)
+
+    if (error) {
+      console.error('Error creating teams:', error)
+      setMessage({ type: 'error', text: 'Failed to create teams' })
+    } else {
+      setMessage({ type: 'success', text: `Created ${teamsToCreate.length} teams` })
+      openTeamManagement(managingTeamsFor)
+    }
+
+    setIsSaving(false)
   }
 
   // Clear message after delay
@@ -587,8 +721,120 @@ export default function SchoolsAdminPage() {
           </Card>
         )}
 
+        {/* Team Management Modal */}
+        {managingTeamsFor && (
+          <Card className="mb-6 p-4">
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="font-display font-bold text-lg neon-text-green">
+                Teams: {managingTeamsFor.short_name}
+              </h2>
+              <div className="flex gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={createAllTeams}
+                  disabled={isSaving}
+                >
+                  {isSaving ? (
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  ) : (
+                    <Plus className="mr-2 h-4 w-4" />
+                  )}
+                  Create All Missing Teams
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={() => setManagingTeamsFor(null)}
+                >
+                  <X className="h-5 w-5" />
+                </Button>
+              </div>
+            </div>
+
+            {isLoadingTeams ? (
+              <div className="flex justify-center py-8">
+                <Loader2 className="h-8 w-8 animate-spin text-neon-green" />
+              </div>
+            ) : (
+              <div className="space-y-2">
+                {sports.map((sport) => {
+                  const team = schoolTeams.find(
+                    (t) => t.sport_id === sport.id && t.gender === sport.gender
+                  )
+
+                  return (
+                    <div
+                      key={`${sport.id}-${sport.gender}`}
+                      className={cn(
+                        'flex items-center justify-between p-3 border-2',
+                        team?.is_active
+                          ? 'border-neon-green/30 bg-neon-green/5'
+                          : team
+                            ? 'border-border bg-background-secondary opacity-50'
+                            : 'border-border bg-background-secondary'
+                      )}
+                    >
+                      <div className="flex items-center gap-3">
+                        <Badge
+                          variant={sport.gender === 'boys' ? 'default' : 'secondary'}
+                          className="text-[10px]"
+                        >
+                          {sport.gender === 'boys' ? 'B' : sport.gender === 'girls' ? 'G' : 'Co'}
+                        </Badge>
+                        <span className="font-display font-bold text-foreground">
+                          {sport.display_name || sport.name}
+                        </span>
+                        {team && (
+                          <span className="text-xs text-foreground-muted">
+                            {team.is_active ? '(Active)' : '(Inactive)'}
+                          </span>
+                        )}
+                      </div>
+
+                      <div className="flex gap-2">
+                        {team ? (
+                          <Button
+                            variant={team.is_active ? 'destructive' : 'default'}
+                            size="sm"
+                            onClick={() => toggleTeamActive(team.id, team.is_active)}
+                          >
+                            {team.is_active ? 'Deactivate' : 'Activate'}
+                          </Button>
+                        ) : (
+                          <Button
+                            size="sm"
+                            onClick={() => createTeam(sport.id, sport.gender)}
+                            disabled={isSaving}
+                          >
+                            <Plus className="mr-1 h-4 w-4" />
+                            Create
+                          </Button>
+                        )}
+                      </div>
+                    </div>
+                  )
+                })}
+
+                {sports.length === 0 && (
+                  <p className="text-center text-foreground-muted py-4">
+                    No sports configured. Add sports first.
+                  </p>
+                )}
+              </div>
+            )}
+
+            <div className="mt-4 p-3 bg-background-secondary border-2 border-border">
+              <p className="text-xs text-foreground-muted">
+                <strong>Note:</strong> Teams are created per sport/gender combination.
+                Each team can be scheduled for games in the 2025-2026 season.
+              </p>
+            </div>
+          </Card>
+        )}
+
         {/* Filters */}
-        {!showForm && (
+        {!showForm && !managingTeamsFor && (
           <div className="flex flex-col sm:flex-row gap-3 mb-4">
             <div className="relative flex-1">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-foreground-muted" />
@@ -613,7 +859,7 @@ export default function SchoolsAdminPage() {
         )}
 
         {/* Stats */}
-        {!showForm && (
+        {!showForm && !managingTeamsFor && (
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-6">
             {LEAGUES.slice(0, 4).map((league) => (
               <Card key={league} className="p-3 text-center">
@@ -627,7 +873,7 @@ export default function SchoolsAdminPage() {
         )}
 
         {/* Schools List */}
-        {!showForm && (
+        {!showForm && !managingTeamsFor && (
           <>
             {isLoading ? (
               <div className="flex justify-center py-12">
@@ -646,6 +892,7 @@ export default function SchoolsAdminPage() {
                     school={school}
                     onEdit={() => startEditing(school)}
                     onView={() => router.push(`/school/${school.id}`)}
+                    onManageTeams={() => openTeamManagement(school)}
                   />
                 ))}
               </div>
@@ -662,10 +909,12 @@ function SchoolRow({
   school,
   onEdit,
   onView,
+  onManageTeams,
 }: {
   school: School
   onEdit: () => void
   onView: () => void
+  onManageTeams: () => void
 }) {
   const colors = school.colors as { primary: string; secondary: string } | null
 
@@ -719,10 +968,13 @@ function SchoolRow({
 
         {/* Actions */}
         <div className="flex gap-2">
-          <Button variant="outline" size="sm" onClick={onView}>
+          <Button variant="outline" size="sm" onClick={onManageTeams} title="Manage Teams">
+            <Trophy className="h-4 w-4" />
+          </Button>
+          <Button variant="outline" size="sm" onClick={onView} title="View School">
             <Users className="h-4 w-4" />
           </Button>
-          <Button variant="outline" size="sm" onClick={onEdit}>
+          <Button variant="outline" size="sm" onClick={onEdit} title="Edit School">
             <Edit2 className="h-4 w-4" />
           </Button>
         </div>
