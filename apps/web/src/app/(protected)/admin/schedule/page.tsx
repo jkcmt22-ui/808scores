@@ -222,14 +222,17 @@ export default function ScheduleAdminPage() {
       }
 
       // Fetch teams with school info (needed for game creation)
-      const { data: teamsData } = await supabase
+      const { data: teamsData, error: teamsError } = await supabase
         .from('teams')
         .select('*, school:schools(*)')
         .eq('is_active', true)
         .eq('season_year', '2025-2026')
         .order('school_id')
 
-      if (teamsData) {
+      if (teamsError) {
+        console.error('Error fetching teams:', teamsError)
+      } else if (teamsData) {
+        console.log('Fetched teams count:', teamsData.length)
         setTeams(teamsData as TeamWithSchool[])
       }
     }
@@ -375,23 +378,29 @@ export default function ScheduleAdminPage() {
     setMessage(null)
 
     try {
+      const insertData = {
+        sport_id: formData.sport_id,
+        home_team_id: formData.home_team_id,
+        away_team_id: formData.away_team_id,
+        scheduled_at: new Date(formData.scheduled_at).toISOString(),
+        venue: formData.venue || null,
+        status: formData.status,
+        game_type: formData.game_type,
+        home_score: 0,
+        away_score: 0,
+        streaming_url: formData.streaming_url || null,
+        predictions_enabled: formData.predictions_enabled,
+      }
+      console.log('Inserting game with data:', insertData)
+
       const { error } = await supabase
         .from('games')
-        .insert({
-          sport_id: formData.sport_id,
-          home_team_id: formData.home_team_id,
-          away_team_id: formData.away_team_id,
-          scheduled_at: new Date(formData.scheduled_at).toISOString(),
-          venue: formData.venue || null,
-          status: formData.status,
-          game_type: formData.game_type,
-          home_score: 0,
-          away_score: 0,
-          streaming_url: formData.streaming_url || null,
-          predictions_enabled: formData.predictions_enabled,
-        } as never)
+        .insert(insertData as never)
 
-      if (error) throw error
+      if (error) {
+        console.error('Supabase insert error:', error)
+        throw error
+      }
 
       setMessage({ type: 'success', text: 'Game created successfully' })
       closeForm()
