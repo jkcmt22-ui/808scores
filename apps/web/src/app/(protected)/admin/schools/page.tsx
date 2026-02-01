@@ -39,6 +39,7 @@ interface SchoolFormData {
 const ISLANDS = ['Oahu', 'Maui', 'Hawaii', 'Kauai', 'Molokai', 'Lanai']
 const LEAGUES = ['OIA', 'ILH', 'BIIF', 'MIL', 'KIF']
 const DIVISIONS = ['Division I', 'Division II', 'Open']
+const TEAM_DIVISIONS = ['Division I', 'Division II', 'Open'] as const
 
 const initialFormData: SchoolFormData = {
   name: '',
@@ -317,16 +318,19 @@ export default function SchoolsAdminPage() {
   }
 
   // Create a team for this school
-  const createTeam = async (sportId: string, gender: string) => {
+  const createTeam = async (sportId: string, gender: string, division?: string) => {
     if (!supabase || !managingTeamsFor) return
 
     setIsSaving(true)
+
+    // Default to school's division or 'Division I'
+    const teamDivision = division || managingTeamsFor.division || 'Division I'
 
     const { data, error } = await supabase.from('teams').insert({
       school_id: managingTeamsFor.id,
       sport_id: sportId,
       gender,
-      division: managingTeamsFor.division || null,
+      division: teamDivision,
       league: managingTeamsFor.league || null,
       season_year: '2025-2026',
       is_active: true,
@@ -343,6 +347,25 @@ export default function SchoolsAdminPage() {
     }
 
     setIsSaving(false)
+  }
+
+  // Update team division
+  const updateTeamDivision = async (teamId: string, division: string) => {
+    if (!supabase || !managingTeamsFor) return
+
+    const { error } = await supabase
+      .from('teams')
+      .update({ division } as never)
+      .eq('id', teamId)
+
+    if (error) {
+      console.error('Error updating team division:', error)
+      setMessage({ type: 'error', text: `Failed to update division: ${error.message}` })
+    } else {
+      setMessage({ type: 'success', text: 'Division updated' })
+      // Refresh teams
+      openTeamManagement(managingTeamsFor)
+    }
   }
 
   // Toggle team active status
@@ -375,13 +398,16 @@ export default function SchoolsAdminPage() {
       schoolTeams.map((t) => `${t.sport_id}-${t.gender}`)
     )
 
+    // Default to school's division or 'Division I'
+    const defaultDivision = managingTeamsFor.division || 'Division I'
+
     const teamsToCreate = sports
       .filter((sport) => !existingTeamKeys.has(`${sport.id}-${sport.gender}`))
       .map((sport) => ({
         school_id: managingTeamsFor.id,
         sport_id: sport.id,
         gender: sport.gender,
-        division: managingTeamsFor.division || null,
+        division: defaultDivision,
         league: managingTeamsFor.league || null,
         season_year: '2025-2026',
         is_active: true,
@@ -791,7 +817,7 @@ export default function SchoolsAdminPage() {
                             : 'border-border bg-background-secondary'
                       )}
                     >
-                      <div className="flex items-center gap-3">
+                      <div className="flex items-center gap-3 flex-1">
                         <Badge
                           variant={sport.gender === 'boys' ? 'default' : 'secondary'}
                           className="text-[10px]"
@@ -808,15 +834,29 @@ export default function SchoolsAdminPage() {
                         )}
                       </div>
 
-                      <div className="flex gap-2">
+                      <div className="flex items-center gap-2">
                         {team ? (
-                          <Button
-                            variant={team.is_active ? 'destructive' : 'default'}
-                            size="sm"
-                            onClick={() => toggleTeamActive(team.id, team.is_active)}
-                          >
-                            {team.is_active ? 'Deactivate' : 'Activate'}
-                          </Button>
+                          <>
+                            {/* Division dropdown for existing teams */}
+                            <select
+                              value={team.division || 'Division I'}
+                              onChange={(e) => updateTeamDivision(team.id, e.target.value)}
+                              className="h-8 px-2 text-xs border-2 border-border bg-background text-foreground font-display"
+                            >
+                              {TEAM_DIVISIONS.map((div) => (
+                                <option key={div} value={div}>
+                                  {div}
+                                </option>
+                              ))}
+                            </select>
+                            <Button
+                              variant={team.is_active ? 'destructive' : 'default'}
+                              size="sm"
+                              onClick={() => toggleTeamActive(team.id, team.is_active)}
+                            >
+                              {team.is_active ? 'Deactivate' : 'Activate'}
+                            </Button>
+                          </>
                         ) : (
                           <Button
                             size="sm"

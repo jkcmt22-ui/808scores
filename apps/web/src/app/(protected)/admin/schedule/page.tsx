@@ -605,13 +605,19 @@ export default function ScheduleAdminPage() {
     : []
 
   // Group teams by school for better display
+  // Division II teams show with "II" suffix
   const teamOptions = teamsForSelectedSport
-    .map((t) => ({
-      id: t.id,
-      label: `${t.school.short_name} (${t.gender === 'boys' ? 'B' : t.gender === 'girls' ? 'G' : 'Co'})`,
-      schoolName: t.school.name,
-      gender: t.gender,
-    }))
+    .map((t) => {
+      const divisionSuffix = t.division === 'Division II' ? ' II' : ''
+      const genderLabel = t.gender === 'boys' ? 'B' : t.gender === 'girls' ? 'G' : 'Co'
+      return {
+        id: t.id,
+        label: `${t.school.short_name}${divisionSuffix} (${genderLabel})`,
+        schoolName: t.school.name,
+        gender: t.gender,
+        division: t.division,
+      }
+    })
     .sort((a, b) => a.label.localeCompare(b.label))
 
   return (
