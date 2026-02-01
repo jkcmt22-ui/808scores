@@ -146,6 +146,9 @@ export async function POST(request: NextRequest) {
       .select('id, gender')
       .eq('active', true)
 
+    let teamsCreated = 0
+    let teamsError: string | null = null
+
     if (activeSports && activeSports.length > 0) {
       const teamsToCreate = activeSports.map((sport: { id: string; gender: string }) => ({
         school_id: school.id,
@@ -157,20 +160,27 @@ export async function POST(request: NextRequest) {
         is_active: true,
       }))
 
-      const { error: teamsError } = await supabase
+      const { data: createdTeams, error: teamInsertError } = await supabase
         .from('teams')
         .insert(teamsToCreate as never)
+        .select()
 
-      if (teamsError) {
-        console.error('Teams creation error:', teamsError)
-        // Don't fail the request - school was created, just log the teams error
+      if (teamInsertError) {
+        console.error('Teams creation error:', teamInsertError)
+        teamsError = teamInsertError.message
+      } else {
+        teamsCreated = createdTeams?.length ?? teamsToCreate.length
       }
     }
 
     return NextResponse.json({
       success: true,
       school,
-      message: 'School created successfully',
+      teamsCreated,
+      teamsError,
+      message: teamsError
+        ? `School created but teams failed: ${teamsError}. Go to Schools page and click "Manage Teams" to create them manually.`
+        : `School created successfully with ${teamsCreated} teams`,
     })
   } catch (error) {
     console.error('School creation error:', error)

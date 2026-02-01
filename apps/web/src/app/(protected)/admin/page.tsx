@@ -207,22 +207,31 @@ export default function AdminPage() {
         }
       }
 
-      // Fetch teams with school info (needed for game creation)
-      const { data: teamsData, error: teamsError } = await supabase
-        .from('teams')
-        .select('*, school:schools(*)')
-        .eq('is_active', true)
-        .eq('season_year', '2025-2026')
-        .order('school_id')
-
-      if (!teamsError && teamsData) {
-        setTeams(teamsData as TeamWithSchool[])
-      }
+      // Fetch teams
+      await fetchTeams()
     } catch (err) {
       console.error('Error fetching common data:', err)
     } finally {
       endTimer()
     }
+  }, [supabase])
+
+  // Separate function to fetch teams (can be called to refresh after adding schools)
+  const fetchTeams = useCallback(async () => {
+    if (!supabase) return
+
+    const { data: teamsData, error: teamsError } = await supabase
+      .from('teams')
+      .select('*, school:schools(*)')
+      .eq('is_active', true)
+      .eq('season_year', '2025-2026')
+      .order('school_id')
+
+    if (!teamsError && teamsData) {
+      setTeams(teamsData as TeamWithSchool[])
+      return teamsData.length
+    }
+    return 0
   }, [supabase])
 
   // Fetch games
@@ -1136,7 +1145,22 @@ export default function AdminPage() {
         {/* Create Tab */}
         {activeTab === 'create' && (
           <Card className="p-4">
-            <h2 className="font-display font-bold text-lg mb-4 neon-text-green">Create New Game</h2>
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="font-display font-bold text-lg neon-text-green">Create New Game</h2>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={async () => {
+                  setMessage({ type: 'success', text: 'Refreshing teams...' })
+                  const count = await fetchTeams()
+                  setMessage({ type: 'success', text: `Loaded ${count} teams` })
+                }}
+                title="Refresh teams (use after adding new schools)"
+              >
+                <RefreshCw className="h-4 w-4 mr-1" />
+                <span className="text-xs">{teams.length} teams</span>
+              </Button>
+            </div>
             <GameForm
               formData={formData}
               onChange={handleFormChange}

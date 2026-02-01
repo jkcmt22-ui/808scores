@@ -184,7 +184,21 @@ export default function SchoolsAdminPage() {
         throw new Error(errorMessage)
       }
 
-      setMessage({ type: 'success', text: 'School created successfully' })
+      const result = await response.json()
+
+      // Show detailed success message with team creation info
+      if (result.teamsError) {
+        setMessage({
+          type: 'error',
+          text: `School created but teams failed. Click "Manage Teams" on the school to create them.`
+        })
+      } else {
+        setMessage({
+          type: 'success',
+          text: `School created with ${result.teamsCreated || 0} teams. Ready to add games!`
+        })
+      }
+
       setFormData(initialFormData)
       setShowForm(false)
 

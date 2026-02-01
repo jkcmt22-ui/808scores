@@ -18,6 +18,7 @@ import {
   Copy,
   Trash2,
   BarChart3,
+  RefreshCw,
 } from 'lucide-react'
 import { Button, Badge, Input, Card } from '@/components/ui'
 import { useAuth } from '@/hooks'
@@ -255,26 +256,33 @@ export default function ScheduleAdminPage() {
         }
       }
 
-      // Fetch teams with school info (needed for game creation)
-      const { data: teamsData, error: teamsError } = await supabase
-        .from('teams')
-        .select('*, school:schools(*)')
-        .eq('is_active', true)
-        .eq('season_year', '2025-2026')
-        .order('school_id')
-
-      if (teamsError) {
-        console.error('Error fetching teams:', teamsError)
-      } else if (teamsData) {
-        console.log('Fetched teams count:', teamsData.length)
-        setTeams(teamsData as TeamWithSchool[])
-      }
+      // Fetch teams
+      await fetchTeams()
     }
 
     if (hasAdminAccess) {
       fetchInitialData()
     }
   }, [supabase, hasAdminAccess])
+
+  // Separate function to fetch teams (can be called to refresh)
+  const fetchTeams = useCallback(async () => {
+    if (!supabase) return
+
+    const { data: teamsData, error: teamsError } = await supabase
+      .from('teams')
+      .select('*, school:schools(*)')
+      .eq('is_active', true)
+      .eq('season_year', '2025-2026')
+      .order('school_id')
+
+    if (teamsError) {
+      console.error('Error fetching teams:', teamsError)
+    } else if (teamsData) {
+      console.log('Fetched teams count:', teamsData.length)
+      setTeams(teamsData as TeamWithSchool[])
+    }
+  }, [supabase])
 
   // Fetch games when week changes
   useEffect(() => {
@@ -619,9 +627,23 @@ export default function ScheduleAdminPage() {
               Schedule
             </h1>
           </div>
-          <Button variant="outline" size="sm" onClick={goToToday}>
-            Today
-          </Button>
+          <div className="flex items-center gap-2">
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={async () => {
+                setMessage({ type: 'success', text: 'Refreshing teams...' })
+                await fetchTeams()
+                setMessage({ type: 'success', text: `Loaded ${teams.length} teams` })
+              }}
+              title="Refresh teams (use after adding new schools)"
+            >
+              <RefreshCw className="h-4 w-4" />
+            </Button>
+            <Button variant="outline" size="sm" onClick={goToToday}>
+              Today
+            </Button>
+          </div>
         </div>
       </header>
 
