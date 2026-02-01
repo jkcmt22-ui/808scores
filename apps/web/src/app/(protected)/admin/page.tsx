@@ -40,7 +40,7 @@ import { cn, formatGameTime, isGameLive, isGameFinal } from '@/lib/utils'
 import { adminCache } from '@/lib/admin-cache'
 import { perf } from '@/lib/perf'
 import { getPeriodOptions, getPeriodTypeLabel, isInningsBased, type PeriodOption } from '@/lib/sport-periods'
-import type { GameWithTeams, Sport, School, GameStatus, GameType, TrustedReporterCode, PeriodsConfig } from '@/types/database'
+import type { GameWithTeams, Sport, School, GameStatus, GameType, TrustedReporterCode, PeriodsConfig, TeamWithSchool } from '@/types/database'
 import { getHomeSchool, getAwaySchool } from '@/types/database'
 
 type TabType = 'games' | 'create' | 'applications' | 'codes' | 'users'
@@ -128,6 +128,7 @@ export default function AdminPage() {
   const [games, setGames] = useState<GameWithTeams[]>([])
   const [sports, setSports] = useState<Sport[]>([])
   const [schools, setSchools] = useState<School[]>([])
+  const [teams, setTeams] = useState<TeamWithSchool[]>([])
   const [loadingStates, setLoadingStates] = useState<Record<TabType, boolean>>({
     games: false,
     create: false,
@@ -204,6 +205,18 @@ export default function AdminPage() {
           setSchools(schools)
           adminCache.setSchools(schools)
         }
+      }
+
+      // Fetch teams with school info (needed for game creation)
+      const { data: teamsData, error: teamsError } = await supabase
+        .from('teams')
+        .select('*, school:schools(*)')
+        .eq('is_active', true)
+        .eq('season_year', '2025-2026')
+        .order('school_id')
+
+      if (!teamsError && teamsData) {
+        setTeams(teamsData as TeamWithSchool[])
       }
     } catch (err) {
       console.error('Error fetching common data:', err)
@@ -430,7 +443,13 @@ export default function AdminPage() {
 
   // Handle form changes
   const handleFormChange = (field: keyof GameFormData, value: string | number | boolean) => {
-    setFormData((prev) => ({ ...prev, [field]: value }))
+    setFormData((prev) => {
+      // Clear team selections when sport changes (teams are sport-specific)
+      if (field === 'sport_id' && value !== prev.sport_id) {
+        return { ...prev, sport_id: value as string, home_team_id: '', away_team_id: '' }
+      }
+      return { ...prev, [field]: value }
+    })
   }
 
   // Create game
@@ -963,7 +982,7 @@ export default function AdminPage() {
               formData={formData}
               onChange={handleFormChange}
               sports={sports}
-              schools={schools}
+              teams={teams}
               isEdit={true}
               editingGame={editingGame}
             />
@@ -1129,7 +1148,7 @@ export default function AdminPage() {
               formData={formData}
               onChange={handleFormChange}
               sports={sports}
-              schools={schools}
+              teams={teams}
               isEdit={false}
               editingGame={null}
             />
@@ -1900,17 +1919,31 @@ function GameForm({
   formData,
   onChange,
   sports,
-  schools,
+  teams,
   isEdit,
   editingGame,
 }: {
   formData: GameFormData
   onChange: (field: keyof GameFormData, value: string | number | boolean) => void
   sports: Sport[]
-  schools: School[]
+  teams: TeamWithSchool[]
   isEdit: boolean
   editingGame?: GameWithTeams | null
 }) {
+  // Filter teams by selected sport for the form dropdowns
+  const teamsForSelectedSport = formData.sport_id
+    ? teams.filter((t) => t.sport_id === formData.sport_id)
+    : []
+
+  // Group teams by school for better display
+  const teamOptions = teamsForSelectedSport
+    .map((t) => ({
+      id: t.id,
+      label: `${t.school.short_name} (${t.gender === 'boys' ? 'B' : t.gender === 'girls' ? 'G' : 'Co'})`,
+      schoolName: t.school.name,
+      gender: t.gender,
+    }))
+    .sort((a, b) => a.label.localeCompare(b.label))
   // Get the selected sport for period options
   const selectedSport = isEdit && editingGame
     ? editingGame.sport
@@ -1949,11 +1982,12 @@ function GameForm({
                 value={formData.away_team_id}
                 onChange={(e) => onChange('away_team_id', e.target.value)}
                 className="w-full h-10 px-3 border-2 border-border bg-background text-foreground font-display text-sm"
+                disabled={!formData.sport_id}
               >
-                <option value="">Select team...</option>
-                {schools.map((school) => (
-                  <option key={school.id} value={school.id}>
-                    {school.name}
+                <option value="">{formData.sport_id ? 'Select team...' : 'Select sport first'}</option>
+                {teamOptions.map((team) => (
+                  <option key={team.id} value={team.id}>
+                    {team.label}
                   </option>
                 ))}
               </select>
@@ -1964,11 +1998,12 @@ function GameForm({
                 value={formData.home_team_id}
                 onChange={(e) => onChange('home_team_id', e.target.value)}
                 className="w-full h-10 px-3 border-2 border-border bg-background text-foreground font-display text-sm"
+                disabled={!formData.sport_id}
               >
-                <option value="">Select team...</option>
-                {schools.map((school) => (
-                  <option key={school.id} value={school.id}>
-                    {school.name}
+                <option value="">{formData.sport_id ? 'Select team...' : 'Select sport first'}</option>
+                {teamOptions.map((team) => (
+                  <option key={team.id} value={team.id}>
+                    {team.label}
                   </option>
                 ))}
               </select>
