@@ -36,7 +36,7 @@ import {
 import { Button, Badge, Input, Card } from '@/components/ui'
 import { useAuth } from '@/hooks'
 import { createClient } from '@/lib/supabase/client'
-import { cn, formatGameTime, isGameLive, isGameFinal } from '@/lib/utils'
+import { cn, formatGameTime, isGameLive, isGameFinal, hawaiiDatetimeToUTC, utcToHawaiiDatetime } from '@/lib/utils'
 import { adminCache } from '@/lib/admin-cache'
 import { perf } from '@/lib/perf'
 import { getPeriodOptions, getPeriodTypeLabel, isInningsBased, type PeriodOption } from '@/lib/sport-periods'
@@ -464,19 +464,12 @@ export default function AdminPage() {
     setMessage(null)
 
     try {
-      // Parse the datetime-local input value as Hawaii time
-      // The input gives us a string like "2024-01-15T19:00" which is already in Hawaii time
-      // We need to append the timezone offset to prevent UTC conversion
-      const hawaiiOffset = '-10:00' // Hawaii is UTC-10
-      const scheduledAtHawaii = formData.scheduled_at.includes('T')
-        ? `${formData.scheduled_at}:00${hawaiiOffset}`
-        : `${formData.scheduled_at}${hawaiiOffset}`
-
+      // Convert datetime-local input (Hawaii time) to UTC
       const gameData = {
         sport_id: formData.sport_id,
         home_team_id: formData.home_team_id,
         away_team_id: formData.away_team_id,
-        scheduled_at: new Date(scheduledAtHawaii).toISOString(),
+        scheduled_at: hawaiiDatetimeToUTC(formData.scheduled_at),
         venue: formData.venue || null,
         status: formData.status,
         game_type: formData.game_type,
@@ -808,7 +801,7 @@ export default function AdminPage() {
       sport_id: game.sport_id,
       home_team_id: game.home_team_id,
       away_team_id: game.away_team_id,
-      scheduled_at: new Date(game.scheduled_at).toISOString().slice(0, 16),
+      scheduled_at: utcToHawaiiDatetime(game.scheduled_at),
       venue: game.venue || '',
       status: game.status,
       game_type: game.game_type,

@@ -208,6 +208,100 @@ export function getScoreDeadline(scheduledAt: string | Date): Date {
  * Only allows relative paths that start with "/" and don't contain "//".
  * Returns "/" if the URL is invalid or potentially malicious.
  */
+/**
+ * Hawaii timezone utilities
+ * Hawaii is always UTC-10 (no daylight saving time)
+ */
+const HAWAII_OFFSET_HOURS = -10
+const HAWAII_OFFSET_MS = HAWAII_OFFSET_HOURS * 60 * 60 * 1000
+
+/**
+ * Convert a datetime-local input value to a UTC ISO string, treating the input as Hawaii time.
+ * datetime-local gives us "2024-02-02T17:30" which we interpret as Hawaii time.
+ * @param datetimeLocal - Value from datetime-local input (e.g., "2024-02-02T17:30")
+ * @returns ISO string in UTC
+ */
+export function hawaiiDatetimeToUTC(datetimeLocal: string): string {
+  if (!datetimeLocal) return ''
+
+  // Parse the datetime-local value as Hawaii time
+  // Add the Hawaii offset to get UTC
+  // datetime-local gives "2024-02-02T17:30", we append Hawaii offset
+  const hawaiiDatetime = `${datetimeLocal}:00.000${HAWAII_OFFSET_HOURS >= 0 ? '+' : ''}${String(HAWAII_OFFSET_HOURS).padStart(3, '0').replace('-', '-0')}:00`
+
+  // Use a simpler approach: parse without timezone, then adjust
+  const [datePart, timePart] = datetimeLocal.split('T')
+  const [year, month, day] = datePart.split('-').map(Number)
+  const [hours, minutes] = timePart.split(':').map(Number)
+
+  // Create a date in UTC that represents this Hawaii time
+  // If it's 5:30 PM Hawaii (UTC-10), that's 3:30 AM next day UTC
+  const utcHours = hours - HAWAII_OFFSET_HOURS // Subtract negative offset = add 10
+
+  const utcDate = new Date(Date.UTC(year, month - 1, day, utcHours, minutes, 0, 0))
+  return utcDate.toISOString()
+}
+
+/**
+ * Convert a UTC date to a datetime-local value in Hawaii time.
+ * @param utcDate - Date object or ISO string in UTC
+ * @returns Value suitable for datetime-local input (e.g., "2024-02-02T17:30")
+ */
+export function utcToHawaiiDatetime(utcDate: string | Date): string {
+  const d = new Date(utcDate)
+
+  // Get Hawaii time components
+  const options: Intl.DateTimeFormatOptions = {
+    timeZone: 'Pacific/Honolulu',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: false,
+  }
+
+  const formatter = new Intl.DateTimeFormat('en-CA', options)
+  const parts = formatter.formatToParts(d)
+
+  const getPart = (type: string) => parts.find(p => p.type === type)?.value || ''
+
+  const year = getPart('year')
+  const month = getPart('month')
+  const day = getPart('day')
+  const hour = getPart('hour')
+  const minute = getPart('minute')
+
+  return `${year}-${month}-${day}T${hour}:${minute}`
+}
+
+/**
+ * Get today's date in Hawaii timezone as YYYY-MM-DD
+ */
+export function getTodayHawaii(): string {
+  return new Date().toLocaleDateString('en-CA', { timeZone: 'Pacific/Honolulu' })
+}
+
+/**
+ * Get the start of a day in Hawaii time as a UTC Date
+ */
+export function getHawaiiDayStartUTC(date: Date): Date {
+  const hawaiiDate = date.toLocaleDateString('en-CA', { timeZone: 'Pacific/Honolulu' })
+  const [year, month, day] = hawaiiDate.split('-').map(Number)
+  // Midnight Hawaii = 10:00 UTC same day
+  return new Date(Date.UTC(year, month - 1, day, 10, 0, 0, 0))
+}
+
+/**
+ * Get the end of a day in Hawaii time as a UTC Date
+ */
+export function getHawaiiDayEndUTC(date: Date): Date {
+  const hawaiiDate = date.toLocaleDateString('en-CA', { timeZone: 'Pacific/Honolulu' })
+  const [year, month, day] = hawaiiDate.split('-').map(Number)
+  // 11:59:59 PM Hawaii = 09:59:59 UTC next day
+  return new Date(Date.UTC(year, month - 1, day + 1, 9, 59, 59, 999))
+}
+
 export function getSafeRedirectUrl(url: string | null, fallback: string = '/'): string {
   if (!url) {
     return fallback

@@ -22,7 +22,7 @@ import {
 import { Button, Badge, Input, Card } from '@/components/ui'
 import { useAuth } from '@/hooks'
 import { createClient } from '@/lib/supabase/client'
-import { cn } from '@/lib/utils'
+import { cn, hawaiiDatetimeToUTC, utcToHawaiiDatetime, getHawaiiDayStartUTC, getHawaiiDayEndUTC } from '@/lib/utils'
 import { adminCache } from '@/lib/admin-cache'
 import type { GameWithTeams, Sport, School, GameStatus, GameType, TeamWithSchool } from '@/types/database'
 import { getHomeSchool, getAwaySchool } from '@/types/database'
@@ -159,6 +159,10 @@ export default function ScheduleAdminPage() {
 
     setIsLoading(true)
 
+    // Get week boundaries in Hawaii time
+    const weekStartUTC = getHawaiiDayStartUTC(currentWeekStart)
+    const weekEndUTC = getHawaiiDayEndUTC(weekEnd)
+
     // After migration 072, games reference teams instead of schools
     const { data, error } = await supabase
       .from('games')
@@ -168,8 +172,8 @@ export default function ScheduleAdminPage() {
         home_team:teams!games_home_team_id_fkey(*, school:schools(*)),
         away_team:teams!games_away_team_id_fkey(*, school:schools(*))
       `)
-      .gte('scheduled_at', currentWeekStart.toISOString())
-      .lte('scheduled_at', weekEnd.toISOString())
+      .gte('scheduled_at', weekStartUTC.toISOString())
+      .lte('scheduled_at', weekEndUTC.toISOString())
       .order('scheduled_at', { ascending: true })
 
     if (error) {
@@ -270,18 +274,20 @@ export default function ScheduleAdminPage() {
     })
   }, [games, sportFilter, leagueFilter, searchTerm])
 
-  // Group games by day
+  // Group games by day (using Hawaii timezone)
   const gamesByDay = useMemo(() => {
     const grouped = new Map<string, GameWithTeams[]>()
 
     for (const day of weekDays) {
-      const key = day.toISOString().split('T')[0]
+      // Get the day in Hawaii timezone
+      const key = day.toLocaleDateString('en-CA', { timeZone: 'Pacific/Honolulu' })
       grouped.set(key, [])
     }
 
     for (const game of filteredGames) {
       const gameDate = new Date(game.scheduled_at)
-      const key = gameDate.toISOString().split('T')[0]
+      // Get the game date in Hawaii timezone
+      const key = gameDate.toLocaleDateString('en-CA', { timeZone: 'Pacific/Honolulu' })
       if (grouped.has(key)) {
         grouped.get(key)!.push(game)
       }
@@ -319,9 +325,10 @@ export default function ScheduleAdminPage() {
   }
 
   const openAddForm = (date: Date) => {
-    const localDate = new Date(date)
-    localDate.setHours(17, 0, 0, 0) // Default to 5 PM
-    const formatted = localDate.toISOString().slice(0, 16)
+    // Get the date in Hawaii timezone format
+    const hawaiiDateStr = date.toLocaleDateString('en-CA', { timeZone: 'Pacific/Honolulu' })
+    // Default to 5 PM Hawaii time
+    const formatted = `${hawaiiDateStr}T17:00`
 
     setSelectedDate(date)
     setEditingGame(null)
@@ -340,7 +347,7 @@ export default function ScheduleAdminPage() {
       sport_id: game.sport_id,
       home_team_id: game.home_team_id,
       away_team_id: game.away_team_id,
-      scheduled_at: new Date(game.scheduled_at).toISOString().slice(0, 16),
+      scheduled_at: utcToHawaiiDatetime(game.scheduled_at),
       venue: game.venue || '',
       status: game.status,
       game_type: game.game_type,
@@ -382,7 +389,7 @@ export default function ScheduleAdminPage() {
         sport_id: formData.sport_id,
         home_team_id: formData.home_team_id,
         away_team_id: formData.away_team_id,
-        scheduled_at: new Date(formData.scheduled_at).toISOString(),
+        scheduled_at: hawaiiDatetimeToUTC(formData.scheduled_at),
         venue: formData.venue || null,
         status: formData.status,
         game_type: formData.game_type,
@@ -391,7 +398,7 @@ export default function ScheduleAdminPage() {
         streaming_url: formData.streaming_url || null,
         predictions_enabled: formData.predictions_enabled,
       }
-      console.log('Inserting game with data:', insertData)
+      console.log('Inserting game with data:', insertData, 'from Hawaii time:', formData.scheduled_at)
 
       const { error } = await supabase
         .from('games')
@@ -432,7 +439,7 @@ export default function ScheduleAdminPage() {
           sport_id: formData.sport_id,
           home_team_id: formData.home_team_id,
           away_team_id: formData.away_team_id,
-          scheduled_at: new Date(formData.scheduled_at).toISOString(),
+          scheduled_at: hawaiiDatetimeToUTC(formData.scheduled_at),
           venue: formData.venue || null,
           status: formData.status,
           game_type: formData.game_type,
@@ -669,7 +676,7 @@ export default function ScheduleAdminPage() {
         ) : (
           <div className="space-y-4">
             {weekDays.map((day) => {
-              const dateKey = day.toISOString().split('T')[0]
+              const dateKey = day.toLocaleDateString('en-CA', { timeZone: 'Pacific/Honolulu' })
               const dayGames = gamesByDay.get(dateKey) || []
               const dayIsToday = isToday(day)
 
