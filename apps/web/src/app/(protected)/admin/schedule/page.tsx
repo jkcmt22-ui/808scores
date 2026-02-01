@@ -51,39 +51,71 @@ const initialFormData: GameFormData = {
   predictions_enabled: false,
 }
 
-// Get start of week (Sunday)
-function getWeekStart(date: Date): Date {
-  const d = new Date(date)
-  const day = d.getDay()
-  d.setDate(d.getDate() - day)
-  d.setHours(0, 0, 0, 0)
-  return d
+// Hawaii timezone constant
+const HAWAII_TZ = 'Pacific/Honolulu'
+
+// Get Hawaii date string (YYYY-MM-DD) from a Date object
+function getHawaiiDateString(date: Date): string {
+  return date.toLocaleDateString('en-CA', { timeZone: HAWAII_TZ })
 }
 
-// Get end of week (Saturday)
+// Get Hawaii day of week (0 = Sunday)
+function getHawaiiDayOfWeek(date: Date): number {
+  const formatter = new Intl.DateTimeFormat('en-US', {
+    timeZone: HAWAII_TZ,
+    weekday: 'short',
+  })
+  const dayName = formatter.format(date)
+  const dayMap: Record<string, number> = { Sun: 0, Mon: 1, Tue: 2, Wed: 3, Thu: 4, Fri: 5, Sat: 6 }
+  return dayMap[dayName] ?? 0
+}
+
+// Get start of week (Sunday) in Hawaii timezone
+function getWeekStart(date: Date): Date {
+  // Get the Hawaii date string
+  const hawaiiDateStr = getHawaiiDateString(date)
+  const [year, month, day] = hawaiiDateStr.split('-').map(Number)
+
+  // Create a date at midnight Hawaii time (which is 10:00 UTC)
+  const hawaiiDate = new Date(Date.UTC(year, month - 1, day, 10, 0, 0, 0))
+
+  // Get the day of week in Hawaii
+  const dayOfWeek = getHawaiiDayOfWeek(hawaiiDate)
+
+  // Subtract days to get to Sunday
+  hawaiiDate.setUTCDate(hawaiiDate.getUTCDate() - dayOfWeek)
+
+  return hawaiiDate
+}
+
+// Get end of week (Saturday) in Hawaii timezone
 function getWeekEnd(date: Date): Date {
   const d = getWeekStart(date)
-  d.setDate(d.getDate() + 6)
-  d.setHours(23, 59, 59, 999)
+  // Add 6 days and set to end of day Hawaii time (23:59:59 Hawaii = 09:59:59 UTC next day)
+  d.setUTCDate(d.getUTCDate() + 6)
+  // Move to end of day in Hawaii (09:59:59 UTC next day)
+  d.setUTCHours(9, 59, 59, 999)
+  d.setUTCDate(d.getUTCDate() + 1)
   return d
 }
 
-// Format date for display
+// Format date for display in Hawaii timezone
 function formatDateDisplay(date: Date): string {
   return date.toLocaleDateString('en-US', {
     weekday: 'short',
     month: 'short',
     day: 'numeric',
+    timeZone: HAWAII_TZ,
   })
 }
 
-// Format date for week header
+// Format date for week header in Hawaii timezone
 function formatWeekHeader(start: Date, end: Date): string {
-  const startMonth = start.toLocaleDateString('en-US', { month: 'short' })
-  const endMonth = end.toLocaleDateString('en-US', { month: 'short' })
-  const startDay = start.getDate()
-  const endDay = end.getDate()
-  const year = end.getFullYear()
+  const startMonth = start.toLocaleDateString('en-US', { month: 'short', timeZone: HAWAII_TZ })
+  const endMonth = end.toLocaleDateString('en-US', { month: 'short', timeZone: HAWAII_TZ })
+  const startDay = parseInt(start.toLocaleDateString('en-US', { day: 'numeric', timeZone: HAWAII_TZ }))
+  const endDay = parseInt(end.toLocaleDateString('en-US', { day: 'numeric', timeZone: HAWAII_TZ }))
+  const year = parseInt(start.toLocaleDateString('en-US', { year: 'numeric', timeZone: HAWAII_TZ }))
 
   if (startMonth === endMonth) {
     return `${startMonth} ${startDay} - ${endDay}, ${year}`
@@ -91,27 +123,25 @@ function formatWeekHeader(start: Date, end: Date): string {
   return `${startMonth} ${startDay} - ${endMonth} ${endDay}, ${year}`
 }
 
-// Get days of the week
+// Get days of the week starting from weekStart
 function getWeekDays(weekStart: Date): Date[] {
   const days: Date[] = []
   for (let i = 0; i < 7; i++) {
     const d = new Date(weekStart)
-    d.setDate(d.getDate() + i)
+    d.setUTCDate(d.getUTCDate() + i)
     days.push(d)
   }
   return days
 }
 
-// Check if two dates are the same day
+// Check if two dates are the same day in Hawaii timezone
 function isSameDay(date1: Date, date2: Date): boolean {
-  return (
-    date1.getFullYear() === date2.getFullYear() &&
-    date1.getMonth() === date2.getMonth() &&
-    date1.getDate() === date2.getDate()
-  )
+  const str1 = getHawaiiDateString(date1)
+  const str2 = getHawaiiDateString(date2)
+  return str1 === str2
 }
 
-// Check if date is today
+// Check if date is today in Hawaii timezone
 function isToday(date: Date): boolean {
   return isSameDay(date, new Date())
 }
@@ -491,8 +521,10 @@ export default function ScheduleAdminPage() {
       return
     }
 
+    // The scheduled_at is stored in UTC, so we can just add days directly
+    // Since we're adding whole days, the UTC offset doesn't matter
     const newDate = new Date(game.scheduled_at)
-    newDate.setDate(newDate.getDate() + daysToAdd)
+    newDate.setUTCDate(newDate.getUTCDate() + daysToAdd)
 
     try {
       const { error } = await supabase
