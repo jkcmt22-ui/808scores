@@ -30,6 +30,7 @@ interface UseTeamRosterOptions {
   schoolId: string | null
   sportId?: string | null
   gender?: TeamGender | null
+  division?: string | null  // "Division I", "Division II", "Open", etc.
   seasonYear?: string  // "2025-2026" format
 }
 
@@ -77,7 +78,7 @@ export function parseSeasonYear(seasonYear: string): number {
 // ============================================
 
 export function useTeamRoster(options: UseTeamRosterOptions): UseTeamRosterReturn {
-  const { schoolId, sportId, gender, seasonYear } = options
+  const { schoolId, sportId, gender, division, seasonYear } = options
   const [teams, setTeams] = useState<TeamWithRoster[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -113,6 +114,10 @@ export function useTeamRoster(options: UseTeamRosterOptions): UseTeamRosterRetur
 
       if (gender) {
         teamsQuery = teamsQuery.eq('gender', gender)
+      }
+
+      if (division) {
+        teamsQuery = teamsQuery.eq('division', division)
       }
 
       const { data: teamsData, error: teamsError } = await teamsQuery
@@ -207,7 +212,7 @@ export function useTeamRoster(options: UseTeamRosterOptions): UseTeamRosterRetur
     } finally {
       setIsLoading(false)
     }
-  }, [supabase, schoolId, sportId, gender, currentSeasonYear])
+  }, [supabase, schoolId, sportId, gender, division, currentSeasonYear])
 
   useEffect(() => {
     fetchTeamRosters()

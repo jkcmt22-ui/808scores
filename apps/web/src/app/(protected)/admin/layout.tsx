@@ -91,7 +91,7 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
       const retryKey = 'admin-auth-retry'
       const hasRetried = sessionStorage.getItem(retryKey) === 'true'
 
-      // Timeout after 15 seconds
+      // Timeout after 30 seconds
       const timeout = setTimeout(() => {
         if (!hasRetried) {
           // Auto-retry once
@@ -102,7 +102,7 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
           setLoadingTimeout(true)
           logLoadingEnd(loadingIdRef.current, 'timeout')
         }
-      }, 15000)
+      }, 30000)
 
       return () => clearTimeout(timeout)
     } else if (loadingIdRef.current) {

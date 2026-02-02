@@ -65,10 +65,11 @@ export default function AdminRostersPage() {
   const { schools, isLoading: schoolsLoading } = useSchools()
   const { sports, isLoading: sportsLoading } = useSports()
 
-  // Selection state - now includes gender
+  // Selection state - now includes gender and division
   const [selectedSchoolId, setSelectedSchoolId] = useState<string | null>(null)
   const [selectedSportId, setSelectedSportId] = useState<string | null>(null)
   const [selectedGender, setSelectedGender] = useState<TeamGender | null>(null)
+  const [selectedDivision, setSelectedDivision] = useState<string | null>(null)
   const [seasonYear, setSeasonYear] = useState<string>(getCurrentSeasonYear())
 
   // UI state
@@ -117,7 +118,38 @@ export default function AdminRostersPage() {
   // Get current school, sport, and team for display
   const selectedSchool = schools.find(s => s.id === selectedSchoolId)
   const selectedSport = sports.find(s => s.id === selectedSportId)
-  const currentTeam = teams.length > 0 ? teams[0] : null
+
+  // Extract available divisions from fetched teams
+  const availableDivisions = useMemo(() => {
+    const divisions = new Set<string>()
+    teams.forEach(t => {
+      if (t.team.division) {
+        divisions.add(t.team.division)
+      }
+    })
+    return Array.from(divisions).sort()
+  }, [teams])
+
+  // Auto-select division when only one is available
+  useEffect(() => {
+    if (availableDivisions.length === 1 && !selectedDivision) {
+      setSelectedDivision(availableDivisions[0])
+    } else if (availableDivisions.length > 1 && selectedDivision && !availableDivisions.includes(selectedDivision)) {
+      // Reset if selected division is no longer available
+      setSelectedDivision(null)
+    }
+  }, [availableDivisions, selectedDivision])
+
+  // Filter to get the current team based on selected division
+  const currentTeam = useMemo(() => {
+    if (teams.length === 0) return null
+    if (teams.length === 1) return teams[0]
+    if (selectedDivision) {
+      return teams.find(t => t.team.division === selectedDivision) || null
+    }
+    // If no division selected and multiple teams, return null to force selection
+    return null
+  }, [teams, selectedDivision])
 
   // Get all players from the current team
   const allPlayers = currentTeam?.players || []
@@ -160,8 +192,8 @@ export default function AdminRostersPage() {
       return
     }
 
-    if (!hasFullContext) {
-      setMessage({ type: 'error', text: 'Please select school, sport, and gender first' })
+    if (!hasFullContext || !currentTeam) {
+      setMessage({ type: 'error', text: 'Please select school, sport, gender, and division first' })
       return
     }
 
@@ -177,18 +209,8 @@ export default function AdminRostersPage() {
       return
     }
 
-    // Get or create the team
-    const team = await getOrCreateTeam({
-      schoolId: selectedSchoolId!,
-      sportId: selectedSportId!,
-      gender: selectedGender!,
-      seasonYear,
-    })
-
-    if (!team) {
-      setMessage({ type: 'error', text: 'Failed to create team' })
-      return
-    }
+    // Use the currently selected team
+    const team = currentTeam.team
 
     // Add to roster with form data
     const rosterSuccess = await addToTeamRoster(team.id, newPlayer.id, {
@@ -318,8 +340,8 @@ export default function AdminRostersPage() {
       )}
 
       <div className="px-4 py-6 max-w-4xl mx-auto">
-        {/* Selectors - School, Sport, Gender, Season */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+        {/* Selectors - School, Sport, Gender, Division, Season */}
+        <div className="grid grid-cols-1 md:grid-cols-5 gap-4 mb-6">
           {/* School selector */}
           <div>
             <label className="block text-sm font-display text-foreground-muted mb-2">
@@ -332,6 +354,7 @@ export default function AdminRostersPage() {
                 // Reset downstream selections when school changes
                 setSelectedSportId(null)
                 setSelectedGender(null)
+                setSelectedDivision(null)
               }}
               className="w-full px-3 py-2 bg-background-secondary border border-border rounded-lg text-foreground focus:outline-none focus:border-neon-blue"
               disabled={schoolsLoading}
@@ -354,8 +377,9 @@ export default function AdminRostersPage() {
               value={selectedSportId || ''}
               onChange={e => {
                 setSelectedSportId(e.target.value || null)
-                // Reset gender when sport changes
+                // Reset gender and division when sport changes
                 setSelectedGender(null)
+                setSelectedDivision(null)
               }}
               className="w-full px-3 py-2 bg-background-secondary border border-border rounded-lg text-foreground focus:outline-none focus:border-neon-blue"
               disabled={sportsLoading || !selectedSchoolId}
@@ -383,7 +407,10 @@ export default function AdminRostersPage() {
             </label>
             <select
               value={selectedGender || ''}
-              onChange={e => setSelectedGender(e.target.value as TeamGender || null)}
+              onChange={e => {
+                setSelectedGender(e.target.value as TeamGender || null)
+                setSelectedDivision(null)
+              }}
               className="w-full px-3 py-2 bg-background-secondary border border-border rounded-lg text-foreground focus:outline-none focus:border-neon-blue"
               disabled={!selectedSportId}
             >
@@ -393,6 +420,32 @@ export default function AdminRostersPage() {
                   {option.label}
                 </option>
               ))}
+            </select>
+          </div>
+
+          {/* Division selector - only show if multiple divisions available */}
+          <div>
+            <label className="block text-sm font-display text-foreground-muted mb-2">
+              Division {availableDivisions.length > 1 ? '*' : ''}
+            </label>
+            <select
+              value={selectedDivision || ''}
+              onChange={e => setSelectedDivision(e.target.value || null)}
+              className="w-full px-3 py-2 bg-background-secondary border border-border rounded-lg text-foreground focus:outline-none focus:border-neon-blue"
+              disabled={!selectedGender || availableDivisions.length === 0}
+            >
+              {availableDivisions.length === 0 ? (
+                <option value="">No teams</option>
+              ) : availableDivisions.length === 1 ? (
+                <option value={availableDivisions[0]}>{availableDivisions[0]}</option>
+              ) : (
+                <>
+                  <option value="">Select division...</option>
+                  {availableDivisions.map(div => (
+                    <option key={div} value={div}>{div}</option>
+                  ))}
+                </>
+              )}
             </select>
           </div>
 
@@ -415,8 +468,8 @@ export default function AdminRostersPage() {
           </div>
         </div>
 
-        {/* Pinned context header - shows when all selections are made */}
-        {hasFullContext && selectedSchool && selectedSport && (
+        {/* Pinned context header - shows when all selections are made and team is selected */}
+        {hasFullContext && selectedSchool && selectedSport && currentTeam && (
           <div className="mb-6 p-4 rounded-lg bg-neon-blue/10 border border-neon-blue/30">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3">
@@ -427,8 +480,9 @@ export default function AdminRostersPage() {
                   </h2>
                   <p className="text-sm text-foreground-muted">
                     {selectedGender === 'boys' ? 'Boys' : 'Girls'}{' '}
-                    {selectedSport.name.replace(/^(Boys|Girls)\s+/i, '')}{' '}
-                    {seasonYear}
+                    {selectedSport.name.replace(/^(Boys|Girls)\s+/i, '')}
+                    {currentTeam?.team.division && ` - ${currentTeam.team.division}`}{' '}
+                    ({seasonYear})
                   </p>
                 </div>
               </div>
@@ -451,6 +505,23 @@ export default function AdminRostersPage() {
             <Users className="h-12 w-12 mx-auto text-foreground-muted mb-4" />
             <p className="text-foreground-muted">
               Select sport and gender to view and edit the roster
+            </p>
+          </div>
+        ) : availableDivisions.length > 1 && !selectedDivision ? (
+          <div className="scoreboard-panel p-12 text-center">
+            <Users className="h-12 w-12 mx-auto text-foreground-muted mb-4" />
+            <p className="text-foreground-muted">
+              This school has multiple teams for this sport/gender.
+            </p>
+            <p className="text-foreground-muted mt-2">
+              Select a division: {availableDivisions.join(', ')}
+            </p>
+          </div>
+        ) : !currentTeam ? (
+          <div className="scoreboard-panel p-12 text-center">
+            <Users className="h-12 w-12 mx-auto text-foreground-muted mb-4" />
+            <p className="text-foreground-muted">
+              No team found for this selection
             </p>
           </div>
         ) : (
