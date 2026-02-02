@@ -55,6 +55,27 @@ export const GameCard = React.memo(function GameCard({ game, showSport = false }
   const homeSchool = getHomeSchool(game)
   const awaySchool = getAwaySchool(game)
 
+  // TBD school ID for detecting TBD teams
+  const TBD_SCHOOL_ID = 'aaaaaaaa-0000-0000-0000-000000000001'
+  const isHomeTBD = homeSchool.id === TBD_SCHOOL_ID
+  const isAwayTBD = awaySchool.id === TBD_SCHOOL_ID
+
+  // Get display names (show "Winner of..." if TBD with source game)
+  const getTeamDisplayName = (school: typeof homeSchool, sourceType?: 'winner' | 'loser' | null) => {
+    if (school.id === TBD_SCHOOL_ID && sourceType) {
+      return `${sourceType === 'winner' ? 'Winner' : 'Loser'}`
+    }
+    return school.short_name
+  }
+
+  const homeDisplayName = isHomeTBD && game.home_team_source_type
+    ? getTeamDisplayName(homeSchool, game.home_team_source_type)
+    : homeSchool.short_name
+
+  const awayDisplayName = isAwayTBD && game.away_team_source_type
+    ? getTeamDisplayName(awaySchool, game.away_team_source_type)
+    : awaySchool.short_name
+
   // Check if game is overdue for score submission
   const scoreOverdue = isScoreOverdue(game.scheduled_at, game.status, game.is_verified)
 
@@ -135,11 +156,17 @@ export const GameCard = React.memo(function GameCard({ game, showSport = false }
           {/* Away Team */}
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3 flex-1 min-w-0">
-              <div className="flex h-9 w-9 items-center justify-center bg-background-tertiary text-xs font-display font-black text-neon-blue border-2 border-neon-blue/30">
-                {awaySchool.short_name.slice(0, 2).toUpperCase()}
+              <div className={cn(
+                "flex h-9 w-9 items-center justify-center bg-background-tertiary text-xs font-display font-black border-2",
+                isAwayTBD ? "text-neon-yellow border-neon-yellow/30" : "text-neon-blue border-neon-blue/30"
+              )}>
+                {isAwayTBD ? '?' : awaySchool.short_name.slice(0, 2).toUpperCase()}
               </div>
-              <span className="font-display font-bold text-foreground truncate">
-                {awaySchool.short_name}
+              <span className={cn(
+                "font-display font-bold truncate",
+                isAwayTBD ? "text-neon-yellow" : "text-foreground"
+              )}>
+                {awayDisplayName}
               </span>
             </div>
             <div className={cn(
@@ -153,11 +180,17 @@ export const GameCard = React.memo(function GameCard({ game, showSport = false }
           {/* Home Team */}
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3 flex-1 min-w-0">
-              <div className="flex h-9 w-9 items-center justify-center bg-background-tertiary text-xs font-display font-black text-neon-pink border-2 border-neon-pink/30">
-                {homeSchool.short_name.slice(0, 2).toUpperCase()}
+              <div className={cn(
+                "flex h-9 w-9 items-center justify-center bg-background-tertiary text-xs font-display font-black border-2",
+                isHomeTBD ? "text-neon-yellow border-neon-yellow/30" : "text-neon-pink border-neon-pink/30"
+              )}>
+                {isHomeTBD ? '?' : homeSchool.short_name.slice(0, 2).toUpperCase()}
               </div>
-              <span className="font-display font-bold text-foreground truncate">
-                {homeSchool.short_name}
+              <span className={cn(
+                "font-display font-bold truncate",
+                isHomeTBD ? "text-neon-yellow" : "text-foreground"
+              )}>
+                {homeDisplayName}
               </span>
             </div>
             <div className={cn(

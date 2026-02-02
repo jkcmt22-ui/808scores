@@ -97,6 +97,11 @@ interface GameFormData {
   streaming_url: string
   tournament_id: string
   tournament_round: string
+  // TBD team source fields (for "Winner of Game X" functionality)
+  home_team_source_game_id: string
+  home_team_source_type: 'winner' | 'loser' | ''
+  away_team_source_game_id: string
+  away_team_source_type: 'winner' | 'loser' | ''
 }
 
 const initialFormData: GameFormData = {
@@ -118,7 +123,14 @@ const initialFormData: GameFormData = {
   streaming_url: '',
   tournament_id: '',
   tournament_round: '',
+  home_team_source_game_id: '',
+  home_team_source_type: '',
+  away_team_source_game_id: '',
+  away_team_source_type: '',
 }
+
+// TBD school ID for identifying TBD teams
+const TBD_SCHOOL_ID = 'aaaaaaaa-0000-0000-0000-000000000001'
 
 // Tournament round options for dropdown
 const TOURNAMENT_ROUNDS: { value: TournamentRound; label: string }[] = [
@@ -541,6 +553,11 @@ export default function AdminPage() {
         golden_game: formData.golden_game,
         tournament_id: formData.tournament_id || null,
         tournament_round: formData.tournament_round || null,
+        // TBD team source fields
+        home_team_source_game_id: formData.home_team_source_game_id || null,
+        home_team_source_type: formData.home_team_source_type || null,
+        away_team_source_game_id: formData.away_team_source_game_id || null,
+        away_team_source_type: formData.away_team_source_type || null,
         // Temporarily commented out until migration is applied:
         // photos_url: formData.photos_url || null,
         // instagram_url: formData.instagram_url || null,
@@ -603,6 +620,11 @@ export default function AdminPage() {
         venue: formData.venue || null,
         tournament_id: formData.tournament_id || null,
         tournament_round: formData.tournament_round || null,
+        // TBD team source fields
+        home_team_source_game_id: formData.home_team_source_game_id || null,
+        home_team_source_type: formData.home_team_source_type || null,
+        away_team_source_game_id: formData.away_team_source_game_id || null,
+        away_team_source_type: formData.away_team_source_type || null,
         // Temporarily commented out until migration is applied:
         // photos_url: formData.photos_url || null,
         // instagram_url: formData.instagram_url || null,
@@ -886,6 +908,10 @@ export default function AdminPage() {
       streaming_url: gameWithExtras.streaming_url || '',
       tournament_id: gameWithExtras.tournament_id || '',
       tournament_round: gameWithExtras.tournament_round || '',
+      home_team_source_game_id: gameWithExtras.home_team_source_game_id || '',
+      home_team_source_type: gameWithExtras.home_team_source_type || '',
+      away_team_source_game_id: gameWithExtras.away_team_source_game_id || '',
+      away_team_source_type: gameWithExtras.away_team_source_type || '',
     })
   }
 
@@ -1049,6 +1075,7 @@ export default function AdminPage() {
               sports={sports}
               teams={teams}
               tournaments={tournaments}
+              games={games}
               isEdit={true}
               editingGame={editingGame}
             />
@@ -1231,6 +1258,7 @@ export default function AdminPage() {
               sports={sports}
               teams={teams}
               tournaments={tournaments}
+              games={games}
               isEdit={false}
               editingGame={null}
             />
@@ -2003,6 +2031,7 @@ function GameForm({
   sports,
   teams,
   tournaments,
+  games,
   isEdit,
   editingGame,
 }: {
@@ -2011,6 +2040,7 @@ function GameForm({
   sports: Sport[]
   teams: TeamWithSchool[]
   tournaments: Tournament[]
+  games: GameWithTeams[]
   isEdit: boolean
   editingGame?: GameWithTeams | null
 }) {
@@ -2039,6 +2069,40 @@ function GameForm({
       }
     })
     .sort((a, b) => a.label.localeCompare(b.label))
+
+  // Check if selected teams are TBD teams
+  const selectedAwayTeam = teamsForSelectedSport.find(t => t.id === formData.away_team_id)
+  const selectedHomeTeam = teamsForSelectedSport.find(t => t.id === formData.home_team_id)
+  const isAwayTeamTBD = selectedAwayTeam?.school?.id === TBD_SCHOOL_ID
+  const isHomeTeamTBD = selectedHomeTeam?.school?.id === TBD_SCHOOL_ID
+
+  // Get tournament games for "Winner of Game X" dropdown
+  // Only show games from the same tournament (excluding the current game being edited)
+  const tournamentGamesForSource = useMemo(() => {
+    if (!formData.tournament_id) return []
+    return games
+      .filter(g => g.tournament_id === formData.tournament_id)
+      .filter(g => !editingGame || g.id !== editingGame.id) // Exclude current game
+      .map(g => {
+        const homeSchool = getHomeSchool(g).short_name
+        const awaySchool = getAwaySchool(g).short_name
+        const roundLabel = g.tournament_round
+          ? TOURNAMENT_ROUNDS.find(r => r.value === g.tournament_round)?.label || g.tournament_round
+          : ''
+        return {
+          id: g.id,
+          label: `${roundLabel}: ${awaySchool} vs ${homeSchool}`,
+          round: g.tournament_round,
+          status: g.status,
+        }
+      })
+      .sort((a, b) => {
+        // Sort by round order
+        const roundOrder = ['play_in', 'round_of_32', 'round_of_16', 'quarterfinal', 'semifinal', 'third_place', 'final']
+        return roundOrder.indexOf(a.round || '') - roundOrder.indexOf(b.round || '')
+      })
+  }, [formData.tournament_id, games, editingGame])
+
   // Get the selected sport for period options
   const selectedSport = isEdit && editingGame
     ? editingGame.sport
@@ -2071,11 +2135,16 @@ function GameForm({
 
           {/* Teams */}
           <div className="grid grid-cols-2 gap-4">
-            <div>
+            <div className="space-y-2">
               <label className="block text-sm font-medium text-foreground mb-1">Away Team *</label>
               <select
                 value={formData.away_team_id}
-                onChange={(e) => onChange('away_team_id', e.target.value)}
+                onChange={(e) => {
+                  onChange('away_team_id', e.target.value)
+                  // Clear source game when team changes
+                  onChange('away_team_source_game_id', '')
+                  onChange('away_team_source_type', '')
+                }}
                 className="w-full h-10 px-3 border-2 border-border bg-background text-foreground font-display text-sm"
                 disabled={!formData.sport_id}
               >
@@ -2086,12 +2155,53 @@ function GameForm({
                   </option>
                 ))}
               </select>
+              {/* Show "Determined by" when TBD team is selected */}
+              {isAwayTeamTBD && formData.tournament_id && (
+                <div className="p-2 bg-neon-yellow/10 border border-neon-yellow/30 rounded">
+                  <label className="block text-xs font-medium text-neon-yellow mb-1">
+                    Determined by:
+                  </label>
+                  <div className="flex gap-2">
+                    <select
+                      value={formData.away_team_source_type}
+                      onChange={(e) => onChange('away_team_source_type', e.target.value)}
+                      className="flex-shrink-0 h-8 px-2 border border-border bg-background text-foreground text-xs"
+                    >
+                      <option value="">Select...</option>
+                      <option value="winner">Winner of</option>
+                      <option value="loser">Loser of</option>
+                    </select>
+                    {formData.away_team_source_type && (
+                      <select
+                        value={formData.away_team_source_game_id}
+                        onChange={(e) => onChange('away_team_source_game_id', e.target.value)}
+                        className="flex-1 h-8 px-2 border border-border bg-background text-foreground text-xs"
+                      >
+                        <option value="">Select game...</option>
+                        {tournamentGamesForSource.map((game: any) => (
+                          <option key={game.id} value={game.id}>
+                            {game.label}
+                          </option>
+                        ))}
+                      </select>
+                    )}
+                  </div>
+                </div>
+              )}
+              {isAwayTeamTBD && !formData.tournament_id && (
+                <p className="text-xs text-neon-yellow">Select a tournament to link to source game</p>
+              )}
             </div>
-            <div>
+            <div className="space-y-2">
               <label className="block text-sm font-medium text-foreground mb-1">Home Team *</label>
               <select
                 value={formData.home_team_id}
-                onChange={(e) => onChange('home_team_id', e.target.value)}
+                onChange={(e) => {
+                  onChange('home_team_id', e.target.value)
+                  // Clear source game when team changes
+                  onChange('home_team_source_game_id', '')
+                  onChange('home_team_source_type', '')
+                }}
                 className="w-full h-10 px-3 border-2 border-border bg-background text-foreground font-display text-sm"
                 disabled={!formData.sport_id}
               >
@@ -2102,6 +2212,42 @@ function GameForm({
                   </option>
                 ))}
               </select>
+              {/* Show "Determined by" when TBD team is selected */}
+              {isHomeTeamTBD && formData.tournament_id && (
+                <div className="p-2 bg-neon-yellow/10 border border-neon-yellow/30 rounded">
+                  <label className="block text-xs font-medium text-neon-yellow mb-1">
+                    Determined by:
+                  </label>
+                  <div className="flex gap-2">
+                    <select
+                      value={formData.home_team_source_type}
+                      onChange={(e) => onChange('home_team_source_type', e.target.value)}
+                      className="flex-shrink-0 h-8 px-2 border border-border bg-background text-foreground text-xs"
+                    >
+                      <option value="">Select...</option>
+                      <option value="winner">Winner of</option>
+                      <option value="loser">Loser of</option>
+                    </select>
+                    {formData.home_team_source_type && (
+                      <select
+                        value={formData.home_team_source_game_id}
+                        onChange={(e) => onChange('home_team_source_game_id', e.target.value)}
+                        className="flex-1 h-8 px-2 border border-border bg-background text-foreground text-xs"
+                      >
+                        <option value="">Select game...</option>
+                        {tournamentGamesForSource.map((game: any) => (
+                          <option key={game.id} value={game.id}>
+                            {game.label}
+                          </option>
+                        ))}
+                      </select>
+                    )}
+                  </div>
+                </div>
+              )}
+              {isHomeTeamTBD && !formData.tournament_id && (
+                <p className="text-xs text-neon-yellow">Select a tournament to link to source game</p>
+              )}
             </div>
           </div>
 

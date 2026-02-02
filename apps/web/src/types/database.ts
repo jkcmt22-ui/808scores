@@ -139,6 +139,11 @@ export interface Database {
           bracket_position: number | null
           winner_advances_to: string | null
           loser_drops_to: string | null
+          // TBD team source fields (for "Winner of Game X" functionality) - optional until migration 085 applied
+          home_team_source_game_id?: string | null
+          home_team_source_type?: 'winner' | 'loser' | null
+          away_team_source_game_id?: string | null
+          away_team_source_type?: 'winner' | 'loser' | null
           // Media fields
           photos_url: string | null
           instagram_url: string | null
