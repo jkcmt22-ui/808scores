@@ -20,6 +20,7 @@ export function useAuth() {
     user: context.user,
     profile: context.profile,
     isLoading: context.isLoading,
+    isProfileLoading: context.isProfileLoading,  // Track profile fetch separately
     isAuthenticated: context.isAuthenticated,
     signOut: context.signOut,
     updateProfile: context.updateProfile,

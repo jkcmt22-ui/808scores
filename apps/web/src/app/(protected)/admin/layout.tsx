@@ -50,7 +50,7 @@ const adminNavItems = [
 export default function AdminLayout({ children }: { children: ReactNode }) {
   const pathname = usePathname()
   const router = useRouter()
-  const { user, profile, isLoading: authLoading } = useAuth()
+  const { user, profile, isLoading: authLoading, isProfileLoading } = useAuth()
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const [collapsed, setCollapsed] = useState(false)
   const [loadingTimeout, setLoadingTimeout] = useState(false)
@@ -81,38 +81,33 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
     })
   }, [authLoading, user, profile])
 
-  // Track loading state with timeout and auto-retry
+  // Track loading state with timeout
+  // Bug #3 fix: Remove auto-reload (causes confusion), add try-catch for sessionStorage
   useEffect(() => {
-    if (authLoading) {
+    if (authLoading || isProfileLoading) {
       loadingIdRef.current = logLoadingStart('AdminLayout', 'auth check')
       setLoadingTimeout(false)
 
-      // Check if we've already retried (persisted in sessionStorage)
-      const retryKey = 'admin-auth-retry'
-      const hasRetried = sessionStorage.getItem(retryKey) === 'true'
-
-      // Timeout after 30 seconds
+      // Timeout after 45 seconds - just show error, no auto-reload
+      // Auto-reload caused more confusion than it helped on slow networks
       const timeout = setTimeout(() => {
-        if (!hasRetried) {
-          // Auto-retry once
-          sessionStorage.setItem(retryKey, 'true')
-          logLoadingEnd(loadingIdRef.current, 'timeout') // Will auto-retry
-          window.location.reload()
-        } else {
-          setLoadingTimeout(true)
-          logLoadingEnd(loadingIdRef.current, 'timeout')
-        }
-      }, 30000)
+        setLoadingTimeout(true)
+        logLoadingEnd(loadingIdRef.current, 'timeout')
+      }, 45000)
 
       return () => clearTimeout(timeout)
     } else if (loadingIdRef.current) {
       logLoadingEnd(loadingIdRef.current, 'success')
       loadingIdRef.current = ''
       setLoadingTimeout(false) // Reset timeout state when loading completes
-      // Clear retry flag on success
-      sessionStorage.removeItem('admin-auth-retry')
+      // Clear any stale retry flags (wrapped in try-catch for incognito mode)
+      try {
+        sessionStorage.removeItem('admin-auth-retry')
+      } catch {
+        // Ignore sessionStorage errors in private browsing
+      }
     }
-  }, [authLoading])
+  }, [authLoading, isProfileLoading])
 
   // Handle redirect in useEffect (not during render)
   useEffect(() => {
@@ -131,7 +126,8 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
   // === CONDITIONAL RETURNS START HERE (after all hooks) ===
 
   // Auth loading state - show loading in layout with timeout fallback
-  if (authLoading) {
+  // Also show loading if profile is still being fetched (Bug #1 fix)
+  if (authLoading || isProfileLoading) {
     if (loadingTimeout) {
       return (
         <div className="min-h-screen bg-background">
@@ -172,8 +168,19 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
   }
 
   // Not authenticated - redirect handled by useEffect above
+  // Bug #2 fix: Show loading spinner instead of blank screen during redirect
   if (!user) {
-    return null
+    return (
+      <div className="min-h-screen bg-background">
+        <Header title="Admin Panel" />
+        <div className="flex min-h-[50vh] flex-col items-center justify-center">
+          <Loader2 className="h-8 w-8 animate-spin text-neon-yellow" />
+          <span className="mt-4 font-display text-sm text-foreground-muted uppercase tracking-wider">
+            Redirecting to login...
+          </span>
+        </div>
+      </div>
+    )
   }
 
   // Profile failed to load - graceful error

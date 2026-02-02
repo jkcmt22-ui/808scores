@@ -43,6 +43,7 @@ interface AuthContextType {
   user: SupabaseUser | null
   profile: User | null
   isLoading: boolean
+  isProfileLoading: boolean  // Track profile fetch separately for better UX
   isAuthenticated: boolean
   signOut: () => Promise<void>
   refreshProfile: () => Promise<void>
@@ -55,6 +56,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<SupabaseUser | null>(null)
   const [profile, setProfile] = useState<User | null>(null)
   const [isLoading, setIsLoading] = useState(true)
+  const [isProfileLoading, setIsProfileLoading] = useState(false)  // Track profile fetch separately
   const subscriptionIdRef = useRef<string>('')
   const hasInitializedRef = useRef(false)
 
@@ -123,9 +125,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
         if (authUser) {
           setUser(authUser)
-          const userProfile = await fetchProfile(authUser.id, 'init')
-          setProfile(userProfile)
-          logAuthEvent('INIT_COMPLETE', 'AuthProvider', { hasUser: true, hasProfile: !!userProfile })
+          setIsProfileLoading(true)  // Signal that profile fetch is starting
+          try {
+            const userProfile = await fetchProfile(authUser.id, 'init')
+            setProfile(userProfile)
+            logAuthEvent('INIT_COMPLETE', 'AuthProvider', { hasUser: true, hasProfile: !!userProfile })
+          } finally {
+            setIsProfileLoading(false)  // Profile fetch done (success or fail)
+          }
         } else {
           logAuthEvent('INIT_COMPLETE', 'AuthProvider', { hasUser: false })
         }
@@ -149,8 +156,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
         if (event === 'SIGNED_IN' && session?.user) {
           setUser(session.user)
-          const userProfile = await fetchProfile(session.user.id, 'onAuthStateChange')
-          setProfile(userProfile)
+          setIsProfileLoading(true)
+          try {
+            const userProfile = await fetchProfile(session.user.id, 'onAuthStateChange')
+            setProfile(userProfile)
+          } finally {
+            setIsProfileLoading(false)
+          }
         } else if (event === 'SIGNED_OUT') {
           setUser(null)
           setProfile(null)
@@ -174,8 +186,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const refreshProfile = async () => {
     if (user) {
-      const userProfile = await fetchProfile(user.id, 'refreshProfile')
-      setProfile(userProfile)
+      setIsProfileLoading(true)
+      try {
+        const userProfile = await fetchProfile(user.id, 'refreshProfile')
+        setProfile(userProfile)
+      } finally {
+        setIsProfileLoading(false)
+      }
     }
   }
 
@@ -207,6 +224,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         user,
         profile,
         isLoading,
+        isProfileLoading,
         isAuthenticated: !!user,
         signOut,
         refreshProfile,
