@@ -32,7 +32,7 @@ SELECT
   '2025-2026',
   true
 FROM sports s
-WHERE s.is_active = true
+WHERE s.active = true
 ON CONFLICT DO NOTHING;
 
 -- Add a comment to document the TBD school
