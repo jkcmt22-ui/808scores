@@ -263,14 +263,18 @@ export function useGames(supabase: TypedSupabaseClient | null, options: UseGames
 export function useLiveGames(supabase: TypedSupabaseClient | null) {
   const [games, setGames] = useState<GameWithTeamsAndCount[]>([])
   const [isLoading, setIsLoading] = useState(true)
+  const [error, setError] = useState<Error | null>(null)
 
-  useEffect(() => {
+  const fetchLiveGames = useCallback(async () => {
     if (!supabase) {
       setIsLoading(false)
       return
     }
 
-    const fetchLiveGames = async () => {
+    setIsLoading(true)
+    setError(null)
+
+    try {
       // First, expire any stale in_progress games (past 5AM HST next day)
       try {
         await supabase.rpc('expire_stale_games')
@@ -279,7 +283,7 @@ export function useLiveGames(supabase: TypedSupabaseClient | null) {
       }
 
       // After migration 072, games reference teams instead of schools
-      const { data, error } = await supabase
+      const { data, error: queryError } = await supabase
         .from('games')
         .select(`
           *,
@@ -291,38 +295,46 @@ export function useLiveGames(supabase: TypedSupabaseClient | null) {
         .eq('status', 'in_progress')
         .order('scheduled_at', { ascending: true })
 
-      if (!error && data) {
-        // Filter out expired games (past 5AM HST the day after scheduled_at)
-        const gamesData = (data as GameWithTeams[]).filter(
-          game => !isGameExpired(game.scheduled_at)
-        )
+      if (queryError) throw queryError
 
-        if (gamesData.length > 0) {
-          const gameIds = gamesData.map(g => g.id)
-          const { data: messageCounts } = await supabase
-            .from('chat_messages')
-            .select('game_id')
-            .in('game_id', gameIds)
+      // Filter out expired games (past 5AM HST the day after scheduled_at)
+      const gamesData = (data as GameWithTeams[]).filter(
+        game => !isGameExpired(game.scheduled_at)
+      )
 
-          const countMap: Record<string, number> = {}
-          if (messageCounts) {
-            for (const msg of messageCounts as { game_id: string }[]) {
-              countMap[msg.game_id] = (countMap[msg.game_id] || 0) + 1
-            }
+      if (gamesData.length > 0) {
+        const gameIds = gamesData.map(g => g.id)
+        const { data: messageCounts } = await supabase
+          .from('chat_messages')
+          .select('game_id')
+          .in('game_id', gameIds)
+
+        const countMap: Record<string, number> = {}
+        if (messageCounts) {
+          for (const msg of messageCounts as { game_id: string }[]) {
+            countMap[msg.game_id] = (countMap[msg.game_id] || 0) + 1
           }
-
-          setGames(gamesData.map(game => ({
-            ...game,
-            message_count: countMap[game.id] || 0
-          })))
-        } else {
-          setGames([])
         }
+
+        setGames(gamesData.map(game => ({
+          ...game,
+          message_count: countMap[game.id] || 0
+        })))
+      } else {
+        setGames([])
       }
+    } catch (err) {
+      console.error('Error fetching live games:', err)
+      setError(err instanceof Error ? err : new Error('Failed to fetch live games'))
+    } finally {
       setIsLoading(false)
     }
+  }, [supabase])
 
+  useEffect(() => {
     fetchLiveGames()
+
+    if (!supabase) return
 
     // Subscribe to live game updates
     const channel = supabase
@@ -344,9 +356,9 @@ export function useLiveGames(supabase: TypedSupabaseClient | null) {
     return () => {
       supabase.removeChannel(channel)
     }
-  }, [supabase])
+  }, [supabase, fetchLiveGames])
 
-  return { games, isLoading }
+  return { games, isLoading, error, refetch: fetchLiveGames }
 }
 
 export function useGame(supabase: TypedSupabaseClient | null, gameId: string) {

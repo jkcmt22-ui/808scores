@@ -55,7 +55,7 @@ interface RecentSubmission {
 }
 
 export default function ProfilePage() {
-  const { profile, isLoading, signOut } = useRequireAuth()
+  const { profile, isLoading, isProfileLoading, signOut } = useRequireAuth()
   const { userBadges, isLoading: badgesLoading } = useUserBadges(profile?.id)
   const { events: pointEvents, isLoading: pointEventsLoading, hasMore, loadMore } = usePointEvents(profile?.id)
   const [recentSubmissions, setRecentSubmissions] = useState<RecentSubmission[]>([])
@@ -101,16 +101,25 @@ export default function ProfilePage() {
     fetchRecentSubmissions()
   }, [profile])
 
-  if (isLoading) {
+  // Wait for both auth AND profile to finish loading
+  if (isLoading || isProfileLoading) {
     return (
-      <div className="flex min-h-screen items-center justify-center">
+      <div className="flex min-h-screen items-center justify-center bg-background">
         <Loader2 className="h-8 w-8 animate-spin text-neon-blue" />
       </div>
     )
   }
 
+  // Show loading state instead of blank screen during redirect
   if (!profile) {
-    return null // Will redirect to login
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-background">
+        <Loader2 className="h-8 w-8 animate-spin text-neon-yellow" />
+        <span className="ml-3 font-display text-sm text-foreground-muted uppercase tracking-wider">
+          Redirecting to login...
+        </span>
+      </div>
+    )
   }
 
   const nextTier = profile.tier === 'verified' ? 'elite' : profile.tier === 'standard' ? 'verified' : 'standard'

@@ -33,7 +33,7 @@ import type { School, Sport } from '@/types/database'
 
 export default function ProfileSettingsPage() {
   const router = useRouter()
-  const { user, profile, isLoading: authLoading, updateProfile } = useRequireAuth()
+  const { user, profile, isLoading: authLoading, isProfileLoading, updateProfile } = useRequireAuth()
   const { schools, isLoading: schoolsLoading } = useSchools()
   const { sports, isLoading: sportsLoading } = useSports()
   const { favoriteTeams, addFavorite, removeFavorite, toggleNotify, isFavorite } = useFavoriteTeams(user?.id)
@@ -336,7 +336,8 @@ export default function ProfileSettingsPage() {
     }
   }
 
-  if (authLoading) {
+  // Wait for both auth AND profile to finish loading
+  if (authLoading || isProfileLoading) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-background">
         <Loader2 className="h-8 w-8 animate-spin text-neon-blue" />
@@ -344,7 +345,17 @@ export default function ProfileSettingsPage() {
     )
   }
 
-  if (!profile) return null
+  // Show loading state instead of blank screen during redirect
+  if (!profile) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-background">
+        <Loader2 className="h-8 w-8 animate-spin text-neon-yellow" />
+        <span className="ml-3 font-display text-sm text-foreground-muted uppercase tracking-wider">
+          Redirecting to login...
+        </span>
+      </div>
+    )
+  }
 
   return (
     <div className="min-h-screen bg-background grid-bg">

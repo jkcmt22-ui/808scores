@@ -4,7 +4,7 @@ import { useState, useMemo } from 'react'
 import { Header } from '@/components/layout'
 import { GameCard, SportFilter } from '@/components/game'
 import { useLiveGames, useAuth, useFavoriteTeams, useFavoriteSports } from '@/hooks'
-import { Radio, Loader2, Star } from 'lucide-react'
+import { Radio, Loader2, Star, AlertCircle, RefreshCw } from 'lucide-react'
 import type { GameWithTeams } from '@/types/database'
 import { getHomeSchool, getAwaySchool } from '@/types/database'
 
@@ -38,7 +38,7 @@ function sortByFavorites(
 
 export default function LivePage() {
   const [selectedSport, setSelectedSport] = useState('all')
-  const { games, isLoading } = useLiveGames()
+  const { games, isLoading, error, refetch } = useLiveGames()
 
   // Auth and favorites
   const { user } = useAuth()
@@ -92,8 +92,30 @@ export default function LivePage() {
           </div>
         )}
 
+        {/* Error state */}
+        {!isLoading && error && (
+          <div className="flex flex-col items-center justify-center py-16 text-center animate-fade-in">
+            <div className="scoreboard-panel p-6 mb-4">
+              <AlertCircle className="h-10 w-10 text-neon-pink mx-auto" />
+            </div>
+            <h3 className="mb-2 font-display text-lg font-black text-foreground uppercase tracking-widest">
+              Unable to Load Games
+            </h3>
+            <p className="text-sm text-foreground-muted max-w-xs font-display mb-4">
+              There was a problem loading live games. Please try again.
+            </p>
+            <button
+              onClick={() => refetch()}
+              className="flex items-center gap-2 px-4 py-2 bg-neon-blue text-background font-display font-bold rounded-lg hover:bg-neon-blue/80 transition-colors"
+            >
+              <RefreshCw className="h-4 w-4" />
+              Try Again
+            </button>
+          </div>
+        )}
+
         {/* Live Games */}
-        {!isLoading && filteredGames.length > 0 && (
+        {!isLoading && !error && filteredGames.length > 0 && (
           <div className="space-y-3">
             {/* Favorite live games */}
             {hasFavorites && sortedGames.favorites.length > 0 && (
@@ -118,7 +140,7 @@ export default function LivePage() {
         )}
 
         {/* Empty state */}
-        {!isLoading && filteredGames.length === 0 && (
+        {!isLoading && !error && filteredGames.length === 0 && (
           <div className="flex flex-col items-center justify-center py-16 text-center animate-fade-in">
             <div className="scoreboard-panel p-8 mb-4">
               <div className="score-led text-5xl mb-4 neon-text-pink">--</div>
