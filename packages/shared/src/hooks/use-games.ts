@@ -56,7 +56,8 @@ export function useGames(supabase: TypedSupabaseClient | null, options: UseGames
           *,
           sport:sports(*),
           home_team:teams!games_home_team_id_fkey(*, school:schools(*)),
-          away_team:teams!games_away_team_id_fkey(*, school:schools(*))
+          away_team:teams!games_away_team_id_fkey(*, school:schools(*)),
+          tournament:tournaments(*)
         `)
         .order('scheduled_at', { ascending: true })
 
@@ -284,7 +285,8 @@ export function useLiveGames(supabase: TypedSupabaseClient | null) {
           *,
           sport:sports(*),
           home_team:teams!games_home_team_id_fkey(*, school:schools(*)),
-          away_team:teams!games_away_team_id_fkey(*, school:schools(*))
+          away_team:teams!games_away_team_id_fkey(*, school:schools(*)),
+          tournament:tournaments(*)
         `)
         .eq('status', 'in_progress')
         .order('scheduled_at', { ascending: true })
@@ -368,7 +370,8 @@ export function useGame(supabase: TypedSupabaseClient | null, gameId: string) {
           *,
           sport:sports(*),
           home_team:teams!games_home_team_id_fkey(*, school:schools(*)),
-          away_team:teams!games_away_team_id_fkey(*, school:schools(*))
+          away_team:teams!games_away_team_id_fkey(*, school:schools(*)),
+          tournament:tournaments(*)
         `)
         .eq('id', gameId)
         .single()

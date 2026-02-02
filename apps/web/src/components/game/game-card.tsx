@@ -111,6 +111,11 @@ export const GameCard = React.memo(function GameCard({ game, showSport = false }
                 {gameTypeBadge.label}
               </Badge>
             )}
+            {game.tournament && (
+              <span className="text-[10px] font-display text-neon-blue truncate max-w-[120px]">
+                {game.tournament.name}
+              </span>
+            )}
             {game.golden_game && (
               <Badge variant="warning" className="gap-1 text-[10px] font-display">
                 <Star className="h-3 w-3" />
