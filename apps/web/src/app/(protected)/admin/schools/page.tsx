@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useMemo, useEffect } from 'react'
+import { useState, useMemo, useEffect, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import {
   Plus,
@@ -75,6 +75,7 @@ export default function SchoolsAdminPage() {
   const [managingTeamsFor, setManagingTeamsFor] = useState<School | null>(null)
   const [schoolTeams, setSchoolTeams] = useState<TeamWithSchool[]>([])
   const [isLoadingTeams, setIsLoadingTeams] = useState(false)
+  const loadingTeamsForSchoolIdRef = useRef<string | null>(null)
 
   const hasAdminAccess = profile?.is_admin === true || profile?.is_super_admin === true
   const supabase = supabaseClient
@@ -297,24 +298,40 @@ export default function SchoolsAdminPage() {
   const openTeamManagement = async (school: School) => {
     if (!supabase) return
 
+    // Track which school we're loading for (prevents race condition)
+    const requestId = school.id
+    loadingTeamsForSchoolIdRef.current = requestId
+
     setManagingTeamsFor(school)
+    setSchoolTeams([]) // Clear old data immediately
     setIsLoadingTeams(true)
 
-    const { data, error } = await supabase
-      .from('teams')
-      .select('*, school:schools(*)')
-      .eq('school_id', school.id)
-      .eq('season_year', '2025-2026')
-      .order('sport_id')
+    try {
+      const { data, error } = await supabase
+        .from('teams')
+        .select('*, school:schools(*)')
+        .eq('school_id', school.id)
+        .eq('season_year', '2025-2026')
+        .order('sport_id')
 
-    if (error) {
-      console.error('Error fetching teams:', error)
-      setMessage({ type: 'error', text: 'Failed to load teams' })
-    } else {
-      setSchoolTeams(data as TeamWithSchool[])
+      // Only update state if this is still the active request (prevents stale data)
+      if (loadingTeamsForSchoolIdRef.current !== requestId) {
+        console.log('Race condition avoided: skipping stale teams response')
+        return
+      }
+
+      if (error) {
+        console.error('Error fetching teams:', error)
+        setMessage({ type: 'error', text: 'Failed to load teams' })
+      } else {
+        setSchoolTeams(data as TeamWithSchool[])
+      }
+    } finally {
+      // Only clear loading state if this is still the active request
+      if (loadingTeamsForSchoolIdRef.current === requestId) {
+        setIsLoadingTeams(false)
+      }
     }
-
-    setIsLoadingTeams(false)
   }
 
   // Create a team for this school
