@@ -40,7 +40,7 @@ import { cn, formatGameTime, isGameLive, isGameFinal, hawaiiDatetimeToUTC, utcTo
 import { adminCache } from '@/lib/admin-cache'
 import { perf } from '@/lib/perf'
 import { getPeriodOptions, getPeriodTypeLabel, isInningsBased, type PeriodOption } from '@/lib/sport-periods'
-import type { GameWithTeams, Sport, School, GameStatus, GameType, TrustedReporterCode, PeriodsConfig, TeamWithSchool } from '@/types/database'
+import type { GameWithTeams, Sport, School, GameStatus, GameType, TrustedReporterCode, PeriodsConfig, TeamWithSchool, Tournament, TournamentRound } from '@/types/database'
 import { getHomeSchool, getAwaySchool } from '@/types/database'
 
 type TabType = 'games' | 'create' | 'applications' | 'codes' | 'users'
@@ -95,6 +95,8 @@ interface GameFormData {
   photos_url: string
   instagram_url: string
   streaming_url: string
+  tournament_id: string
+  tournament_round: string
 }
 
 const initialFormData: GameFormData = {
@@ -114,7 +116,24 @@ const initialFormData: GameFormData = {
   photos_url: '',
   instagram_url: '',
   streaming_url: '',
+  tournament_id: '',
+  tournament_round: '',
 }
+
+// Tournament round options for dropdown
+const TOURNAMENT_ROUNDS: { value: TournamentRound; label: string }[] = [
+  { value: 'play_in', label: 'Play-In' },
+  { value: 'round_of_32', label: 'Round of 32' },
+  { value: 'round_of_16', label: 'Round of 16' },
+  { value: 'quarterfinal', label: 'Quarterfinal' },
+  { value: 'semifinal', label: 'Semifinal' },
+  { value: 'third_place', label: 'Third Place' },
+  { value: 'final', label: 'Final' },
+  { value: 'pool_a', label: 'Pool A' },
+  { value: 'pool_b', label: 'Pool B' },
+  { value: 'pool_c', label: 'Pool C' },
+  { value: 'pool_d', label: 'Pool D' },
+]
 
 export default function AdminPage() {
   const router = useRouter()
@@ -129,6 +148,7 @@ export default function AdminPage() {
   const [sports, setSports] = useState<Sport[]>([])
   const [schools, setSchools] = useState<School[]>([])
   const [teams, setTeams] = useState<TeamWithSchool[]>([])
+  const [tournaments, setTournaments] = useState<Tournament[]>([])
   const [loadingStates, setLoadingStates] = useState<Record<TabType, boolean>>({
     games: false,
     create: false,
@@ -209,11 +229,15 @@ export default function AdminPage() {
 
       // Fetch teams
       await fetchTeams()
+
+      // Fetch tournaments
+      await fetchTournaments()
     } catch (err) {
       console.error('Error fetching common data:', err)
     } finally {
       endTimer()
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [supabase])
 
   // Separate function to fetch teams (can be called to refresh after adding schools)
@@ -232,6 +256,21 @@ export default function AdminPage() {
       return teamsData.length
     }
     return 0
+  }, [supabase])
+
+  // Fetch tournaments for game association
+  const fetchTournaments = useCallback(async () => {
+    if (!supabase) return
+
+    const { data: tournamentsData, error: tournamentsError } = await supabase
+      .from('tournaments')
+      .select('*')
+      .in('status', ['upcoming', 'in_progress'])
+      .order('start_date', { ascending: false })
+
+    if (!tournamentsError && tournamentsData) {
+      setTournaments(tournamentsData as Tournament[])
+    }
   }, [supabase])
 
   // Fetch games
@@ -455,7 +494,19 @@ export default function AdminPage() {
     setFormData((prev) => {
       // Clear team selections when sport changes (teams are sport-specific)
       if (field === 'sport_id' && value !== prev.sport_id) {
-        return { ...prev, sport_id: value as string, home_team_id: '', away_team_id: '' }
+        return { ...prev, sport_id: value as string, home_team_id: '', away_team_id: '', tournament_id: '', tournament_round: '' }
+      }
+      // Auto-set game_type to 'tournament' when a tournament is selected
+      if (field === 'tournament_id' && value) {
+        return { ...prev, tournament_id: value as string, game_type: 'tournament' }
+      }
+      // Clear tournament_round when tournament is cleared
+      if (field === 'tournament_id' && !value) {
+        return { ...prev, tournament_id: '', tournament_round: '', game_type: prev.game_type === 'tournament' ? 'regular_season' : prev.game_type }
+      }
+      // Auto-set game_type to 'championship' when round is 'final'
+      if (field === 'tournament_round' && value === 'final') {
+        return { ...prev, tournament_round: value as string, game_type: 'championship' }
       }
       return { ...prev, [field]: value }
     })
@@ -488,6 +539,8 @@ export default function AdminPage() {
         time_remaining: formData.time_remaining || null,
         is_verified: formData.is_verified,
         golden_game: formData.golden_game,
+        tournament_id: formData.tournament_id || null,
+        tournament_round: formData.tournament_round || null,
         // Temporarily commented out until migration is applied:
         // photos_url: formData.photos_url || null,
         // instagram_url: formData.instagram_url || null,
@@ -548,6 +601,8 @@ export default function AdminPage() {
         is_verified: formData.is_verified,
         golden_game: formData.golden_game,
         venue: formData.venue || null,
+        tournament_id: formData.tournament_id || null,
+        tournament_round: formData.tournament_round || null,
         // Temporarily commented out until migration is applied:
         // photos_url: formData.photos_url || null,
         // instagram_url: formData.instagram_url || null,
@@ -804,8 +859,14 @@ export default function AdminPage() {
   // Start editing a game
   const startEditing = (game: GameWithTeams) => {
     setEditingGame(game)
-    // Cast to access the media fields
-    const gameWithMedia = game as GameWithTeams & { photos_url?: string | null; instagram_url?: string | null; streaming_url?: string | null }
+    // Cast to access the media and tournament fields
+    const gameWithExtras = game as GameWithTeams & {
+      photos_url?: string | null
+      instagram_url?: string | null
+      streaming_url?: string | null
+      tournament_id?: string | null
+      tournament_round?: string | null
+    }
     setFormData({
       sport_id: game.sport_id,
       home_team_id: game.home_team_id,
@@ -820,9 +881,11 @@ export default function AdminPage() {
       time_remaining: game.time_remaining || '',
       is_verified: game.is_verified,
       golden_game: game.golden_game,
-      photos_url: gameWithMedia.photos_url || '',
-      instagram_url: gameWithMedia.instagram_url || '',
-      streaming_url: gameWithMedia.streaming_url || '',
+      photos_url: gameWithExtras.photos_url || '',
+      instagram_url: gameWithExtras.instagram_url || '',
+      streaming_url: gameWithExtras.streaming_url || '',
+      tournament_id: gameWithExtras.tournament_id || '',
+      tournament_round: gameWithExtras.tournament_round || '',
     })
   }
 
@@ -985,6 +1048,7 @@ export default function AdminPage() {
               onChange={handleFormChange}
               sports={sports}
               teams={teams}
+              tournaments={tournaments}
               isEdit={true}
               editingGame={editingGame}
             />
@@ -1166,6 +1230,7 @@ export default function AdminPage() {
               onChange={handleFormChange}
               sports={sports}
               teams={teams}
+              tournaments={tournaments}
               isEdit={false}
               editingGame={null}
             />
@@ -1937,6 +2002,7 @@ function GameForm({
   onChange,
   sports,
   teams,
+  tournaments,
   isEdit,
   editingGame,
 }: {
@@ -1944,12 +2010,18 @@ function GameForm({
   onChange: (field: keyof GameFormData, value: string | number | boolean) => void
   sports: Sport[]
   teams: TeamWithSchool[]
+  tournaments: Tournament[]
   isEdit: boolean
   editingGame?: GameWithTeams | null
 }) {
   // Filter teams by selected sport for the form dropdowns
   const teamsForSelectedSport = formData.sport_id
     ? teams.filter((t) => t.sport_id === formData.sport_id)
+    : []
+
+  // Filter tournaments by selected sport
+  const tournamentsForSelectedSport = formData.sport_id
+    ? tournaments.filter((t) => t.sport_id === formData.sport_id)
     : []
 
   // Group teams by school for better display
@@ -2085,6 +2157,56 @@ function GameForm({
             <option value="exhibition">Exhibition</option>
             <option value="scrimmage">Scrimmage</option>
           </select>
+        </div>
+      </div>
+
+      {/* Tournament Association */}
+      <div className="grid grid-cols-2 gap-4">
+        <div>
+          <label className="block text-sm font-medium text-foreground mb-1">
+            Tournament
+            <span className="text-foreground-muted font-normal ml-1">(optional)</span>
+          </label>
+          <select
+            value={formData.tournament_id}
+            onChange={(e) => onChange('tournament_id', e.target.value)}
+            className="w-full h-10 px-3 border-2 border-border bg-background text-foreground font-display text-sm"
+            disabled={!formData.sport_id}
+          >
+            <option value="">None (Regular Season)</option>
+            {tournamentsForSelectedSport.map((tournament) => (
+              <option key={tournament.id} value={tournament.id}>
+                {tournament.league ? `${tournament.league} ` : ''}
+                {tournament.division ? `${tournament.division} ` : ''}
+                {tournament.name}
+              </option>
+            ))}
+          </select>
+          {!formData.sport_id && (
+            <p className="text-xs text-foreground-muted mt-1">Select a sport first</p>
+          )}
+        </div>
+        <div>
+          <label className="block text-sm font-medium text-foreground mb-1">
+            Tournament Round
+            <span className="text-foreground-muted font-normal ml-1">(optional)</span>
+          </label>
+          <select
+            value={formData.tournament_round}
+            onChange={(e) => onChange('tournament_round', e.target.value)}
+            className="w-full h-10 px-3 border-2 border-border bg-background text-foreground font-display text-sm"
+            disabled={!formData.tournament_id}
+          >
+            <option value="">Select round...</option>
+            {TOURNAMENT_ROUNDS.map((round) => (
+              <option key={round.value} value={round.value}>
+                {round.label}
+              </option>
+            ))}
+          </select>
+          {!formData.tournament_id && formData.sport_id && (
+            <p className="text-xs text-foreground-muted mt-1">Select a tournament first</p>
+          )}
         </div>
       </div>
 

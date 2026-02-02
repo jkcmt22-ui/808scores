@@ -25,7 +25,7 @@ import { useAuth } from '@/hooks'
 import { createClient } from '@/lib/supabase/client'
 import { cn, hawaiiDatetimeToUTC, utcToHawaiiDatetime, getHawaiiDayStartUTC, getHawaiiDayEndUTC } from '@/lib/utils'
 import { adminCache } from '@/lib/admin-cache'
-import type { GameWithTeams, Sport, School, GameStatus, GameType, TeamWithSchool } from '@/types/database'
+import type { GameWithTeams, Sport, School, GameStatus, GameType, TeamWithSchool, Tournament, TournamentRound } from '@/types/database'
 import { getHomeSchool, getAwaySchool } from '@/types/database'
 
 interface GameFormData {
@@ -38,6 +38,8 @@ interface GameFormData {
   game_type: GameType
   streaming_url: string
   predictions_enabled: boolean
+  tournament_id: string
+  tournament_round: string
 }
 
 const initialFormData: GameFormData = {
@@ -50,7 +52,24 @@ const initialFormData: GameFormData = {
   game_type: 'regular_season',
   streaming_url: '',
   predictions_enabled: false,
+  tournament_id: '',
+  tournament_round: '',
 }
+
+// Tournament round options for dropdown
+const TOURNAMENT_ROUNDS: { value: TournamentRound; label: string }[] = [
+  { value: 'play_in', label: 'Play-In' },
+  { value: 'round_of_32', label: 'Round of 32' },
+  { value: 'round_of_16', label: 'Round of 16' },
+  { value: 'quarterfinal', label: 'Quarterfinal' },
+  { value: 'semifinal', label: 'Semifinal' },
+  { value: 'third_place', label: 'Third Place' },
+  { value: 'final', label: 'Final' },
+  { value: 'pool_a', label: 'Pool A' },
+  { value: 'pool_b', label: 'Pool B' },
+  { value: 'pool_c', label: 'Pool C' },
+  { value: 'pool_d', label: 'Pool D' },
+]
 
 // Hawaii timezone constant
 const HAWAII_TZ = 'Pacific/Honolulu'
@@ -160,6 +179,7 @@ export default function ScheduleAdminPage() {
   const [sports, setSports] = useState<Sport[]>([])
   const [schools, setSchools] = useState<School[]>([])
   const [teams, setTeams] = useState<TeamWithSchool[]>([])
+  const [tournaments, setTournaments] = useState<Tournament[]>([])
   const [isLoading, setIsLoading] = useState(true)
 
   // Filters
@@ -258,11 +278,15 @@ export default function ScheduleAdminPage() {
 
       // Fetch teams
       await fetchTeams()
+
+      // Fetch tournaments
+      await fetchTournaments()
     }
 
     if (hasAdminAccess) {
       fetchInitialData()
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [supabase, hasAdminAccess])
 
   // Separate function to fetch teams (can be called to refresh)
@@ -281,6 +305,21 @@ export default function ScheduleAdminPage() {
     } else if (teamsData) {
       console.log('Fetched teams count:', teamsData.length)
       setTeams(teamsData as TeamWithSchool[])
+    }
+  }, [supabase])
+
+  // Fetch tournaments for game association
+  const fetchTournaments = useCallback(async () => {
+    if (!supabase) return
+
+    const { data: tournamentsData, error: tournamentsError } = await supabase
+      .from('tournaments')
+      .select('*')
+      .in('status', ['upcoming', 'in_progress'])
+      .order('start_date', { ascending: false })
+
+    if (!tournamentsError && tournamentsData) {
+      setTournaments(tournamentsData as Tournament[])
     }
   }, [supabase])
 
@@ -356,7 +395,19 @@ export default function ScheduleAdminPage() {
     setFormData((prev) => {
       // Clear team selections when sport changes (teams are sport-specific)
       if (field === 'sport_id' && value !== prev.sport_id) {
-        return { ...prev, [field]: value, home_team_id: '', away_team_id: '' }
+        return { ...prev, [field]: value, home_team_id: '', away_team_id: '', tournament_id: '', tournament_round: '' }
+      }
+      // Auto-set game_type to 'tournament' when a tournament is selected
+      if (field === 'tournament_id' && value) {
+        return { ...prev, tournament_id: value, game_type: 'tournament' }
+      }
+      // Clear tournament_round when tournament is cleared
+      if (field === 'tournament_id' && !value) {
+        return { ...prev, tournament_id: '', tournament_round: '', game_type: prev.game_type === 'tournament' ? 'regular_season' : prev.game_type }
+      }
+      // Auto-set game_type to 'championship' when round is 'final'
+      if (field === 'tournament_round' && value === 'final') {
+        return { ...prev, tournament_round: value, game_type: 'championship' }
       }
       return { ...prev, [field]: value }
     })
@@ -380,7 +431,12 @@ export default function ScheduleAdminPage() {
   const openEditForm = (game: GameWithTeams) => {
     setEditingGame(game)
     setSelectedDate(new Date(game.scheduled_at))
-    const gameExtended = game as GameWithTeams & { streaming_url?: string | null; predictions_enabled?: boolean }
+    const gameExtended = game as GameWithTeams & {
+      streaming_url?: string | null
+      predictions_enabled?: boolean
+      tournament_id?: string | null
+      tournament_round?: string | null
+    }
     setFormData({
       sport_id: game.sport_id,
       home_team_id: game.home_team_id,
@@ -391,6 +447,8 @@ export default function ScheduleAdminPage() {
       game_type: game.game_type,
       streaming_url: gameExtended.streaming_url || '',
       predictions_enabled: gameExtended.predictions_enabled || false,
+      tournament_id: gameExtended.tournament_id || '',
+      tournament_round: gameExtended.tournament_round || '',
     })
     setShowForm(true)
   }
@@ -435,6 +493,8 @@ export default function ScheduleAdminPage() {
         away_score: 0,
         streaming_url: formData.streaming_url || null,
         predictions_enabled: formData.predictions_enabled,
+        tournament_id: formData.tournament_id || null,
+        tournament_round: formData.tournament_round || null,
       }
       console.log('Inserting game with data:', insertData, 'from Hawaii time:', formData.scheduled_at)
 
@@ -483,6 +543,8 @@ export default function ScheduleAdminPage() {
           game_type: formData.game_type,
           streaming_url: formData.streaming_url || null,
           predictions_enabled: formData.predictions_enabled,
+          tournament_id: formData.tournament_id || null,
+          tournament_round: formData.tournament_round || null,
         } as never)
         .eq('id', editingGame.id)
 
@@ -602,6 +664,11 @@ export default function ScheduleAdminPage() {
   // Filter teams by selected sport for the form dropdowns
   const teamsForSelectedSport = formData.sport_id
     ? teams.filter((t) => t.sport_id === formData.sport_id)
+    : []
+
+  // Filter tournaments by selected sport
+  const tournamentsForSelectedSport = formData.sport_id
+    ? tournaments.filter((t) => t.sport_id === formData.sport_id)
     : []
 
   // Group teams by school for better display
@@ -939,6 +1006,50 @@ export default function ScheduleAdminPage() {
                       <option value="tournament">Tournament</option>
                       <option value="exhibition">Exhibition</option>
                       <option value="scrimmage">Scrimmage</option>
+                    </select>
+                  </div>
+                </div>
+
+                {/* Tournament Association */}
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-foreground mb-1">
+                      Tournament
+                      <span className="text-foreground-muted font-normal ml-1 text-xs">(optional)</span>
+                    </label>
+                    <select
+                      value={formData.tournament_id}
+                      onChange={(e) => handleFormChange('tournament_id', e.target.value)}
+                      className="w-full h-10 px-3 border-2 border-border bg-background text-foreground font-display text-sm"
+                      disabled={!formData.sport_id}
+                    >
+                      <option value="">None (Regular Season)</option>
+                      {tournamentsForSelectedSport.map((tournament) => (
+                        <option key={tournament.id} value={tournament.id}>
+                          {tournament.league ? `${tournament.league} ` : ''}
+                          {tournament.division ? `${tournament.division} ` : ''}
+                          {tournament.name}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-foreground mb-1">
+                      Round
+                      <span className="text-foreground-muted font-normal ml-1 text-xs">(optional)</span>
+                    </label>
+                    <select
+                      value={formData.tournament_round}
+                      onChange={(e) => handleFormChange('tournament_round', e.target.value)}
+                      className="w-full h-10 px-3 border-2 border-border bg-background text-foreground font-display text-sm"
+                      disabled={!formData.tournament_id}
+                    >
+                      <option value="">Select round...</option>
+                      {TOURNAMENT_ROUNDS.map((round) => (
+                        <option key={round.value} value={round.value}>
+                          {round.label}
+                        </option>
+                      ))}
                     </select>
                   </div>
                 </div>
