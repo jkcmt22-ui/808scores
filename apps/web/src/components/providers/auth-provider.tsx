@@ -11,8 +11,8 @@ import {
   logAuthEvent,
 } from '@/lib/auth-debug'
 
-// Auth initialization timeout (5 seconds)
-const AUTH_INIT_TIMEOUT_MS = 5000
+// Auth initialization timeout (10 seconds)
+const AUTH_INIT_TIMEOUT_MS = 10000
 
 /**
  * Explicit profile fields selection - no select('*')
