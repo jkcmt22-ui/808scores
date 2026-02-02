@@ -799,25 +799,26 @@ export default function SchoolsAdminPage() {
                 <Loader2 className="h-8 w-8 animate-spin text-neon-green" />
               </div>
             ) : (
-              <div className="space-y-2">
+              <div className="space-y-4">
                 {sports.map((sport) => {
-                  const team = schoolTeams.find(
+                  // Get ALL teams for this sport/gender (not just one)
+                  const teamsForSport = schoolTeams.filter(
                     (t) => t.sport_id === sport.id && t.gender === sport.gender
+                  )
+                  // Find which divisions already have teams
+                  const existingDivisions = new Set(teamsForSport.map((t) => t.division))
+                  // Available divisions for "Add Team" button
+                  const availableDivisions = TEAM_DIVISIONS.filter(
+                    (div) => !existingDivisions.has(div)
                   )
 
                   return (
                     <div
                       key={`${sport.id}-${sport.gender}`}
-                      className={cn(
-                        'flex items-center justify-between p-3 border-2',
-                        team?.is_active
-                          ? 'border-neon-green/30 bg-neon-green/5'
-                          : team
-                            ? 'border-border bg-background-secondary opacity-50'
-                            : 'border-border bg-background-secondary'
-                      )}
+                      className="border-2 border-border"
                     >
-                      <div className="flex items-center gap-3 flex-1">
+                      {/* Sport header */}
+                      <div className="flex items-center gap-3 p-3 bg-background-secondary border-b border-border">
                         <Badge
                           variant={sport.gender === 'boys' ? 'default' : 'secondary'}
                           className="text-[10px]"
@@ -827,45 +828,81 @@ export default function SchoolsAdminPage() {
                         <span className="font-display font-bold text-foreground">
                           {sport.display_name || sport.name}
                         </span>
-                        {team && (
-                          <span className="text-xs text-foreground-muted">
-                            {team.is_active ? '(Active)' : '(Inactive)'}
-                          </span>
-                        )}
+                        <span className="text-xs text-foreground-muted">
+                          ({teamsForSport.length} team{teamsForSport.length !== 1 ? 's' : ''})
+                        </span>
                       </div>
 
-                      <div className="flex items-center gap-2">
-                        {team ? (
-                          <>
-                            {/* Division dropdown for existing teams */}
-                            <select
-                              value={team.division || 'Division I'}
-                              onChange={(e) => updateTeamDivision(team.id, e.target.value)}
-                              className="h-8 px-2 text-xs border-2 border-border bg-background text-foreground font-display"
+                      {/* Teams list */}
+                      <div className="divide-y divide-border">
+                        {teamsForSport.length > 0 ? (
+                          teamsForSport.map((team) => (
+                            <div
+                              key={team.id}
+                              className={cn(
+                                'flex items-center justify-between p-3',
+                                team.is_active
+                                  ? 'bg-neon-green/5'
+                                  : 'bg-background-secondary opacity-50'
+                              )}
                             >
-                              {TEAM_DIVISIONS.map((div) => (
-                                <option key={div} value={div}>
-                                  {div}
-                                </option>
-                              ))}
-                            </select>
-                            <Button
-                              variant={team.is_active ? 'destructive' : 'default'}
-                              size="sm"
-                              onClick={() => toggleTeamActive(team.id, team.is_active)}
-                            >
-                              {team.is_active ? 'Deactivate' : 'Activate'}
-                            </Button>
-                          </>
+                              <div className="flex items-center gap-3">
+                                <span className="font-display text-sm text-foreground">
+                                  {team.division || 'Division I'}
+                                </span>
+                                <span className="text-xs text-foreground-muted">
+                                  {team.is_active ? '(Active)' : '(Inactive)'}
+                                </span>
+                              </div>
+
+                              <div className="flex items-center gap-2">
+                                {/* Division dropdown for existing teams */}
+                                <select
+                                  value={team.division || 'Division I'}
+                                  onChange={(e) => updateTeamDivision(team.id, e.target.value)}
+                                  className="h-8 px-2 text-xs border-2 border-border bg-background text-foreground font-display"
+                                >
+                                  {TEAM_DIVISIONS.map((div) => (
+                                    <option key={div} value={div}>
+                                      {div}
+                                    </option>
+                                  ))}
+                                </select>
+                                <Button
+                                  variant={team.is_active ? 'destructive' : 'default'}
+                                  size="sm"
+                                  onClick={() => toggleTeamActive(team.id, team.is_active)}
+                                >
+                                  {team.is_active ? 'Deactivate' : 'Activate'}
+                                </Button>
+                              </div>
+                            </div>
+                          ))
                         ) : (
-                          <Button
-                            size="sm"
-                            onClick={() => createTeam(sport.id, sport.gender)}
-                            disabled={isSaving}
-                          >
-                            <Plus className="mr-1 h-4 w-4" />
-                            Create
-                          </Button>
+                          <div className="p-3 text-center text-foreground-muted text-sm">
+                            No teams yet
+                          </div>
+                        )}
+
+                        {/* Add Team button - show available divisions */}
+                        {availableDivisions.length > 0 && (
+                          <div className="p-3 bg-background-tertiary">
+                            <div className="flex items-center gap-2">
+                              <span className="text-xs text-foreground-muted">Add team:</span>
+                              {availableDivisions.map((div) => (
+                                <Button
+                                  key={div}
+                                  size="sm"
+                                  variant="outline"
+                                  onClick={() => createTeam(sport.id, sport.gender, div)}
+                                  disabled={isSaving}
+                                >
+                                  <Plus className="mr-1 h-3 w-3" />
+                                  {div}
+                                </Button>
+                              ))}
+                            </div>
+                          </div>
                         )}
                       </div>
                     </div>
@@ -882,8 +919,8 @@ export default function SchoolsAdminPage() {
 
             <div className="mt-4 p-3 bg-background-secondary border-2 border-border">
               <p className="text-xs text-foreground-muted">
-                <strong>Note:</strong> Teams are created per sport/gender combination.
-                Each team can be scheduled for games in the 2025-2026 season.
+                <strong>Note:</strong> Schools can have multiple teams per sport (e.g., Division I and Division II).
+                Each team can be scheduled for games separately in the 2025-2026 season.
               </p>
             </div>
           </Card>
