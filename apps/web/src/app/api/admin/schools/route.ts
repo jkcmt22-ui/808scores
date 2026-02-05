@@ -1,6 +1,6 @@
 import { createClient } from '@/lib/supabase/server'
 import { NextRequest, NextResponse } from 'next/server'
-import { getCurrentSeasonYear } from '@/hooks'
+import { getCurrentSeasonYear } from '@/hooks/use-team-roster'
 
 export async function POST(request: NextRequest) {
   try {
