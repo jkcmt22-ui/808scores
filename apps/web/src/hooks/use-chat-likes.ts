@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import type { ChatLike } from '@/types/database'
 
@@ -90,47 +90,59 @@ export function useChatLikes({ gameId, userId }: UseChatLikesOptions): UseChatLi
     }
   }, [supabase, gameId, userId])
 
+  // Track in-flight toggles to prevent double-firing on rapid clicks
+  const pendingToggles = useRef(new Set<string>())
+  // Ref to always read the latest likedMessageIds without stale closures
+  const likedRef = useRef(likedMessageIds)
+  likedRef.current = likedMessageIds
+
   const toggleLike = useCallback(
     async (messageId: string) => {
       if (!supabase || !userId) return
+      if (pendingToggles.current.has(messageId)) return
 
-      const isLiked = likedMessageIds.has(messageId)
+      pendingToggles.current.add(messageId)
+      try {
+        const isLiked = likedRef.current.has(messageId)
 
-      if (isLiked) {
-        // Remove like
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        const { error } = await (supabase as any)
-          .from('chat_likes')
-          .delete()
-          .eq('message_id', messageId)
-          .eq('user_id', userId)
+        if (isLiked) {
+          // Remove like
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          const { error } = await (supabase as any)
+            .from('chat_likes')
+            .delete()
+            .eq('message_id', messageId)
+            .eq('user_id', userId)
 
-        if (error) {
-          console.error('Error removing like:', error)
-          return
+          if (error) {
+            console.error('Error removing like:', error)
+            return
+          }
+
+          setLikedMessageIds((prev) => {
+            const next = new Set(prev)
+            next.delete(messageId)
+            return next
+          })
+        } else {
+          // Add like
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          const { error } = await (supabase as any)
+            .from('chat_likes')
+            .insert({ message_id: messageId, user_id: userId })
+
+          if (error) {
+            console.error('Error adding like:', error)
+            return
+          }
+
+          setLikedMessageIds((prev) => new Set([...prev, messageId]))
         }
-
-        setLikedMessageIds((prev) => {
-          const next = new Set(prev)
-          next.delete(messageId)
-          return next
-        })
-      } else {
-        // Add like
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        const { error } = await (supabase as any)
-          .from('chat_likes')
-          .insert({ message_id: messageId, user_id: userId })
-
-        if (error) {
-          console.error('Error adding like:', error)
-          return
-        }
-
-        setLikedMessageIds((prev) => new Set([...prev, messageId]))
+      } finally {
+        pendingToggles.current.delete(messageId)
       }
     },
-    [supabase, userId, likedMessageIds]
+    [supabase, userId]
   )
 
   return {
