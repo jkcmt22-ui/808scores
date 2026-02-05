@@ -6,11 +6,13 @@ import { Header } from '@/components/layout'
 import { Button, Badge, Avatar } from '@/components/ui'
 import { PrizeDisplay } from '@/components/rewards'
 import {
-  Ticket, Users, Trophy, Play, Check, AlertCircle,
+  Ticket, Users, Trophy, Play, Check,
   Calendar, Clock, Loader2, RefreshCw
 } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import { useAuth } from '@/hooks'
+import { useToast } from '@/components/ui/toast'
+import { ConfirmModal } from '@/components/admin/confirm-modal'
 import { executeRaffleDrawing, type DrawingResult } from '@/lib/raffle/drawing'
 import { cn } from '@/lib/utils'
 import type { RaffleWithPrize, RaffleEntryWithUser, RaffleWinnerWithDetails } from '@/types/database'
@@ -26,14 +28,21 @@ export default function AdminRaffleDetailPage() {
   const [isLoading, setIsLoading] = useState(true)
   const [isDrawing, setIsDrawing] = useState(false)
   const [drawingResults, setDrawingResults] = useState<DrawingResult[] | null>(null)
-  const [error, setError] = useState<string | null>(null)
+  const [confirmAction, setConfirmAction] = useState<{
+    action: () => Promise<void>
+    title: string
+    description: string
+    confirmLabel?: string
+    variant?: 'destructive' | 'default'
+  } | null>(null)
+  const { toast } = useToast()
 
   const supabase = useMemo(() => createClient(), [])
   const hasAdminAccess = profile?.is_admin === true || profile?.is_super_admin === true
 
   const fetchData = useCallback(async () => {
     if (!supabase) {
-      setError('Database connection not available')
+      toast({ type: 'error', text: 'Database connection not available' })
       setIsLoading(false)
       return
     }
@@ -85,36 +94,40 @@ export default function AdminRaffleDetailPage() {
   const totalEntries = entries.reduce((sum, e) => sum + e.entry_count, 0)
   const totalPointsUsed = entries.reduce((sum, e) => sum + e.points_used, 0)
 
-  const handleRunDrawing = async () => {
+  const handleRunDrawing = () => {
     if (!raffle) return
 
-    if (!confirm('Are you sure you want to run the drawing? This cannot be undone.')) {
-      return
-    }
+    setConfirmAction({
+      action: async () => {
+        setIsDrawing(true)
+        setDrawingResults(null)
 
-    setIsDrawing(true)
-    setError(null)
-    setDrawingResults(null)
+        // Get the month from the raffle for monthly raffles
+        const raffleMonth = raffle.month || undefined
 
-    // Get the month from the raffle for monthly raffles
-    const raffleMonth = raffle.month || undefined
+        const result = await executeRaffleDrawing(
+          raffle.id,
+          raffle.winner_count,
+          raffle.prize_id || undefined,
+          raffle.raffle_type as 'monthly' | 'season_end' | 'special',
+          raffleMonth
+        )
 
-    const result = await executeRaffleDrawing(
-      raffle.id,
-      raffle.winner_count,
-      raffle.prize_id || undefined,
-      raffle.raffle_type as 'monthly' | 'season_end' | 'special',
-      raffleMonth
-    )
+        if (result.success && result.winners) {
+          setDrawingResults(result.winners)
+          toast({ type: 'success', text: 'Drawing completed successfully!' })
+          fetchData() // Refresh to get updated status and winners
+        } else {
+          toast({ type: 'error', text: result.error || 'Drawing failed' })
+        }
 
-    if (result.success && result.winners) {
-      setDrawingResults(result.winners)
-      fetchData() // Refresh to get updated status and winners
-    } else {
-      setError(result.error || 'Drawing failed')
-    }
-
-    setIsDrawing(false)
+        setIsDrawing(false)
+      },
+      title: 'Run Drawing',
+      description: 'Are you sure you want to run the drawing? This cannot be undone.',
+      confirmLabel: 'Run Drawing',
+      variant: 'destructive',
+    })
   }
 
   const handleMarkClaimed = async (winnerId: string) => {
@@ -131,7 +144,9 @@ export default function AdminRaffleDetailPage() {
 
     if (error) {
       console.error('Error marking claimed:', error)
+      toast({ type: 'error', text: 'Failed to mark prize as claimed' })
     } else {
+      toast({ type: 'success', text: 'Prize marked as claimed' })
       fetchData()
     }
   }
@@ -274,13 +289,6 @@ export default function AdminRaffleDetailPage() {
               This raffle is closed and ready for drawing. Running the drawing will randomly select
               {raffle.winner_count === 1 ? ' a winner' : ` ${raffle.winner_count} winners`} based on entry weights.
             </p>
-
-            {error && (
-              <div className="flex items-center gap-2 p-3 mb-4 bg-destructive/10 text-destructive text-sm rounded-md">
-                <AlertCircle className="h-4 w-4" />
-                {error}
-              </div>
-            )}
 
             <Button
               onClick={handleRunDrawing}
@@ -429,6 +437,16 @@ export default function AdminRaffleDetailPage() {
           )}
         </div>
       </main>
+
+      <ConfirmModal
+        isOpen={!!confirmAction}
+        onConfirm={async () => { await confirmAction?.action(); setConfirmAction(null) }}
+        onCancel={() => setConfirmAction(null)}
+        title={confirmAction?.title || ''}
+        description={confirmAction?.description || ''}
+        confirmLabel={confirmAction?.confirmLabel || 'Confirm'}
+        variant={confirmAction?.variant || 'destructive'}
+      />
     </>
   )
 }

@@ -1,5 +1,6 @@
 import { createClient } from '@/lib/supabase/server'
 import { NextRequest, NextResponse } from 'next/server'
+import { getCurrentSeasonYear } from '@/hooks'
 
 export async function POST(request: NextRequest) {
   try {
@@ -156,7 +157,7 @@ export async function POST(request: NextRequest) {
         gender: sport.gender,
         division: division || null,
         league: league || null,
-        season_year: '2025-2026',
+        season_year: getCurrentSeasonYear(),
         is_active: true,
       }))
 

@@ -1,14 +1,14 @@
 'use client'
 
 import { useState, useMemo, useEffect } from 'react'
+import { useToast } from '@/components/ui/toast'
+import { ConfirmModal } from '@/components/admin/confirm-modal'
 import { useRouter } from 'next/navigation'
 import {
   Plus,
   Edit2,
   Trash2,
   Loader2,
-  AlertCircle,
-  CheckCircle,
   Users,
   Search,
   ArrowLeft,
@@ -27,7 +27,6 @@ import {
   type TeamRosterPlayer,
   type TeamGender,
 } from '@/hooks/use-team-roster'
-import { cn } from '@/lib/utils'
 import { getSportEmoji } from '@/lib/sport-utils'
 import type { Player } from '@/types/database'
 
@@ -77,7 +76,6 @@ export default function AdminRostersPage() {
   const [showAddPlayer, setShowAddPlayer] = useState(false)
   const [editingPlayer, setEditingPlayer] = useState<{ player: Player; rosterEntryId: string | null } | null>(null)
   const [showAssignToRoster, setShowAssignToRoster] = useState<Player | null>(null)
-  const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null)
 
   // Form state
   const [playerForm, setPlayerForm] = useState<PlayerFormData>({
@@ -91,6 +89,12 @@ export default function AdminRostersPage() {
     grade: '',
     is_captain: false,
   })
+  const [confirmAction, setConfirmAction] = useState<{
+    action: () => Promise<void>
+    title: string
+    description: string
+    confirmLabel?: string
+  } | null>(null)
 
   // Check if all selectors are filled (required for editing)
   const hasFullContext = selectedSchoolId && selectedSportId && selectedGender
@@ -114,6 +118,8 @@ export default function AdminRostersPage() {
     isLoading: mutationLoading,
     error: mutationError,
   } = useTeamRosterMutations(selectedSchoolId)
+
+  const { toast } = useToast()
 
   // Get current school, sport, and team for display
   const selectedSchool = schools.find(s => s.id === selectedSchoolId)
@@ -161,14 +167,6 @@ export default function AdminRostersPage() {
     }
   }, [authLoading, user, profile, router])
 
-  // Clear message after 3 seconds
-  useEffect(() => {
-    if (message) {
-      const timer = setTimeout(() => setMessage(null), 3000)
-      return () => clearTimeout(timer)
-    }
-  }, [message])
-
   // Filter players by search term
   const filteredPlayers = useMemo(() => {
     if (!searchTerm) return allPlayers
@@ -188,12 +186,12 @@ export default function AdminRostersPage() {
   // Handlers
   const handleAddPlayer = async () => {
     if (!playerForm.first_name || !playerForm.last_name) {
-      setMessage({ type: 'error', text: 'First and last name are required' })
+      toast({ type: 'error', text: 'First and last name are required' })
       return
     }
 
     if (!hasFullContext || !currentTeam) {
-      setMessage({ type: 'error', text: 'Please select school, sport, gender, and division first' })
+      toast({ type: 'error', text: 'Please select school, sport, gender, and division first' })
       return
     }
 
@@ -205,7 +203,7 @@ export default function AdminRostersPage() {
     })
 
     if (!newPlayer) {
-      setMessage({ type: 'error', text: mutationError || 'Failed to add player' })
+      toast({ type: 'error', text: mutationError || 'Failed to add player' })
       return
     }
 
@@ -222,13 +220,13 @@ export default function AdminRostersPage() {
     })
 
     if (rosterSuccess) {
-      setMessage({ type: 'success', text: 'Player added to roster successfully' })
+      toast({ type: 'success', text: 'Player added to roster successfully' })
       setPlayerForm({ first_name: '', last_name: '', jersey_number: null })
       setRosterForm({ jersey_number: null, position: '', grade: '', is_captain: false })
       setShowAddPlayer(false)
       refetchRoster()
     } else {
-      setMessage({ type: 'error', text: mutationError || 'Failed to add player to roster' })
+      toast({ type: 'error', text: mutationError || 'Failed to add player to roster' })
     }
   }
 
@@ -252,26 +250,31 @@ export default function AdminRostersPage() {
     }
 
     if (success) {
-      setMessage({ type: 'success', text: 'Player updated successfully' })
+      toast({ type: 'success', text: 'Player updated successfully' })
       setEditingPlayer(null)
       refetchRoster()
     } else {
-      setMessage({ type: 'error', text: mutationError || 'Failed to update player' })
+      toast({ type: 'error', text: mutationError || 'Failed to update player' })
     }
   }
 
-  const handleDeletePlayer = async (rosterPlayer: TeamRosterPlayer) => {
-    if (!confirm('Are you sure you want to remove this player from the roster?')) return
+  const handleDeletePlayer = (rosterPlayer: TeamRosterPlayer) => {
+    setConfirmAction({
+      action: async () => {
+        // Remove from roster (soft delete)
+        const success = await removeFromTeamRoster(rosterPlayer.rosterEntry.id)
 
-    // Remove from roster (soft delete)
-    const success = await removeFromTeamRoster(rosterPlayer.rosterEntry.id)
-
-    if (success) {
-      setMessage({ type: 'success', text: 'Player removed from roster' })
-      refetchRoster()
-    } else {
-      setMessage({ type: 'error', text: mutationError || 'Failed to remove player' })
-    }
+        if (success) {
+          toast({ type: 'success', text: 'Player removed from roster' })
+          refetchRoster()
+        } else {
+          toast({ type: 'error', text: mutationError || 'Failed to remove player' })
+        }
+      },
+      title: 'Remove Player',
+      description: 'Are you sure you want to remove this player from the roster?',
+      confirmLabel: 'Remove',
+    })
   }
 
   const openEditPlayer = (rosterPlayer: TeamRosterPlayer) => {
@@ -323,21 +326,6 @@ export default function AdminRostersPage() {
           </span>
         </div>
       </div>
-
-      {/* Message toast */}
-      {message && (
-        <div className={cn(
-          'fixed top-4 right-4 z-50 flex items-center gap-2 px-4 py-3 rounded-lg shadow-lg',
-          message.type === 'success' ? 'bg-score-green text-black' : 'bg-score-red text-white'
-        )}>
-          {message.type === 'success' ? (
-            <CheckCircle className="h-5 w-5" />
-          ) : (
-            <AlertCircle className="h-5 w-5" />
-          )}
-          {message.text}
-        </div>
-      )}
 
       <div className="px-4 py-6 max-w-4xl mx-auto">
         {/* Selectors - School, Sport, Gender, Division, Season */}
@@ -769,6 +757,16 @@ export default function AdminRostersPage() {
           </div>
         </Modal>
       )}
+
+      <ConfirmModal
+        isOpen={!!confirmAction}
+        onConfirm={async () => { await confirmAction?.action(); setConfirmAction(null) }}
+        onCancel={() => setConfirmAction(null)}
+        title={confirmAction?.title || ''}
+        description={confirmAction?.description || ''}
+        confirmLabel={confirmAction?.confirmLabel || 'Remove'}
+        variant="destructive"
+      />
     </div>
   )
 }

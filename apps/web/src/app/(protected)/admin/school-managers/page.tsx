@@ -6,7 +6,6 @@ import {
   Plus,
   Loader2,
   AlertCircle,
-  CheckCircle,
   ChevronLeft,
   Search,
   Save,
@@ -21,6 +20,8 @@ import { Button, Badge, Input, Card, Avatar } from '@/components/ui'
 import { useAuth } from '@/hooks'
 import { createClient } from '@/lib/supabase/client'
 import { cn } from '@/lib/utils'
+import { useToast } from '@/components/ui/toast'
+import { ConfirmModal } from '@/components/admin/confirm-modal'
 import type { School, SchoolManagerWithUser, SchoolManagerRole } from '@/types/database'
 
 interface SearchUser {
@@ -77,7 +78,13 @@ export default function SchoolManagersAdminPage() {
   const [editingManager, setEditingManager] = useState<SchoolManagerWithUser | null>(null)
   const [formData, setFormData] = useState<ManagerFormData>(initialFormData)
   const [isSaving, setIsSaving] = useState(false)
-  const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null)
+
+  const [confirmAction, setConfirmAction] = useState<{
+    action: () => Promise<void>
+    title: string
+    description: string
+    confirmLabel?: string
+  } | null>(null)
 
   // User search for adding managers
   const [userSearchTerm, setUserSearchTerm] = useState('')
@@ -87,6 +94,7 @@ export default function SchoolManagersAdminPage() {
 
   const isSuperAdmin = profile?.is_super_admin === true
   const hasAdminAccess = profile?.is_admin === true || isSuperAdmin
+  const { toast } = useToast()
 
   // Fetch managers and schools
   const fetchData = useCallback(async () => {
@@ -230,7 +238,7 @@ export default function SchoolManagersAdminPage() {
   // Create manager
   const handleCreateManager = async () => {
     if (!selectedUser || !formData.school_id) {
-      setMessage({ type: 'error', text: 'Please select a user and school' })
+      toast({ type: 'error', text: 'Please select a user and school' })
       return
     }
 
@@ -239,17 +247,16 @@ export default function SchoolManagersAdminPage() {
       (m) => m.user_id === selectedUser.id && m.school_id === formData.school_id
     )
     if (existingManager) {
-      setMessage({ type: 'error', text: 'This user is already a manager for this school' })
+      toast({ type: 'error', text: 'This user is already a manager for this school' })
       return
     }
 
     if (!supabase) {
-      setMessage({ type: 'error', text: 'Database connection not available' })
+      toast({ type: 'error', text: 'Database connection not available' })
       return
     }
 
     setIsSaving(true)
-    setMessage(null)
 
     try {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -270,12 +277,24 @@ export default function SchoolManagersAdminPage() {
 
       // Also update the user's is_school_manager flag
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      await (supabase as any)
+      const { error: userUpdateError } = await (supabase as any)
         .from('users')
         .update({ is_school_manager: true })
         .eq('id', selectedUser.id)
 
-      setMessage({ type: 'success', text: `${selectedUser.display_name || 'User'} added as ${formData.role}` })
+      if (userUpdateError) {
+        console.error('Error updating user flag:', userUpdateError)
+        // Rollback the manager record
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        await (supabase as any)
+          .from('school_managers')
+          .delete()
+          .eq('user_id', selectedUser.id)
+          .eq('school_id', formData.school_id)
+        throw new Error('Failed to update user permissions — manager record rolled back')
+      }
+
+      toast({ type: 'success', text: `${selectedUser.display_name || 'User'} added as ${formData.role}` })
       setFormData(initialFormData)
       setSelectedUser(null)
       setUserSearchTerm('')
@@ -285,7 +304,7 @@ export default function SchoolManagersAdminPage() {
       fetchData()
     } catch (err) {
       console.error('Error creating manager:', err)
-      setMessage({ type: 'error', text: 'Failed to add manager' })
+      toast({ type: 'error', text: 'Failed to add manager' })
     } finally {
       setIsSaving(false)
     }
@@ -296,12 +315,11 @@ export default function SchoolManagersAdminPage() {
     if (!editingManager) return
 
     if (!supabase) {
-      setMessage({ type: 'error', text: 'Database connection not available' })
+      toast({ type: 'error', text: 'Database connection not available' })
       return
     }
 
     setIsSaving(true)
-    setMessage(null)
 
     try {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -318,7 +336,7 @@ export default function SchoolManagersAdminPage() {
 
       if (error) throw error
 
-      setMessage({ type: 'success', text: 'Manager updated successfully' })
+      toast({ type: 'success', text: 'Manager updated successfully' })
       setEditingManager(null)
       setShowForm(false)
 
@@ -326,52 +344,55 @@ export default function SchoolManagersAdminPage() {
       fetchData()
     } catch (err) {
       console.error('Error updating manager:', err)
-      setMessage({ type: 'error', text: 'Failed to update manager' })
+      toast({ type: 'error', text: 'Failed to update manager' })
     } finally {
       setIsSaving(false)
     }
   }
 
   // Remove manager (deactivate)
-  const handleRemoveManager = async (manager: SchoolManagerWithUser) => {
-    if (!confirm(`Remove ${manager.user?.display_name || 'this user'} as manager of ${manager.school?.name}?`)) {
-      return
-    }
+  const handleRemoveManager = (manager: SchoolManagerWithUser) => {
+    setConfirmAction({
+      action: async () => {
+        if (!supabase) return
 
-    if (!supabase) return
+        try {
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          const { error } = await (supabase as any)
+            .from('school_managers')
+            .update({ is_active: false })
+            .eq('id', manager.id)
 
-    try {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const { error } = await (supabase as any)
-        .from('school_managers')
-        .update({ is_active: false })
-        .eq('id', manager.id)
+          if (error) throw error
 
-      if (error) throw error
+          // Check if user has other active manager roles
+          const { data: otherRoles } = await supabase
+            .from('school_managers')
+            .select('id')
+            .eq('user_id', manager.user_id)
+            .eq('is_active', true)
+            .neq('id', manager.id)
 
-      // Check if user has other active manager roles
-      const { data: otherRoles } = await supabase
-        .from('school_managers')
-        .select('id')
-        .eq('user_id', manager.user_id)
-        .eq('is_active', true)
-        .neq('id', manager.id)
+          // If no other roles, remove is_school_manager flag
+          if (!otherRoles || otherRoles.length === 0) {
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            await (supabase as any)
+              .from('users')
+              .update({ is_school_manager: false })
+              .eq('id', manager.user_id)
+          }
 
-      // If no other roles, remove is_school_manager flag
-      if (!otherRoles || otherRoles.length === 0) {
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        await (supabase as any)
-          .from('users')
-          .update({ is_school_manager: false })
-          .eq('id', manager.user_id)
-      }
-
-      setMessage({ type: 'success', text: 'Manager removed successfully' })
-      setManagers((prev) => prev.filter((m) => m.id !== manager.id))
-    } catch (err) {
-      console.error('Error removing manager:', err)
-      setMessage({ type: 'error', text: 'Failed to remove manager' })
-    }
+          toast({ type: 'success', text: 'Manager removed successfully' })
+          setManagers((prev) => prev.filter((m) => m.id !== manager.id))
+        } catch (err) {
+          console.error('Error removing manager:', err)
+          toast({ type: 'error', text: 'Failed to remove manager' })
+        }
+      },
+      title: 'Remove Manager',
+      description: `Remove ${manager.user?.display_name || 'this user'} as manager of ${manager.school?.name}?`,
+      confirmLabel: 'Remove',
+    })
   }
 
   // Start editing
@@ -388,14 +409,6 @@ export default function SchoolManagersAdminPage() {
     })
     setShowForm(true)
   }
-
-  // Clear message after delay
-  useEffect(() => {
-    if (message) {
-      const timer = setTimeout(() => setMessage(null), 3000)
-      return () => clearTimeout(timer)
-    }
-  }, [message])
 
   // Auth loading
   if (authLoading) {
@@ -455,23 +468,6 @@ export default function SchoolManagersAdminPage() {
       </header>
 
       <main className="p-4 pb-24">
-        {/* Message Toast */}
-        {message && (
-          <div className={cn(
-            'mb-4 flex items-center gap-2 p-3 text-sm border-2',
-            message.type === 'success'
-              ? 'bg-neon-green/10 border-neon-green/30 text-neon-green'
-              : 'bg-neon-pink/10 border-neon-pink/30 text-neon-pink'
-          )}>
-            {message.type === 'success' ? (
-              <CheckCircle className="h-4 w-4 flex-shrink-0" />
-            ) : (
-              <AlertCircle className="h-4 w-4 flex-shrink-0" />
-            )}
-            <span>{message.text}</span>
-          </div>
-        )}
-
         {/* Role Legend */}
         <div className="mb-4 p-4 bg-background-secondary border-2 border-border">
           <h3 className="font-display font-bold text-sm mb-2 text-foreground">Role Descriptions</h3>
@@ -850,6 +846,16 @@ export default function SchoolManagersAdminPage() {
           </>
         )}
       </main>
+
+      <ConfirmModal
+        isOpen={!!confirmAction}
+        onConfirm={async () => { await confirmAction?.action(); setConfirmAction(null) }}
+        onCancel={() => setConfirmAction(null)}
+        title={confirmAction?.title || ''}
+        description={confirmAction?.description || ''}
+        confirmLabel={confirmAction?.confirmLabel || 'Remove'}
+        variant="destructive"
+      />
     </div>
   )
 }

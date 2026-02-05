@@ -4,8 +4,6 @@ import { useState, useEffect, useCallback, useMemo } from 'react'
 import {
   Plus,
   Loader2,
-  AlertCircle,
-  CheckCircle,
   Calendar,
   Users,
   Trophy,
@@ -16,6 +14,8 @@ import {
 import { Button, Card, Badge, Input } from '@/components/ui'
 import { createClient } from '@/lib/supabase/client'
 import { cn } from '@/lib/utils'
+import { useToast } from '@/components/ui/toast'
+import { ConfirmModal } from '@/components/admin/confirm-modal'
 import type { Season, Sport, SeasonStatus } from '@/types/database'
 
 interface SeasonWithCounts extends Season {
@@ -24,6 +24,7 @@ interface SeasonWithCounts extends Season {
 
 export default function AdminSeasonsPage() {
   const supabase = useMemo(() => createClient(), [])
+  const { toast } = useToast()
 
   // State
   const [seasons, setSeasons] = useState<SeasonWithCounts[]>([])
@@ -31,7 +32,13 @@ export default function AdminSeasonsPage() {
   const [isLoading, setIsLoading] = useState(true)
   const [isSaving, setIsSaving] = useState(false)
   const [isGenerating, setIsGenerating] = useState(false)
-  const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null)
+  const [confirmAction, setConfirmAction] = useState<{
+    action: () => Promise<void>
+    title: string
+    description: string
+    confirmLabel?: string
+    variant?: 'destructive' | 'default'
+  } | null>(null)
 
   // Form state
   const [showForm, setShowForm] = useState(false)
@@ -49,7 +56,6 @@ export default function AdminSeasonsPage() {
     if (!supabase) return
 
     setIsLoading(true)
-    setMessage(null)
 
     try {
       // Fetch seasons
@@ -93,7 +99,7 @@ export default function AdminSeasonsPage() {
       setSports((sportsData || []) as Sport[])
     } catch (err) {
       console.error('Error fetching data:', err)
-      setMessage({ type: 'error', text: 'Failed to load data' })
+      toast({ type: 'error', text: 'Failed to load data' })
     } finally {
       setIsLoading(false)
     }
@@ -146,12 +152,11 @@ export default function AdminSeasonsPage() {
   // Save season
   const handleSave = async () => {
     if (!supabase || !formData.year) {
-      setMessage({ type: 'error', text: 'Please enter a season year' })
+      toast({ type: 'error', text: 'Please enter a season year' })
       return
     }
 
     setIsSaving(true)
-    setMessage(null)
 
     try {
       const payload = {
@@ -170,7 +175,7 @@ export default function AdminSeasonsPage() {
           .eq('id', editingSeason.id)
 
         if (error) throw error
-        setMessage({ type: 'success', text: 'Season updated successfully' })
+        toast({ type: 'success', text: 'Season updated successfully' })
       } else {
         // Create
         const { error } = await supabase
@@ -178,7 +183,7 @@ export default function AdminSeasonsPage() {
           .insert(payload as never)
 
         if (error) throw error
-        setMessage({ type: 'success', text: 'Season created successfully' })
+        toast({ type: 'success', text: 'Season created successfully' })
       }
 
       setShowForm(false)
@@ -186,7 +191,7 @@ export default function AdminSeasonsPage() {
       fetchData()
     } catch (err: unknown) {
       const errorMessage = err instanceof Error ? err.message : 'Failed to save season'
-      setMessage({ type: 'error', text: errorMessage })
+      toast({ type: 'error', text: errorMessage })
     } finally {
       setIsSaving(false)
     }
@@ -197,7 +202,6 @@ export default function AdminSeasonsPage() {
     if (!supabase) return
 
     setIsSaving(true)
-    setMessage(null)
 
     try {
       // Use the set_current_season function
@@ -208,96 +212,99 @@ export default function AdminSeasonsPage() {
 
       if (error) throw error
 
-      setMessage({ type: 'success', text: 'Current season updated' })
+      toast({ type: 'success', text: 'Current season updated' })
       fetchData()
     } catch (err) {
       console.error('Error setting current season:', err)
-      setMessage({ type: 'error', text: 'Failed to set current season' })
+      toast({ type: 'error', text: 'Failed to set current season' })
     } finally {
       setIsSaving(false)
     }
   }
 
   // Generate teams for a season
-  const handleGenerateTeams = async (season: Season) => {
+  const handleGenerateTeams = (season: Season) => {
     if (!supabase) return
 
-    const confirmed = confirm(
-      `Generate teams for ${season.year}?\n\nThis will create team entries for all schools × all enabled sports (${season.sports_enabled?.length || sports.length} sports).\n\nExisting teams will not be duplicated.`
-    )
-    if (!confirmed) return
+    setConfirmAction({
+      action: async () => {
+        setIsGenerating(true)
 
-    setIsGenerating(true)
-    setMessage(null)
-
-    try {
-      // Get all schools
-      const { data: schools, error: schoolsError } = await supabase
-        .from('schools')
-        .select('id')
-
-      if (schoolsError) throw schoolsError
-
-      // Get enabled sports (or all if none specified)
-      const enabledSportIds = season.sports_enabled?.length
-        ? season.sports_enabled
-        : sports.map(s => s.id)
-
-      const enabledSports = sports.filter(s => enabledSportIds.includes(s.id))
-
-      let createdCount = 0
-      let skippedCount = 0
-
-      // Create teams for each school + sport combination
-      for (const school of (schools || []) as Array<{ id: string }>) {
-        for (const sport of enabledSports) {
-          // Check if team already exists
-          const { data: existing } = await supabase
-            .from('teams')
+        try {
+          // Get all schools
+          const { data: schools, error: schoolsError } = await supabase
+            .from('schools')
             .select('id')
-            .eq('school_id', school.id)
-            .eq('sport_id', sport.id)
-            .eq('gender', sport.gender)
-            .eq('level', 'varsity')
-            .eq('season_year', season.year)
-            .single()
 
-          if (existing) {
-            skippedCount++
-            continue
+          if (schoolsError) throw schoolsError
+
+          // Get enabled sports (or all if none specified)
+          const enabledSportIds = season.sports_enabled?.length
+            ? season.sports_enabled
+            : sports.map(s => s.id)
+
+          const enabledSports = sports.filter(s => enabledSportIds.includes(s.id))
+
+          let createdCount = 0
+          let skippedCount = 0
+
+          // Create teams for each school + sport combination
+          for (const school of (schools || []) as Array<{ id: string }>) {
+            for (const sport of enabledSports) {
+              // Check if team already exists
+              const { data: existing } = await supabase
+                .from('teams')
+                .select('id')
+                .eq('school_id', school.id)
+                .eq('sport_id', sport.id)
+                .eq('gender', sport.gender)
+                .eq('level', 'varsity')
+                .eq('season_year', season.year)
+                .single()
+
+              if (existing) {
+                skippedCount++
+                continue
+              }
+
+              // Create the team
+              const { error: insertError } = await supabase
+                .from('teams')
+                .insert({
+                  school_id: school.id,
+                  sport_id: sport.id,
+                  gender: sport.gender,
+                  level: 'varsity',
+                  season_year: season.year,
+                  is_active: true,
+                } as never)
+
+              if (insertError) {
+                console.error('Error creating team:', insertError)
+              } else {
+                createdCount++
+              }
+            }
           }
 
-          // Create the team
-          const { error: insertError } = await supabase
-            .from('teams')
-            .insert({
-              school_id: school.id,
-              sport_id: sport.id,
-              gender: sport.gender,
-              level: 'varsity',
-              season_year: season.year,
-              is_active: true,
-            } as never)
-
-          if (insertError) {
-            console.error('Error creating team:', insertError)
-          } else {
-            createdCount++
-          }
+          toast({
+            type: 'success',
+            text: `Generated ${createdCount} teams (${skippedCount} already existed)`,
+          })
+          fetchData()
+        } catch (err) {
+          console.error('Error generating teams:', err)
+          toast({ type: 'error', text: 'Failed to generate teams' })
+        } finally {
+          setIsGenerating(false)
         }
-      }
-
-      setMessage({
-        type: 'success',
-        text: `Generated ${createdCount} teams (${skippedCount} already existed)`,
-      })
-      fetchData()
-    } catch (err) {
-      console.error('Error generating teams:', err)
-      setMessage({ type: 'error', text: 'Failed to generate teams' })
-    } finally {
-      setIsGenerating(false)
-    }
+      },
+      title: 'Generate Teams',
+      description: `Generate teams for ${season.year}? This will create team entries for all schools \u00d7 all enabled sports (${season.sports_enabled?.length || sports.length} sports). Existing teams will not be duplicated.`,
+      confirmLabel: 'Generate',
+      variant: 'default',
+    })
+    return
   }
 
   // Toggle sport enabled
@@ -347,25 +354,6 @@ export default function AdminSeasonsPage() {
           </Button>
         </div>
       </div>
-
-      {/* Message */}
-      {message && (
-        <div
-          className={cn(
-            'mb-6 flex items-center gap-2 p-3 border-2 rounded',
-            message.type === 'success'
-              ? 'bg-neon-green/10 border-neon-green/30 text-neon-green'
-              : 'bg-neon-pink/10 border-neon-pink/30 text-neon-pink'
-          )}
-        >
-          {message.type === 'success' ? (
-            <CheckCircle className="h-4 w-4 flex-shrink-0" />
-          ) : (
-            <AlertCircle className="h-4 w-4 flex-shrink-0" />
-          )}
-          <span className="text-sm">{message.text}</span>
-        </div>
-      )}
 
       {/* Create/Edit Form */}
       {showForm && (
@@ -559,6 +547,16 @@ export default function AdminSeasonsPage() {
           ))}
         </div>
       )}
+
+      <ConfirmModal
+        isOpen={!!confirmAction}
+        onConfirm={async () => { await confirmAction?.action(); setConfirmAction(null) }}
+        onCancel={() => setConfirmAction(null)}
+        title={confirmAction?.title || ''}
+        description={confirmAction?.description || ''}
+        confirmLabel={confirmAction?.confirmLabel || 'Confirm'}
+        variant={confirmAction?.variant || 'destructive'}
+      />
     </div>
   )
 }

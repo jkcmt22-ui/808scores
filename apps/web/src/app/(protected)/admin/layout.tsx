@@ -20,32 +20,42 @@ import {
   X,
   BarChart3,
   Key,
-  Loader2,
   AlertCircle,
   ListOrdered,
+  Wifi,
+  WifiOff,
+  Gamepad2,
+  Shield,
+  TicketCheck,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { Header } from '@/components/layout'
-import { Button } from '@/components/ui'
+import { Button, Skeleton, ToastProvider } from '@/components/ui'
 import { useAuth } from '@/hooks'
 import { logAuthState, logLoadingStart, logLoadingEnd, logRender } from '@/lib/nav-debug'
 
 const adminNavItems = [
   { href: '/admin', label: 'Dashboard', icon: LayoutDashboard, exact: true },
-  { href: '/admin/seasons', label: 'Seasons', icon: CalendarDays },
-  { href: '/admin/users', label: 'Users', icon: Users },
-  { href: '/admin/analytics', label: 'Analytics', icon: BarChart3 },
-  { href: '/admin/beta-codes', label: 'Beta Codes', icon: Key },
-  { href: '/admin/standings', label: 'Standings', icon: ListOrdered },
+  { href: '/admin/games', label: 'Games', icon: Gamepad2 },
+  { href: '/admin/schedule', label: 'Schedule', icon: Calendar },
   { href: '/admin/tournaments', label: 'Tournaments', icon: Trophy },
   { href: '/admin/schools', label: 'Schools', icon: GraduationCap },
-  { href: '/admin/school-managers', label: 'School Managers', icon: Users },
   { href: '/admin/rosters', label: 'Rosters', icon: ClipboardList },
+  { href: '/admin/standings', label: 'Standings', icon: ListOrdered },
+  { href: '/admin/seasons', label: 'Seasons', icon: CalendarDays },
+  { href: '/admin/users', label: 'Users', icon: Users },
+  { href: '/admin/applications', label: 'Applications', icon: Shield },
+  { href: '/admin/codes', label: 'Invite Codes', icon: TicketCheck },
+  { href: '/admin/school-managers', label: 'School Managers', icon: Users },
   { href: '/admin/moderation', label: 'Moderation', icon: MessageSquare },
-  { href: '/admin/schedule', label: 'Schedule', icon: Calendar },
+  { href: '/admin/analytics', label: 'Analytics', icon: BarChart3 },
+  { href: '/admin/beta-codes', label: 'Beta Codes', icon: Key },
   { href: '/admin/raffles', label: 'Raffles', icon: Gift },
   { href: '/admin/prizes', label: 'Prizes', icon: Award },
 ]
+
+// Progressive loading stages
+type LoadingStage = 'connecting' | 'still-connecting' | 'timeout'
 
 export default function AdminLayout({ children }: { children: ReactNode }) {
   const pathname = usePathname()
@@ -53,7 +63,7 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
   const { user, profile, isLoading: authLoading, isProfileLoading } = useAuth()
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const [collapsed, setCollapsed] = useState(false)
-  const [loadingTimeout, setLoadingTimeout] = useState(false)
+  const [loadingStage, setLoadingStage] = useState<LoadingStage>('connecting')
   const loadingIdRef = useRef<string>('')
   const redirectedRef = useRef(false)
 
@@ -62,7 +72,6 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
 
   // ALL HOOKS MUST BE CALLED BEFORE ANY CONDITIONAL RETURNS (Rules of Hooks)
 
-  // All nav items are visible to all admins (no superAdminOnly restrictions currently)
   const visibleNavItems = useMemo(() => {
     return adminNavItems
   }, [])
@@ -81,26 +90,31 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
     })
   }, [authLoading, user, profile])
 
-  // Track loading state with timeout
-  // Bug #3 fix: Remove auto-reload (causes confusion), add try-catch for sessionStorage
+  // Track loading state with progressive disclosure
   useEffect(() => {
     if (authLoading || isProfileLoading) {
       loadingIdRef.current = logLoadingStart('AdminLayout', 'auth check')
-      setLoadingTimeout(false)
+      setLoadingStage('connecting')
 
-      // Timeout after 45 seconds - just show error, no auto-reload
-      // Auto-reload caused more confusion than it helped on slow networks
-      const timeout = setTimeout(() => {
-        setLoadingTimeout(true)
+      // 5s: "Still connecting..."
+      const stillTimer = setTimeout(() => {
+        setLoadingStage('still-connecting')
+      }, 5000)
+
+      // 15s: Show "Connection Issue" with retry (reduced from 45s)
+      const timeoutTimer = setTimeout(() => {
+        setLoadingStage('timeout')
         logLoadingEnd(loadingIdRef.current, 'timeout')
-      }, 45000)
+      }, 15000)
 
-      return () => clearTimeout(timeout)
+      return () => {
+        clearTimeout(stillTimer)
+        clearTimeout(timeoutTimer)
+      }
     } else if (loadingIdRef.current) {
       logLoadingEnd(loadingIdRef.current, 'success')
       loadingIdRef.current = ''
-      setLoadingTimeout(false) // Reset timeout state when loading completes
-      // Clear any stale retry flags (wrapped in try-catch for incognito mode)
+      setLoadingStage('connecting')
       try {
         sessionStorage.removeItem('admin-auth-retry')
       } catch {
@@ -117,7 +131,7 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
     }
   }, [authLoading, user, router, pathname])
 
-  // Helper function for active state - defined before returns
+  // Helper function for active state
   const isActive = (href: string, exact?: boolean) => {
     if (exact) return pathname === href
     return pathname === href || pathname.startsWith(href + '/')
@@ -125,15 +139,14 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
 
   // === CONDITIONAL RETURNS START HERE (after all hooks) ===
 
-  // Auth loading state - show loading in layout with timeout fallback
-  // Also show loading if profile is still being fetched (Bug #1 fix)
+  // Auth loading state - show skeleton layout with progressive messages
   if (authLoading || isProfileLoading) {
-    if (loadingTimeout) {
+    if (loadingStage === 'timeout') {
       return (
         <div className="min-h-screen bg-background">
           <Header title="Admin Panel" />
           <div className="flex min-h-[50vh] flex-col items-center justify-center p-4">
-            <AlertCircle className="mb-4 h-12 w-12 text-neon-pink" />
+            <WifiOff className="mb-4 h-12 w-12 text-neon-pink" />
             <h1 className="mb-2 font-display text-xl font-bold text-foreground uppercase">
               Connection Issue
             </h1>
@@ -142,7 +155,7 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
             </p>
             <Button
               onClick={() => {
-                sessionStorage.removeItem('admin-auth-retry')
+                try { sessionStorage.removeItem('admin-auth-retry') } catch {}
                 window.location.reload()
               }}
               variant="outline"
@@ -154,28 +167,75 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
       )
     }
 
+    // Skeleton layout that mirrors the real admin UI
     return (
       <div className="min-h-screen bg-background">
         <Header title="Admin Panel" />
-        <div className="flex min-h-[50vh] flex-col items-center justify-center">
-          <Loader2 className="h-8 w-8 animate-spin text-neon-yellow" />
-          <span className="mt-4 font-display text-sm text-foreground-muted uppercase tracking-wider">
-            Loading...
-          </span>
+        <div className="flex">
+          {/* Skeleton sidebar */}
+          <aside className="hidden lg:block w-64 border-r-2 border-border bg-background-secondary h-[calc(100vh-4rem)]">
+            <div className="p-2 space-y-1">
+              {Array.from({ length: 8 }).map((_, i) => (
+                <div key={i} className="flex items-center gap-3 px-3 py-2.5">
+                  <Skeleton className="h-5 w-5 rounded" />
+                  <Skeleton className="h-4 w-24" />
+                </div>
+              ))}
+            </div>
+          </aside>
+
+          {/* Skeleton content */}
+          <main className="flex-1 p-4">
+            {/* Status message */}
+            <div className="flex items-center justify-center gap-2 mb-6 py-3">
+              <Wifi className={cn(
+                'h-4 w-4',
+                loadingStage === 'connecting' ? 'text-neon-yellow animate-pulse' : 'text-neon-yellow/50'
+              )} />
+              <span className="font-display text-xs text-foreground-muted uppercase tracking-wider">
+                {loadingStage === 'connecting' ? 'Connecting...' : 'Still connecting...'}
+              </span>
+            </div>
+
+            {/* Skeleton content cards */}
+            <div className="space-y-4">
+              <Skeleton className="h-10 w-64" />
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                {Array.from({ length: 3 }).map((_, i) => (
+                  <div key={i} className="border-2 border-border p-4">
+                    <Skeleton className="h-4 w-20 mb-2" />
+                    <Skeleton className="h-8 w-12" />
+                  </div>
+                ))}
+              </div>
+              <div className="space-y-3">
+                {Array.from({ length: 4 }).map((_, i) => (
+                  <div key={i} className="border-2 border-border p-4">
+                    <div className="flex items-center justify-between">
+                      <div className="space-y-2">
+                        <Skeleton className="h-4 w-32" />
+                        <Skeleton className="h-3 w-48" />
+                      </div>
+                      <Skeleton className="h-8 w-8" />
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </main>
         </div>
       </div>
     )
   }
 
   // Not authenticated - redirect handled by useEffect above
-  // Bug #2 fix: Show loading spinner instead of blank screen during redirect
   if (!user) {
     return (
       <div className="min-h-screen bg-background">
         <Header title="Admin Panel" />
         <div className="flex min-h-[50vh] flex-col items-center justify-center">
-          <Loader2 className="h-8 w-8 animate-spin text-neon-yellow" />
-          <span className="mt-4 font-display text-sm text-foreground-muted uppercase tracking-wider">
+          <Wifi className="h-6 w-6 animate-pulse text-neon-yellow mb-3" />
+          <span className="font-display text-sm text-foreground-muted uppercase tracking-wider">
             Redirecting to login...
           </span>
         </div>
@@ -183,7 +243,7 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
     )
   }
 
-  // Profile failed to load - graceful error
+  // Profile failed to load
   if (!profile) {
     return (
       <div className="min-h-screen bg-background">
@@ -291,14 +351,16 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
           />
         )}
 
-        {/* Main content */}
+        {/* Main content - wrapped in ToastProvider */}
         <main
           className={cn(
             'flex-1 min-h-[calc(100vh-4rem)] transition-all duration-300',
             collapsed ? 'lg:ml-0' : 'lg:ml-0'
           )}
         >
-          {children}
+          <ToastProvider>
+            {children}
+          </ToastProvider>
         </main>
       </div>
     </div>

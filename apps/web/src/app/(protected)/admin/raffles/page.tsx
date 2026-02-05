@@ -10,6 +10,8 @@ import {
 import { createClient } from '@/lib/supabase/client'
 import { useAuth } from '@/hooks'
 import { cn } from '@/lib/utils'
+import { useToast } from '@/components/ui/toast'
+import { ConfirmModal } from '@/components/admin/confirm-modal'
 import Link from 'next/link'
 import type { RaffleWithPrize, Prize, RaffleType, RaffleStatus } from '@/types/database'
 
@@ -76,10 +78,16 @@ export default function AdminRafflesPage() {
   const [editingRaffle, setEditingRaffle] = useState<RaffleWithPrize | null>(null)
   const [formData, setFormData] = useState<RaffleFormData>(defaultFormData)
   const [isSaving, setIsSaving] = useState(false)
-  const [error, setError] = useState<string | null>(null)
+  const [confirmAction, setConfirmAction] = useState<{
+    action: () => Promise<void>
+    title: string
+    description: string
+    confirmLabel?: string
+  } | null>(null)
 
   const supabase = createClient()
   const hasAdminAccess = profile?.is_admin === true || profile?.is_super_admin === true
+  const { toast } = useToast()
 
   const fetchData = useCallback(async () => {
     if (!supabase) {
@@ -156,7 +164,7 @@ export default function AdminRafflesPage() {
   const handleSave = async () => {
     // Validate required fields
     if (!formData.name.trim()) {
-      setError('Raffle name is required')
+      toast({ type: 'error', text: 'Raffle name is required' })
       return
     }
 
@@ -165,7 +173,7 @@ export default function AdminRafflesPage() {
       const openDate = new Date(formData.entries_open_at)
       const closeDate = new Date(formData.entries_close_at)
       if (closeDate <= openDate) {
-        setError('Entries close date must be after open date')
+        toast({ type: 'error', text: 'Entries close date must be after open date' })
         return
       }
     }
@@ -174,13 +182,12 @@ export default function AdminRafflesPage() {
       const closeDate = new Date(formData.entries_close_at)
       const drawDate = new Date(formData.drawing_at)
       if (drawDate < closeDate) {
-        setError('Drawing date must be on or after entries close date')
+        toast({ type: 'error', text: 'Drawing date must be on or after entries close date' })
         return
       }
     }
 
     setIsSaving(true)
-    setError(null)
 
     const dataToSave = {
       name: formData.name,
@@ -220,30 +227,37 @@ export default function AdminRafflesPage() {
       }
 
       setShowForm(false)
+      toast({ type: 'success', text: editingRaffle ? 'Raffle updated' : 'Raffle created' })
       fetchData()
     } catch (err) {
       console.error('Error saving raffle:', err)
-      setError('Failed to save raffle')
+      toast({ type: 'error', text: 'Failed to save raffle' })
     } finally {
       setIsSaving(false)
     }
   }
 
-  const handleDelete = async (raffle: RaffleWithPrize) => {
-    if (!confirm(`Delete "${raffle.name}"? This cannot be undone.`)) return
+  const handleDelete = (raffle: RaffleWithPrize) => {
+    setConfirmAction({
+      action: async () => {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const { error } = await (supabase as any)
+          .from('raffles')
+          .delete()
+          .eq('id', raffle.id)
 
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const { error } = await (supabase as any)
-      .from('raffles')
-      .delete()
-      .eq('id', raffle.id)
-
-    if (error) {
-      console.error('Error deleting raffle:', error)
-      alert('Failed to delete raffle')
-    } else {
-      fetchData()
-    }
+        if (error) {
+          console.error('Error deleting raffle:', error)
+          toast({ type: 'error', text: 'Failed to delete raffle' })
+        } else {
+          toast({ type: 'success', text: 'Raffle deleted' })
+          fetchData()
+        }
+      },
+      title: 'Delete Raffle',
+      description: `Delete "${raffle.name}"? This cannot be undone.`,
+      confirmLabel: 'Delete',
+    })
   }
 
   if (!hasAdminAccess) {
@@ -458,11 +472,6 @@ export default function AdminRafflesPage() {
                   <span className="text-sm">Active</span>
                 </label>
 
-                {error && (
-                  <div className="p-3 bg-destructive/10 text-destructive text-sm rounded-md">
-                    {error}
-                  </div>
-                )}
               </div>
 
               <div className="flex gap-3 p-4 border-t-2 border-border">
@@ -561,6 +570,16 @@ export default function AdminRafflesPage() {
           )}
         </div>
       </main>
+
+      <ConfirmModal
+        isOpen={!!confirmAction}
+        onConfirm={async () => { await confirmAction?.action(); setConfirmAction(null) }}
+        onCancel={() => setConfirmAction(null)}
+        title={confirmAction?.title || ''}
+        description={confirmAction?.description || ''}
+        confirmLabel={confirmAction?.confirmLabel || 'Delete'}
+        variant="destructive"
+      />
     </>
   )
 }

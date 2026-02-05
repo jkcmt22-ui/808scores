@@ -10,6 +10,8 @@ import { Card } from '@/components/ui/card'
 import { useAuth } from '@/hooks/use-auth'
 import { createClient } from '@/lib/supabase/client'
 import { cn } from '@/lib/utils'
+import { useToast } from '@/components/ui/toast'
+import { ConfirmModal } from '@/components/admin/confirm-modal'
 
 interface BetaCode {
   id: string
@@ -29,6 +31,7 @@ export default function BetaCodesPage() {
   const { user, profile } = useAuth()
   const supabase = createClient()
   const hasAdminAccess = profile?.is_admin === true || profile?.is_super_admin === true
+  const { toast } = useToast()
 
   const [codes, setCodes] = useState<BetaCode[]>([])
   const [isLoading, setIsLoading] = useState(true)
@@ -41,7 +44,12 @@ export default function BetaCodesPage() {
   })
   const [isSaving, setIsSaving] = useState(false)
   const [copiedCode, setCopiedCode] = useState<string | null>(null)
-  const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null)
+  const [confirmAction, setConfirmAction] = useState<{
+    action: () => Promise<void>
+    title: string
+    description: string
+    confirmLabel?: string
+  } | null>(null)
 
   const fetchCodes = async () => {
     if (!supabase) return
@@ -54,13 +62,13 @@ export default function BetaCodesPage() {
 
       if (error) {
         console.error('Error fetching beta codes:', error)
-        setMessage({ type: 'error', text: `Failed to load codes: ${error.message}` })
+        toast({ type: 'error', text: `Failed to load codes: ${error.message}` })
       } else if (data) {
         setCodes(data)
       }
     } catch (err) {
       console.error('Unexpected error fetching codes:', err)
-      setMessage({ type: 'error', text: 'An unexpected error occurred' })
+      toast({ type: 'error', text: 'An unexpected error occurred' })
     } finally {
       setIsLoading(false)
     }
@@ -106,7 +114,6 @@ export default function BetaCodesPage() {
   const handleCreateCode = async () => {
     if (!supabase) return
     setIsSaving(true)
-    setMessage(null)
 
     try {
       const code = generateCode()
@@ -124,13 +131,13 @@ export default function BetaCodesPage() {
 
       if (error) throw error
 
-      setMessage({ type: 'success', text: `Beta code created: ${code}` })
+      toast({ type: 'success', text: `Beta code created: ${code}` })
       setFormData({ name: '', description: '', max_uses: 1, expires_days: 30 })
       setShowForm(false)
       fetchCodes()
     } catch (err) {
       console.error('Error creating beta code:', err)
-      setMessage({ type: 'error', text: 'Failed to create beta code' })
+      toast({ type: 'error', text: 'Failed to create beta code' })
     } finally {
       setIsSaving(false)
     }
@@ -142,21 +149,26 @@ export default function BetaCodesPage() {
     setTimeout(() => setCopiedCode(null), 2000)
   }
 
-  const handleDeactivateCode = async (codeId: string) => {
+  const handleDeactivateCode = (codeId: string) => {
     if (!supabase) return
-    if (!confirm('Deactivate this beta code?')) return
+    setConfirmAction({
+      action: async () => {
+        try {
+          // @ts-expect-error - Beta tables not yet in generated types
+          const { error } = await supabase.from('beta_codes').update({ is_active: false }).eq('id', codeId)
 
-    try {
-      // @ts-expect-error - Beta tables not yet in generated types
-      const { error } = await supabase.from('beta_codes').update({ is_active: false }).eq('id', codeId)
+          if (error) throw error
 
-      if (error) throw error
-
-      setMessage({ type: 'success', text: 'Code deactivated' })
-      fetchCodes()
-    } catch {
-      setMessage({ type: 'error', text: 'Failed to deactivate code' })
-    }
+          toast({ type: 'success', text: 'Code deactivated' })
+          fetchCodes()
+        } catch {
+          toast({ type: 'error', text: 'Failed to deactivate code' })
+        }
+      },
+      title: 'Deactivate Code',
+      description: 'Deactivate this beta code? Users will no longer be able to use it.',
+      confirmLabel: 'Deactivate',
+    })
   }
 
   return (
@@ -175,17 +187,6 @@ export default function BetaCodesPage() {
       </header>
 
       <main className="p-4 grid-bg">
-        {message && (
-          <div className={cn(
-            'mb-4 flex items-center gap-2 p-3 text-sm border-2',
-            message.type === 'success'
-              ? 'bg-neon-green/10 border-neon-green/30 text-neon-green'
-              : 'bg-neon-pink/10 border-neon-pink/30 text-neon-pink'
-          )}>
-            <span>{message.text}</span>
-          </div>
-        )}
-
         {/* Create Form */}
         {showForm && (
           <Card className="mb-6 p-4">
@@ -374,6 +375,16 @@ export default function BetaCodesPage() {
           </div>
         )}
       </main>
+
+      <ConfirmModal
+        isOpen={!!confirmAction}
+        onConfirm={async () => { await confirmAction?.action(); setConfirmAction(null) }}
+        onCancel={() => setConfirmAction(null)}
+        title={confirmAction?.title || ''}
+        description={confirmAction?.description || ''}
+        confirmLabel={confirmAction?.confirmLabel || 'Deactivate'}
+        variant="destructive"
+      />
     </div>
   )
 }

@@ -7,7 +7,6 @@ import {
   Edit2,
   Loader2,
   AlertCircle,
-  CheckCircle,
   ChevronLeft,
   ChevronRight,
   Calendar,
@@ -21,9 +20,11 @@ import {
   RefreshCw,
 } from 'lucide-react'
 import { Button, Badge, Input, Card } from '@/components/ui'
-import { useAuth } from '@/hooks'
+import { useAuth, getCurrentSeasonYear } from '@/hooks'
 import { createClient } from '@/lib/supabase/client'
 import { cn, hawaiiDatetimeToUTC, utcToHawaiiDatetime, getHawaiiDayStartUTC, getHawaiiDayEndUTC } from '@/lib/utils'
+import { useToast } from '@/components/ui/toast'
+import { ConfirmModal } from '@/components/admin/confirm-modal'
 import { adminCache } from '@/lib/admin-cache'
 import type { GameWithTeams, Sport, School, GameStatus, GameType, TeamWithSchool, Tournament, TournamentRound } from '@/types/database'
 import { getHomeSchool, getAwaySchool } from '@/types/database'
@@ -193,9 +194,15 @@ export default function ScheduleAdminPage() {
   const [editingGame, setEditingGame] = useState<GameWithTeams | null>(null)
   const [formData, setFormData] = useState<GameFormData>(initialFormData)
   const [isSaving, setIsSaving] = useState(false)
-  const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null)
+  const [confirmAction, setConfirmAction] = useState<{
+    action: () => Promise<void>
+    title: string
+    description: string
+    confirmLabel?: string
+  } | null>(null)
 
   const hasAdminAccess = profile?.is_admin === true || profile?.is_super_admin === true
+  const { toast } = useToast()
 
   // Computed values
   const weekEnd = useMemo(() => getWeekEnd(currentWeekStart), [currentWeekStart])
@@ -297,7 +304,7 @@ export default function ScheduleAdminPage() {
       .from('teams')
       .select('*, school:schools(*)')
       .eq('is_active', true)
-      .eq('season_year', '2025-2026')
+      .eq('season_year', getCurrentSeasonYear())
       .order('school_id')
 
     if (teamsError) {
@@ -463,22 +470,21 @@ export default function ScheduleAdminPage() {
   // Create game
   const handleCreateGame = async () => {
     if (!formData.sport_id || !formData.home_team_id || !formData.away_team_id || !formData.scheduled_at) {
-      setMessage({ type: 'error', text: 'Please fill in all required fields' })
+      toast({ type: 'error', text: 'Please fill in all required fields' })
       return
     }
 
     if (formData.home_team_id === formData.away_team_id) {
-      setMessage({ type: 'error', text: 'Home and away teams must be different' })
+      toast({ type: 'error', text: 'Home and away teams must be different' })
       return
     }
 
     if (!supabase) {
-      setMessage({ type: 'error', text: 'Database connection not available' })
+      toast({ type: 'error', text: 'Database connection not available' })
       return
     }
 
     setIsSaving(true)
-    setMessage(null)
 
     try {
       const insertData = {
@@ -507,12 +513,12 @@ export default function ScheduleAdminPage() {
         throw error
       }
 
-      setMessage({ type: 'success', text: 'Game created successfully' })
+      toast({ type: 'success', text: 'Game created successfully' })
       closeForm()
       fetchGames()
     } catch (err) {
       console.error('Error creating game:', err)
-      setMessage({ type: 'error', text: 'Failed to create game' })
+      toast({ type: 'error', text: 'Failed to create game' })
     } finally {
       setIsSaving(false)
     }
@@ -523,12 +529,11 @@ export default function ScheduleAdminPage() {
     if (!editingGame) return
 
     if (!supabase) {
-      setMessage({ type: 'error', text: 'Database connection not available' })
+      toast({ type: 'error', text: 'Database connection not available' })
       return
     }
 
     setIsSaving(true)
-    setMessage(null)
 
     try {
       const { error } = await supabase
@@ -550,44 +555,47 @@ export default function ScheduleAdminPage() {
 
       if (error) throw error
 
-      setMessage({ type: 'success', text: 'Game updated successfully' })
+      toast({ type: 'success', text: 'Game updated successfully' })
       closeForm()
       fetchGames()
     } catch (err) {
       console.error('Error updating game:', err)
-      setMessage({ type: 'error', text: 'Failed to update game' })
+      toast({ type: 'error', text: 'Failed to update game' })
     } finally {
       setIsSaving(false)
     }
   }
 
   // Delete game
-  const handleDeleteGame = async (gameId: string) => {
-    if (!confirm('Are you sure you want to delete this game? This cannot be undone.')) {
-      return
-    }
+  const handleDeleteGame = (gameId: string) => {
+    setConfirmAction({
+      action: async () => {
+        if (!supabase) {
+          toast({ type: 'error', text: 'Database connection not available' })
+          return
+        }
 
-    if (!supabase) {
-      setMessage({ type: 'error', text: 'Database connection not available' })
-      return
-    }
+        try {
+          const { error } = await supabase.from('games').delete().eq('id', gameId)
+          if (error) throw error
 
-    try {
-      const { error } = await supabase.from('games').delete().eq('id', gameId)
-      if (error) throw error
-
-      setMessage({ type: 'success', text: 'Game deleted' })
-      fetchGames()
-    } catch (err) {
-      console.error('Error deleting game:', err)
-      setMessage({ type: 'error', text: 'Failed to delete game' })
-    }
+          toast({ type: 'success', text: 'Game deleted' })
+          fetchGames()
+        } catch (err) {
+          console.error('Error deleting game:', err)
+          toast({ type: 'error', text: 'Failed to delete game' })
+        }
+      },
+      title: 'Delete Game',
+      description: 'Are you sure you want to delete this game? This cannot be undone.',
+      confirmLabel: 'Delete',
+    })
   }
 
   // Duplicate game (for recurring schedule)
   const handleDuplicateGame = async (game: GameWithTeams, daysToAdd: number) => {
     if (!supabase) {
-      setMessage({ type: 'error', text: 'Database connection not available' })
+      toast({ type: 'error', text: 'Database connection not available' })
       return
     }
 
@@ -613,21 +621,13 @@ export default function ScheduleAdminPage() {
 
       if (error) throw error
 
-      setMessage({ type: 'success', text: `Game duplicated to ${formatDateDisplay(newDate)}` })
+      toast({ type: 'success', text: `Game duplicated to ${formatDateDisplay(newDate)}` })
       fetchGames()
     } catch (err) {
       console.error('Error duplicating game:', err)
-      setMessage({ type: 'error', text: 'Failed to duplicate game' })
+      toast({ type: 'error', text: 'Failed to duplicate game' })
     }
   }
-
-  // Clear message after delay
-  useEffect(() => {
-    if (message) {
-      const timer = setTimeout(() => setMessage(null), 3000)
-      return () => clearTimeout(timer)
-    }
-  }, [message])
 
   // Auth loading
   if (authLoading) {
@@ -705,9 +705,9 @@ export default function ScheduleAdminPage() {
               variant="ghost"
               size="icon"
               onClick={async () => {
-                setMessage({ type: 'success', text: 'Refreshing teams...' })
+                toast({ type: 'success', text: 'Refreshing teams...' })
                 await fetchTeams()
-                setMessage({ type: 'success', text: `Loaded ${teams.length} teams` })
+                toast({ type: 'success', text: `Loaded ${teams.length} teams` })
               }}
               title="Refresh teams (use after adding new schools)"
             >
@@ -721,25 +721,6 @@ export default function ScheduleAdminPage() {
       </header>
 
       <main className="p-4 pb-24">
-        {/* Message */}
-        {message && (
-          <div
-            className={cn(
-              'mb-4 flex items-center gap-2 p-3 text-sm border-2',
-              message.type === 'success'
-                ? 'bg-neon-green/10 border-neon-green/30 text-neon-green'
-                : 'bg-neon-pink/10 border-neon-pink/30 text-neon-pink'
-            )}
-          >
-            {message.type === 'success' ? (
-              <CheckCircle className="h-4 w-4 flex-shrink-0" />
-            ) : (
-              <AlertCircle className="h-4 w-4 flex-shrink-0" />
-            )}
-            <span>{message.text}</span>
-          </div>
-        )}
-
         {/* Week Navigation */}
         <div className="flex items-center justify-between mb-4">
           <Button variant="outline" size="icon" onClick={goToPreviousWeek}>
@@ -1101,6 +1082,16 @@ export default function ScheduleAdminPage() {
           </div>
         )}
       </main>
+
+      <ConfirmModal
+        isOpen={!!confirmAction}
+        onConfirm={async () => { await confirmAction?.action(); setConfirmAction(null) }}
+        onCancel={() => setConfirmAction(null)}
+        title={confirmAction?.title || ''}
+        description={confirmAction?.description || ''}
+        confirmLabel={confirmAction?.confirmLabel || 'Delete'}
+        variant="destructive"
+      />
     </div>
   )
 }

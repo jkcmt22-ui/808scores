@@ -4,8 +4,6 @@ import { useState, useEffect, useCallback, useMemo } from 'react'
 import {
   Search,
   Loader2,
-  AlertCircle,
-  CheckCircle,
   Shield,
   ShieldCheck,
   UserCheck,
@@ -21,6 +19,7 @@ import { Button, Card, Badge, Input } from '@/components/ui'
 import { createClient } from '@/lib/supabase/client'
 import { cn } from '@/lib/utils'
 import { useAuth } from '@/hooks'
+import { useToast } from '@/components/ui/toast'
 
 interface AdminUser {
   id: string
@@ -57,6 +56,7 @@ export default function AdminUsersPage() {
   const supabase = useMemo(() => createClient(), [])
   const { profile } = useAuth()
   const isSuperAdmin = profile?.is_super_admin === true
+  const { toast } = useToast()
 
   // State
   const [users, setUsers] = useState<AdminUser[]>([])
@@ -65,7 +65,6 @@ export default function AdminUsersPage() {
   const [searchTerm, setSearchTerm] = useState('')
   const [debouncedSearch, setDebouncedSearch] = useState('')
   const [page, setPage] = useState(1)
-  const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null)
 
   // Audit log modal
   const [auditUser, setAuditUser] = useState<AdminUser | null>(null)
@@ -86,7 +85,6 @@ export default function AdminUsersPage() {
     if (!supabase) return
 
     setIsLoading(true)
-    setMessage(null)
 
     try {
       const offset = (page - 1) * USERS_PER_PAGE
@@ -112,7 +110,7 @@ export default function AdminUsersPage() {
       setTotalCount(count || 0)
     } catch (err) {
       console.error('Error fetching users:', err)
-      setMessage({ type: 'error', text: 'Failed to load users' })
+      toast({ type: 'error', text: 'Failed to load users' })
     } finally {
       setIsLoading(false)
     }
@@ -165,13 +163,13 @@ export default function AdminUsersPage() {
 
     // Super admin toggle requires super admin
     if (field === 'is_super_admin' && !isSuperAdmin) {
-      setMessage({ type: 'error', text: 'Only super admins can grant super admin access' })
+      toast({ type: 'error', text: 'Only super admins can grant super admin access' })
       return
     }
 
     // Admin toggle requires super admin
     if (field === 'is_admin' && !isSuperAdmin) {
-      setMessage({ type: 'error', text: 'Only super admins can grant admin access' })
+      toast({ type: 'error', text: 'Only super admins can grant admin access' })
       return
     }
 
@@ -199,7 +197,7 @@ export default function AdminUsersPage() {
         )
       )
 
-      setMessage({
+      toast({
         type: 'success',
         text: `${fieldLabels[field]} ${newValue ? 'granted' : 'revoked'} successfully`,
       })
@@ -208,7 +206,7 @@ export default function AdminUsersPage() {
       const errorMessage = err instanceof Error ? err.message :
         (err && typeof err === 'object' && 'message' in err) ? String((err as {message: unknown}).message) :
         'Failed to update user role'
-      setMessage({ type: 'error', text: errorMessage })
+      toast({ type: 'error', text: errorMessage })
     }
   }
 
@@ -256,25 +254,6 @@ export default function AdminUsersPage() {
           Refresh
         </Button>
       </div>
-
-      {/* Message */}
-      {message && (
-        <div
-          className={cn(
-            'mb-6 flex items-center gap-2 p-3 border-2 rounded',
-            message.type === 'success'
-              ? 'bg-neon-green/10 border-neon-green/30 text-neon-green'
-              : 'bg-neon-pink/10 border-neon-pink/30 text-neon-pink'
-          )}
-        >
-          {message.type === 'success' ? (
-            <CheckCircle className="h-4 w-4 flex-shrink-0" />
-          ) : (
-            <AlertCircle className="h-4 w-4 flex-shrink-0" />
-          )}
-          <span className="text-sm">{message.text}</span>
-        </div>
-      )}
 
       {/* Role Legend */}
       <div className="mb-6 p-4 bg-background-secondary border-2 border-border rounded">

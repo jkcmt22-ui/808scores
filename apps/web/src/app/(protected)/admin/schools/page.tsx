@@ -7,7 +7,6 @@ import {
   Edit2,
   Loader2,
   AlertCircle,
-  CheckCircle,
   ChevronLeft,
   School as SchoolIcon,
   Search,
@@ -18,8 +17,9 @@ import {
   Trophy,
 } from 'lucide-react'
 import { Button, Badge, Input, Card } from '@/components/ui'
-import { useAuth } from '@/hooks'
+import { useAuth, getCurrentSeasonYear } from '@/hooks'
 import { createClient } from '@/lib/supabase/client'
+import { useToast } from '@/components/ui/toast'
 import { cn } from '@/lib/utils'
 import { adminCache } from '@/lib/admin-cache'
 import type { School, Sport, TeamWithSchool } from '@/types/database'
@@ -68,7 +68,6 @@ export default function SchoolsAdminPage() {
   const [editingSchool, setEditingSchool] = useState<School | null>(null)
   const [formData, setFormData] = useState<SchoolFormData>(initialFormData)
   const [isSaving, setIsSaving] = useState(false)
-  const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null)
   const [logoPreviewUrl, setLogoPreviewUrl] = useState<string | null>(null)
 
   // Team management
@@ -79,6 +78,7 @@ export default function SchoolsAdminPage() {
 
   const hasAdminAccess = profile?.is_admin === true || profile?.is_super_admin === true
   const supabase = supabaseClient
+  const { toast } = useToast()
 
   // Fetch schools and sports
   useEffect(() => {
@@ -150,12 +150,11 @@ export default function SchoolsAdminPage() {
   // Create school
   const handleCreateSchool = async () => {
     if (!formData.name || !formData.short_name) {
-      setMessage({ type: 'error', text: 'Name and short name are required' })
+      toast({ type: 'error', text: 'Name and short name are required' })
       return
     }
 
     setIsSaving(true)
-    setMessage(null)
 
     try {
       // Build FormData
@@ -190,12 +189,12 @@ export default function SchoolsAdminPage() {
 
       // Show detailed success message with team creation info
       if (result.teamsError) {
-        setMessage({
+        toast({
           type: 'error',
           text: `School created but teams failed. Click "Manage Teams" on the school to create them.`
         })
       } else {
-        setMessage({
+        toast({
           type: 'success',
           text: `School created with ${result.teamsCreated || 0} teams. Ready to add games!`
         })
@@ -211,7 +210,7 @@ export default function SchoolsAdminPage() {
       if (data) setSchools(data as School[])
     } catch (err) {
       console.error('Error creating school:', err)
-      setMessage({
+      toast({
         type: 'error',
         text: err instanceof Error ? err.message : 'Failed to create school'
       })
@@ -225,7 +224,6 @@ export default function SchoolsAdminPage() {
     if (!editingSchool) return
 
     setIsSaving(true)
-    setMessage(null)
 
     try {
       // Build FormData
@@ -256,7 +254,7 @@ export default function SchoolsAdminPage() {
         throw new Error(errorMessage)
       }
 
-      setMessage({ type: 'success', text: 'School updated successfully' })
+      toast({ type: 'success', text: 'School updated successfully' })
       setEditingSchool(null)
       setShowForm(false)
 
@@ -267,7 +265,7 @@ export default function SchoolsAdminPage() {
       if (data) setSchools(data as School[])
     } catch (err) {
       console.error('Error updating school:', err)
-      setMessage({
+      toast({
         type: 'error',
         text: err instanceof Error ? err.message : 'Failed to update school'
       })
@@ -311,7 +309,7 @@ export default function SchoolsAdminPage() {
         .from('teams')
         .select('*, school:schools(*)')
         .eq('school_id', school.id)
-        .eq('season_year', '2025-2026')
+        .eq('season_year', getCurrentSeasonYear())
         .order('sport_id')
 
       // Only update state if this is still the active request (prevents stale data)
@@ -322,7 +320,7 @@ export default function SchoolsAdminPage() {
 
       if (error) {
         console.error('Error fetching teams:', error)
-        setMessage({ type: 'error', text: 'Failed to load teams' })
+        toast({ type: 'error', text: 'Failed to load teams' })
       } else {
         setSchoolTeams(data as TeamWithSchool[])
       }
@@ -349,16 +347,16 @@ export default function SchoolsAdminPage() {
       gender,
       division: teamDivision,
       league: managingTeamsFor.league || null,
-      season_year: '2025-2026',
+      season_year: getCurrentSeasonYear(),
       is_active: true,
     } as never).select()
 
     if (error) {
       console.error('Error creating team:', error)
-      setMessage({ type: 'error', text: `Failed to create team: ${error.message}` })
+      toast({ type: 'error', text: `Failed to create team: ${error.message}` })
     } else {
       console.log('Created team:', data)
-      setMessage({ type: 'success', text: 'Team created' })
+      toast({ type: 'success', text: 'Team created' })
       // Refresh teams
       openTeamManagement(managingTeamsFor)
     }
@@ -377,9 +375,9 @@ export default function SchoolsAdminPage() {
 
     if (error) {
       console.error('Error updating team division:', error)
-      setMessage({ type: 'error', text: `Failed to update division: ${error.message}` })
+      toast({ type: 'error', text: `Failed to update division: ${error.message}` })
     } else {
-      setMessage({ type: 'success', text: 'Division updated' })
+      toast({ type: 'success', text: 'Division updated' })
       // Refresh teams
       openTeamManagement(managingTeamsFor)
     }
@@ -396,9 +394,9 @@ export default function SchoolsAdminPage() {
 
     if (error) {
       console.error('Error updating team:', error)
-      setMessage({ type: 'error', text: 'Failed to update team' })
+      toast({ type: 'error', text: 'Failed to update team' })
     } else {
-      setMessage({ type: 'success', text: currentActive ? 'Team deactivated' : 'Team activated' })
+      toast({ type: 'success', text: currentActive ? 'Team deactivated' : 'Team activated' })
       // Refresh teams
       openTeamManagement(managingTeamsFor)
     }
@@ -426,12 +424,12 @@ export default function SchoolsAdminPage() {
         gender: sport.gender,
         division: defaultDivision,
         league: managingTeamsFor.league || null,
-        season_year: '2025-2026',
+        season_year: getCurrentSeasonYear(),
         is_active: true,
       }))
 
     if (teamsToCreate.length === 0) {
-      setMessage({ type: 'success', text: 'All teams already exist' })
+      toast({ type: 'success', text: 'All teams already exist' })
       setIsSaving(false)
       return
     }
@@ -440,23 +438,15 @@ export default function SchoolsAdminPage() {
 
     if (error) {
       console.error('Error creating teams:', error)
-      setMessage({ type: 'error', text: `Failed to create teams: ${error.message}` })
+      toast({ type: 'error', text: `Failed to create teams: ${error.message}` })
     } else {
       console.log('Created teams:', data)
-      setMessage({ type: 'success', text: `Created ${data?.length || teamsToCreate.length} teams` })
+      toast({ type: 'success', text: `Created ${data?.length || teamsToCreate.length} teams` })
       openTeamManagement(managingTeamsFor)
     }
 
     setIsSaving(false)
   }
-
-  // Clear message after delay
-  useEffect(() => {
-    if (message) {
-      const timer = setTimeout(() => setMessage(null), 3000)
-      return () => clearTimeout(timer)
-    }
-  }, [message])
 
   // Cleanup blob URLs for logo preview
   useEffect(() => {
@@ -515,23 +505,6 @@ export default function SchoolsAdminPage() {
       </header>
 
       <main className="p-4 pb-24">
-        {/* Message Toast */}
-        {message && (
-          <div className={cn(
-            'mb-4 flex items-center gap-2 p-3 text-sm border-2',
-            message.type === 'success'
-              ? 'bg-neon-green/10 border-neon-green/30 text-neon-green'
-              : 'bg-neon-pink/10 border-neon-pink/30 text-neon-pink'
-          )}>
-            {message.type === 'success' ? (
-              <CheckCircle className="h-4 w-4 flex-shrink-0" />
-            ) : (
-              <AlertCircle className="h-4 w-4 flex-shrink-0" />
-            )}
-            <span>{message.text}</span>
-          </div>
-        )}
-
         {/* Form Modal */}
         {showForm && (
           <Card className="mb-6 p-4">
@@ -730,7 +703,7 @@ export default function SchoolsAdminPage() {
                       if (file) {
                         // Validate file size (5MB max)
                         if (file.size > 5 * 1024 * 1024) {
-                          setMessage({
+                          toast({
                             type: 'error',
                             text: 'Logo must be smaller than 5MB'
                           })

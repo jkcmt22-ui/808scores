@@ -5,7 +5,6 @@ import { useRouter } from 'next/navigation'
 import {
   Loader2,
   AlertCircle,
-  CheckCircle,
   Save,
   RefreshCw,
   ChevronDown,
@@ -15,8 +14,10 @@ import { TeamAssignmentPanel } from '@/components/admin/standings/TeamAssignment
 import { StandingsPreview, type RecordEdit } from '@/components/admin/standings/StandingsPreview'
 import { createClient } from '@/lib/supabase/client'
 import { cn } from '@/lib/utils'
+import { useToast } from '@/components/ui/toast'
 import { LEAGUES } from '@/lib/league-config'
 import type { Sport, School, Team } from '@/types/database'
+import { getCurrentSeasonYear } from '@/hooks'
 import type { LeagueStandings, TeamStanding } from '@/lib/standings-calculator'
 
 interface TeamWithSchool extends Team {
@@ -24,9 +25,10 @@ interface TeamWithSchool extends Team {
   sport: Sport
 }
 
-// Season options
+// Season options - dynamically include current season
+const currentSeason = getCurrentSeasonYear()
 const SEASON_OPTIONS = [
-  { value: '2025-2026', label: '2025-2026' },
+  { value: currentSeason, label: currentSeason },
   { value: '2024-2025', label: '2024-2025' },
 ]
 
@@ -53,7 +55,7 @@ export default function AdminStandingsPage() {
   const [sports, setSports] = useState<Sport[]>([])
   const [teams, setTeams] = useState<TeamWithSchool[]>([])
   const [selectedSportId, setSelectedSportId] = useState<string>('')
-  const [selectedSeason, setSelectedSeason] = useState<string>('2025-2026')
+  const [selectedSeason, setSelectedSeason] = useState<string>(getCurrentSeasonYear())
   const [selectedLeague, setSelectedLeague] = useState<string>('OIA')
   const [selectedDivision, setSelectedDivision] = useState<string>('Division I')
   const [selectedRegion, setSelectedRegion] = useState<string | null>(null)
@@ -61,14 +63,14 @@ export default function AdminStandingsPage() {
   // UI state
   const [isLoading, setIsLoading] = useState(true)
   const [isSaving, setIsSaving] = useState(false)
-  const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null)
-
   // Computed standings
   const [standings, setStandings] = useState<LeagueStandings | null>(null)
   const [isLoadingStandings, setIsLoadingStandings] = useState(false)
 
   // Track pending changes
   const [pendingChanges, setPendingChanges] = useState<Map<string, Partial<Team>>>(new Map())
+
+  const { toast } = useToast()
 
   // Fetch sports on mount
   useEffect(() => {
@@ -99,7 +101,6 @@ export default function AdminStandingsPage() {
     if (!supabase || !selectedSportId || !selectedSeason) return
 
     setIsLoading(true)
-    setMessage(null)
 
     const { data, error } = await supabase
       .from('teams')
@@ -114,7 +115,7 @@ export default function AdminStandingsPage() {
       .order('school_id')
 
     if (error) {
-      setMessage({ type: 'error', text: `Failed to load teams: ${error.message}` })
+      toast({ type: 'error', text: `Failed to load teams: ${error.message}` })
     } else {
       setTeams(data as TeamWithSchool[])
       setPendingChanges(new Map())
@@ -448,19 +449,18 @@ export default function AdminStandingsPage() {
     }
 
     // Refresh standings after save
-    setMessage({ type: 'success', text: `Saved record for ${team.school.short_name}` })
+    toast({ type: 'success', text: `Saved record for ${team.school.short_name}` })
     fetchStandings()
   }, [supabase, selectedSportId, selectedSeason, selectedLeague, selectedDivision, selectedRegion, teams, fetchStandings])
 
   // Save all changes
   const saveChanges = async () => {
     if (!supabase || pendingChanges.size === 0) {
-      setMessage({ type: 'error', text: 'No changes to save' })
+      toast({ type: 'error', text: 'No changes to save' })
       return
     }
 
     setIsSaving(true)
-    setMessage(null)
 
     try {
       let errorCount = 0
@@ -479,15 +479,15 @@ export default function AdminStandingsPage() {
       }
 
       if (errorCount > 0) {
-        setMessage({ type: 'error', text: `Failed to save ${errorCount} of ${totalChanges} updates` })
+        toast({ type: 'error', text: `Failed to save ${errorCount} of ${totalChanges} updates` })
       } else {
-        setMessage({ type: 'success', text: `Saved ${totalChanges} team(s)` })
+        toast({ type: 'success', text: `Saved ${totalChanges} team(s)` })
         setPendingChanges(new Map())
         fetchTeams()
         fetchStandings()
       }
     } catch (err) {
-      setMessage({ type: 'error', text: 'Failed to save changes' })
+      toast({ type: 'error', text: 'Failed to save changes' })
     } finally {
       setIsSaving(false)
     }
@@ -586,22 +586,6 @@ export default function AdminStandingsPage() {
           </div>
         </div>
 
-        {/* Message */}
-        {message && (
-          <div className={cn(
-            'mx-4 mb-3 flex items-center gap-2 p-2 text-sm border-2',
-            message.type === 'success'
-              ? 'bg-neon-green/10 border-neon-green/30 text-neon-green'
-              : 'bg-neon-pink/10 border-neon-pink/30 text-neon-pink'
-          )}>
-            {message.type === 'success' ? (
-              <CheckCircle className="h-4 w-4 flex-shrink-0" />
-            ) : (
-              <AlertCircle className="h-4 w-4 flex-shrink-0" />
-            )}
-            <span>{message.text}</span>
-          </div>
-        )}
       </div>
 
       {/* Navigation Area */}

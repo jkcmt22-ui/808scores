@@ -11,6 +11,8 @@ import {
 import { createClient } from '@/lib/supabase/client'
 import { useAuth } from '@/hooks'
 import { cn } from '@/lib/utils'
+import { useToast } from '@/components/ui/toast'
+import { ConfirmModal } from '@/components/admin/confirm-modal'
 import type { Prize, PrizeType } from '@/types/database'
 
 const PRIZE_TYPES: { value: PrizeType; label: string; icon: typeof Gift }[] = [
@@ -51,10 +53,16 @@ export default function AdminPrizesPage() {
   const [editingPrize, setEditingPrize] = useState<Prize | null>(null)
   const [formData, setFormData] = useState<PrizeFormData>(defaultFormData)
   const [isSaving, setIsSaving] = useState(false)
-  const [error, setError] = useState<string | null>(null)
+  const [confirmAction, setConfirmAction] = useState<{
+    action: () => Promise<void>
+    title: string
+    description: string
+    confirmLabel?: string
+  } | null>(null)
 
   const supabase = createClient()
   const hasAdminAccess = profile?.is_admin === true || profile?.is_super_admin === true
+  const { toast } = useToast()
 
   const fetchPrizes = useCallback(async () => {
     if (!supabase) {
@@ -108,17 +116,16 @@ export default function AdminPrizesPage() {
 
   const handleSave = async () => {
     if (!supabase) {
-      setError('Database connection not available')
+      toast({ type: 'error', text: 'Database connection not available' })
       return
     }
 
     if (!formData.name.trim()) {
-      setError('Prize name is required')
+      toast({ type: 'error', text: 'Prize name is required' })
       return
     }
 
     setIsSaving(true)
-    setError(null)
 
     try {
       if (editingPrize) {
@@ -159,32 +166,38 @@ export default function AdminPrizesPage() {
       }
 
       setShowForm(false)
+      toast({ type: 'success', text: editingPrize ? 'Prize updated' : 'Prize created' })
       fetchPrizes()
     } catch (err) {
       console.error('Error saving prize:', err)
-      setError('Failed to save prize')
+      toast({ type: 'error', text: 'Failed to save prize' })
     } finally {
       setIsSaving(false)
     }
   }
 
-  const handleDelete = async (prize: Prize) => {
-    if (!confirm(`Delete "${prize.name}"? This cannot be undone.`)) return
-
+  const handleDelete = (prize: Prize) => {
     if (!supabase) return
+    setConfirmAction({
+      action: async () => {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const { error } = await (supabase as any)
+          .from('prizes')
+          .delete()
+          .eq('id', prize.id)
 
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const { error } = await (supabase as any)
-      .from('prizes')
-      .delete()
-      .eq('id', prize.id)
-
-    if (error) {
-      console.error('Error deleting prize:', error)
-      alert('Failed to delete prize')
-    } else {
-      fetchPrizes()
-    }
+        if (error) {
+          console.error('Error deleting prize:', error)
+          toast({ type: 'error', text: 'Failed to delete prize' })
+        } else {
+          toast({ type: 'success', text: 'Prize deleted' })
+          fetchPrizes()
+        }
+      },
+      title: 'Delete Prize',
+      description: `Delete "${prize.name}"? This cannot be undone.`,
+      confirmLabel: 'Delete',
+    })
   }
 
   if (!hasAdminAccess) {
@@ -326,12 +339,6 @@ export default function AdminPrizesPage() {
                   />
                   <span className="text-sm">Active (available for raffles)</span>
                 </label>
-
-                {error && (
-                  <div className="p-3 bg-destructive/10 text-destructive text-sm rounded-md">
-                    {error}
-                  </div>
-                )}
               </div>
 
               <div className="flex gap-3 p-4 border-t-2 border-border">
@@ -420,6 +427,16 @@ export default function AdminPrizesPage() {
           )}
         </div>
       </main>
+
+      <ConfirmModal
+        isOpen={!!confirmAction}
+        onConfirm={async () => { await confirmAction?.action(); setConfirmAction(null) }}
+        onCancel={() => setConfirmAction(null)}
+        title={confirmAction?.title || ''}
+        description={confirmAction?.description || ''}
+        confirmLabel={confirmAction?.confirmLabel || 'Delete'}
+        variant="destructive"
+      />
     </>
   )
 }

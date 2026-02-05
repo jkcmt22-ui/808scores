@@ -8,7 +8,6 @@ import {
   Trash2,
   Loader2,
   AlertCircle,
-  CheckCircle,
   Trophy,
   ChevronLeft,
   Users,
@@ -21,6 +20,8 @@ import { Button, Badge, Input, Card } from '@/components/ui'
 import { useAuth, useSports } from '@/hooks'
 import { createClient } from '@/lib/supabase/client'
 import { cn } from '@/lib/utils'
+import { useToast } from '@/components/ui/toast'
+import { ConfirmModal } from '@/components/admin/confirm-modal'
 import type {
   Tournament,
   TournamentTeamWithSchool,
@@ -102,7 +103,6 @@ export default function TournamentsAdminPage() {
   const [editingTournament, setEditingTournament] = useState<TournamentWithSport | null>(null)
   const [formData, setFormData] = useState<TournamentFormData>(initialFormData)
   const [isSaving, setIsSaving] = useState(false)
-  const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null)
 
   // Teams management
   const [showTeamsModal, setShowTeamsModal] = useState(false)
@@ -111,8 +111,15 @@ export default function TournamentsAdminPage() {
   const [selectedSchoolId, setSelectedSchoolId] = useState('')
   const [teamSeed, setTeamSeed] = useState<number | ''>('')
   const [teamPool, setTeamPool] = useState('')
+  const [confirmAction, setConfirmAction] = useState<{
+    action: () => Promise<void>
+    title: string
+    description: string
+    confirmLabel?: string
+  } | null>(null)
 
   const hasAdminAccess = profile?.is_admin === true || profile?.is_super_admin === true
+  const { toast } = useToast()
 
   // Fetch data
   useEffect(() => {
@@ -174,17 +181,16 @@ export default function TournamentsAdminPage() {
   // Create tournament
   const handleCreateTournament = async () => {
     if (!formData.name || !formData.sport_id || !formData.start_date) {
-      setMessage({ type: 'error', text: 'Please fill in all required fields' })
+      toast({ type: 'error', text: 'Please fill in all required fields' })
       return
     }
 
     if (!supabase) {
-      setMessage({ type: 'error', text: 'Database connection not available' })
+      toast({ type: 'error', text: 'Database connection not available' })
       return
     }
 
     setIsSaving(true)
-    setMessage(null)
 
     try {
       const { error } = await supabase
@@ -207,7 +213,7 @@ export default function TournamentsAdminPage() {
 
       if (error) throw error
 
-      setMessage({ type: 'success', text: 'Tournament created successfully' })
+      toast({ type: 'success', text: 'Tournament created successfully' })
       setFormData(initialFormData)
       setShowForm(false)
 
@@ -220,7 +226,7 @@ export default function TournamentsAdminPage() {
       if (tournamentsData) setTournaments(tournamentsData as TournamentWithSport[])
     } catch (err) {
       console.error('Error creating tournament:', err)
-      setMessage({ type: 'error', text: 'Failed to create tournament' })
+      toast({ type: 'error', text: 'Failed to create tournament' })
     } finally {
       setIsSaving(false)
     }
@@ -231,12 +237,11 @@ export default function TournamentsAdminPage() {
     if (!editingTournament) return
 
     if (!supabase) {
-      setMessage({ type: 'error', text: 'Database connection not available' })
+      toast({ type: 'error', text: 'Database connection not available' })
       return
     }
 
     setIsSaving(true)
-    setMessage(null)
 
     try {
       const { error } = await supabase
@@ -260,7 +265,7 @@ export default function TournamentsAdminPage() {
 
       if (error) throw error
 
-      setMessage({ type: 'success', text: 'Tournament updated successfully' })
+      toast({ type: 'success', text: 'Tournament updated successfully' })
       setEditingTournament(null)
       setShowForm(false)
 
@@ -273,34 +278,37 @@ export default function TournamentsAdminPage() {
       if (tournamentsData) setTournaments(tournamentsData as TournamentWithSport[])
     } catch (err) {
       console.error('Error updating tournament:', err)
-      setMessage({ type: 'error', text: 'Failed to update tournament' })
+      toast({ type: 'error', text: 'Failed to update tournament' })
     } finally {
       setIsSaving(false)
     }
   }
 
   // Delete tournament
-  const handleDeleteTournament = async (tournamentId: string) => {
-    if (!confirm('Are you sure you want to delete this tournament? This will also remove all team associations.')) {
-      return
-    }
+  const handleDeleteTournament = (tournamentId: string) => {
+    setConfirmAction({
+      action: async () => {
+        if (!supabase) return
 
-    if (!supabase) return
+        try {
+          const { error } = await supabase
+            .from('tournaments')
+            .delete()
+            .eq('id', tournamentId)
 
-    try {
-      const { error } = await supabase
-        .from('tournaments')
-        .delete()
-        .eq('id', tournamentId)
+          if (error) throw error
 
-      if (error) throw error
-
-      setTournaments((prev) => prev.filter((t) => t.id !== tournamentId))
-      setMessage({ type: 'success', text: 'Tournament deleted successfully' })
-    } catch (err) {
-      console.error('Error deleting tournament:', err)
-      setMessage({ type: 'error', text: 'Failed to delete tournament' })
-    }
+          setTournaments((prev) => prev.filter((t) => t.id !== tournamentId))
+          toast({ type: 'success', text: 'Tournament deleted successfully' })
+        } catch (err) {
+          console.error('Error deleting tournament:', err)
+          toast({ type: 'error', text: 'Failed to delete tournament' })
+        }
+      },
+      title: 'Delete Tournament',
+      description: 'Are you sure you want to delete this tournament? This will also remove all team associations.',
+      confirmLabel: 'Delete',
+    })
   }
 
   // Start editing
@@ -371,33 +379,38 @@ export default function TournamentsAdminPage() {
       setSelectedSchoolId('')
       setTeamSeed('')
       setTeamPool('')
-      setMessage({ type: 'success', text: 'Team added to tournament' })
+      toast({ type: 'success', text: 'Team added to tournament' })
     } catch (err) {
       console.error('Error adding team:', err)
-      setMessage({ type: 'error', text: 'Failed to add team' })
+      toast({ type: 'error', text: 'Failed to add team' })
     }
   }
 
   // Remove team from tournament
-  const handleRemoveTeam = async (teamId: string) => {
-    if (!confirm('Remove this team from the tournament?')) return
+  const handleRemoveTeam = (teamId: string) => {
+    setConfirmAction({
+      action: async () => {
+        if (!supabase) return
 
-    if (!supabase) return
+        try {
+          const { error } = await supabase
+            .from('tournament_teams')
+            .delete()
+            .eq('id', teamId)
 
-    try {
-      const { error } = await supabase
-        .from('tournament_teams')
-        .delete()
-        .eq('id', teamId)
+          if (error) throw error
 
-      if (error) throw error
-
-      setTournamentTeams((prev) => prev.filter((t) => t.id !== teamId))
-      setMessage({ type: 'success', text: 'Team removed from tournament' })
-    } catch (err) {
-      console.error('Error removing team:', err)
-      setMessage({ type: 'error', text: 'Failed to remove team' })
-    }
+          setTournamentTeams((prev) => prev.filter((t) => t.id !== teamId))
+          toast({ type: 'success', text: 'Team removed from tournament' })
+        } catch (err) {
+          console.error('Error removing team:', err)
+          toast({ type: 'error', text: 'Failed to remove team' })
+        }
+      },
+      title: 'Remove Team',
+      description: 'Remove this team from the tournament?',
+      confirmLabel: 'Remove',
+    })
   }
 
   // Update team seed
@@ -476,23 +489,6 @@ export default function TournamentsAdminPage() {
       </header>
 
       <main className="p-4 pb-24">
-        {/* Message */}
-        {message && (
-          <div className={cn(
-            'mb-4 flex items-center gap-2 p-3 text-sm border-2',
-            message.type === 'success'
-              ? 'bg-neon-green/10 border-neon-green/30 text-neon-green'
-              : 'bg-neon-pink/10 border-neon-pink/30 text-neon-pink'
-          )}>
-            {message.type === 'success' ? (
-              <CheckCircle className="h-4 w-4 flex-shrink-0" />
-            ) : (
-              <AlertCircle className="h-4 w-4 flex-shrink-0" />
-            )}
-            <span>{message.text}</span>
-          </div>
-        )}
-
         {/* Form Modal */}
         {showForm && (
           <Card className="mb-6 p-4">
@@ -868,6 +864,16 @@ export default function TournamentsAdminPage() {
           </>
         )}
       </main>
+
+      <ConfirmModal
+        isOpen={!!confirmAction}
+        onConfirm={async () => { await confirmAction?.action(); setConfirmAction(null) }}
+        onCancel={() => setConfirmAction(null)}
+        title={confirmAction?.title || ''}
+        description={confirmAction?.description || ''}
+        confirmLabel={confirmAction?.confirmLabel || 'Delete'}
+        variant="destructive"
+      />
     </div>
   )
 }

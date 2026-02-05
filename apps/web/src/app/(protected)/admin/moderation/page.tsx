@@ -1,11 +1,11 @@
 'use client'
 
 import { useState, useMemo, useEffect } from 'react'
+import { useToast } from '@/components/ui/toast'
 import { useRouter } from 'next/navigation'
 import {
   Loader2,
   AlertCircle,
-  CheckCircle,
   ChevronLeft,
   MessageSquare,
   Eye,
@@ -19,6 +19,7 @@ import { Button, Badge, Input, Card } from '@/components/ui'
 import { useAuth } from '@/hooks'
 import { createClient } from '@/lib/supabase/client'
 import { cn } from '@/lib/utils'
+import { ConfirmModal } from '@/components/admin/confirm-modal'
 import type { ChatMessage, User, Game, School, Sport } from '@/types/database'
 
 interface MessageWithDetails extends ChatMessage {
@@ -41,12 +42,19 @@ export default function ModerationPage() {
   const [isLoading, setIsLoading] = useState(true)
   const [searchTerm, setSearchTerm] = useState('')
   const [filter, setFilter] = useState<FilterType>('reported')
-  const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null)
+
   const [page, setPage] = useState(0)
   const [hasMore, setHasMore] = useState(true)
+  const [confirmAction, setConfirmAction] = useState<{
+    action: () => Promise<void>
+    title: string
+    description: string
+    confirmLabel?: string
+  } | null>(null)
   const PAGE_SIZE = 50
 
   const hasAdminAccess = profile?.is_admin === true || profile?.is_super_admin === true
+  const { toast } = useToast()
 
   // Fetch messages with pagination
   useEffect(() => {
@@ -123,7 +131,7 @@ export default function ModerationPage() {
   // Toggle message visibility
   const toggleHidden = async (messageId: string, currentlyHidden: boolean) => {
     if (!supabase) {
-      setMessage({ type: 'error', text: 'Database connection not available' })
+      toast({ type: 'error', text: 'Database connection not available' })
       return
     }
 
@@ -141,48 +149,45 @@ export default function ModerationPage() {
         )
       )
 
-      setMessage({
+      toast({
         type: 'success',
         text: currentlyHidden ? 'Message is now visible' : 'Message hidden from users',
       })
     } catch (err) {
       console.error('Error toggling message visibility:', err)
-      setMessage({ type: 'error', text: 'Failed to update message' })
+      toast({ type: 'error', text: 'Failed to update message' })
     }
   }
 
   // Delete message permanently
-  const deleteMessage = async (messageId: string) => {
-    if (!confirm('Permanently delete this message? This cannot be undone.')) return
+  const deleteMessage = (messageId: string) => {
+    setConfirmAction({
+      action: async () => {
+        if (!supabase) {
+          toast({ type: 'error', text: 'Database connection not available' })
+          return
+        }
 
-    if (!supabase) {
-      setMessage({ type: 'error', text: 'Database connection not available' })
-      return
-    }
+        try {
+          const { error } = await supabase
+            .from('chat_messages')
+            .delete()
+            .eq('id', messageId)
 
-    try {
-      const { error } = await supabase
-        .from('chat_messages')
-        .delete()
-        .eq('id', messageId)
+          if (error) throw error
 
-      if (error) throw error
-
-      setMessages((prev) => prev.filter((m) => m.id !== messageId))
-      setMessage({ type: 'success', text: 'Message deleted permanently' })
-    } catch (err) {
-      console.error('Error deleting message:', err)
-      setMessage({ type: 'error', text: 'Failed to delete message' })
-    }
+          setMessages((prev) => prev.filter((m) => m.id !== messageId))
+          toast({ type: 'success', text: 'Message deleted permanently' })
+        } catch (err) {
+          console.error('Error deleting message:', err)
+          toast({ type: 'error', text: 'Failed to delete message' })
+        }
+      },
+      title: 'Delete Message',
+      description: 'Permanently delete this message? This cannot be undone.',
+      confirmLabel: 'Delete',
+    })
   }
-
-  // Clear message after delay
-  useEffect(() => {
-    if (message) {
-      const timer = setTimeout(() => setMessage(null), 3000)
-      return () => clearTimeout(timer)
-    }
-  }, [message])
 
   // Auth loading
   if (authLoading) {
@@ -230,23 +235,6 @@ export default function ModerationPage() {
       </header>
 
       <main className="p-4 pb-24">
-        {/* Message Toast */}
-        {message && (
-          <div className={cn(
-            'mb-4 flex items-center gap-2 p-3 text-sm border-2',
-            message.type === 'success'
-              ? 'bg-neon-green/10 border-neon-green/30 text-neon-green'
-              : 'bg-neon-pink/10 border-neon-pink/30 text-neon-pink'
-          )}>
-            {message.type === 'success' ? (
-              <CheckCircle className="h-4 w-4 flex-shrink-0" />
-            ) : (
-              <AlertCircle className="h-4 w-4 flex-shrink-0" />
-            )}
-            <span>{message.text}</span>
-          </div>
-        )}
-
         {/* Filters */}
         <div className="flex flex-col sm:flex-row gap-3 mb-4">
           <div className="relative flex-1">
@@ -336,6 +324,16 @@ export default function ModerationPage() {
           </div>
         )}
       </main>
+
+      <ConfirmModal
+        isOpen={!!confirmAction}
+        onConfirm={async () => { await confirmAction?.action(); setConfirmAction(null) }}
+        onCancel={() => setConfirmAction(null)}
+        title={confirmAction?.title || ''}
+        description={confirmAction?.description || ''}
+        confirmLabel={confirmAction?.confirmLabel || 'Delete'}
+        variant="destructive"
+      />
     </div>
   )
 }
