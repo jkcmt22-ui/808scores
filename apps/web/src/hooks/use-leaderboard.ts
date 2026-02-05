@@ -99,7 +99,7 @@ export function useLeaderboard(options: UseLeaderboardOptions = {}): UseLeaderbo
                 .select('*', { count: 'exact', head: true })
                 .gt('total_points', userDataTyped.total_points)
 
-              setUserRank(count ? count + 1 : null)
+              setUserRank(count !== null ? count + 1 : null)
             }
           }
         }
