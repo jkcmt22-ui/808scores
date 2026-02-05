@@ -30,7 +30,7 @@ interface AdminUser {
   is_admin: boolean
   is_trusted_reporter: boolean
   has_beta_access: boolean
-  is_banned: boolean
+  is_banned?: boolean
   tier: string
   reputation_score: number
   submission_count: number
@@ -92,7 +92,7 @@ export default function AdminUsersPage() {
       // Build query
       let query = supabase
         .from('users')
-        .select('id, display_name, email, phone, is_super_admin, is_admin, is_trusted_reporter, has_beta_access, is_banned, tier, reputation_score, submission_count, created_at', { count: 'exact' })
+        .select('id, display_name, email, phone, is_super_admin, is_admin, is_trusted_reporter, has_beta_access, tier, reputation_score, submission_count, created_at', { count: 'exact' })
 
       // Apply search filter
       if (debouncedSearch) {
@@ -431,7 +431,7 @@ function UserRow({
     if (isLoading) return
     setIsLoading(field)
     try {
-      await onToggleRole(user.id, field, user[field])
+      await onToggleRole(user.id, field, !!user[field])
     } finally {
       setIsLoading(null)
     }
