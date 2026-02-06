@@ -164,10 +164,24 @@ async function getMonthlyPointEntries(month?: string): Promise<DrawingEntry[]> {
   let endDate: Date
 
   if (month) {
-    // Parse month format: '2024-01'
-    const [year, monthNum] = month.split('-').map(Number)
-    startDate = new Date(year, monthNum - 1, 1)
-    endDate = new Date(year, monthNum, 1)
+    // Support both 'YYYY-MM' format and month names like 'January'
+    const monthNames = ['january', 'february', 'march', 'april', 'may', 'june',
+      'july', 'august', 'september', 'october', 'november', 'december']
+    const monthIndex = monthNames.indexOf(month.toLowerCase())
+
+    if (monthIndex !== -1) {
+      // Month name format (e.g. "January") — use current year,
+      // or previous year if the month is in the future
+      const now = new Date()
+      const year = monthIndex > now.getMonth() ? now.getFullYear() - 1 : now.getFullYear()
+      startDate = new Date(year, monthIndex, 1)
+      endDate = new Date(year, monthIndex + 1, 1)
+    } else {
+      // Parse 'YYYY-MM' format
+      const [year, monthNum] = month.split('-').map(Number)
+      startDate = new Date(year, monthNum - 1, 1)
+      endDate = new Date(year, monthNum, 1)
+    }
   } else {
     // Default to current month
     const now = new Date()

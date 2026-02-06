@@ -302,17 +302,18 @@ export function GameForm({
             </div>
           </div>
 
-          {/* Date/Time */}
-          <div>
-            <label className="block text-sm font-medium text-foreground mb-1">Scheduled Date/Time *</label>
-            <Input
-              type="datetime-local"
-              value={formData.scheduled_at}
-              onChange={(e) => onChange('scheduled_at', e.target.value)}
-            />
-          </div>
         </>
       )}
+
+      {/* Date/Time — always editable so games can be rescheduled */}
+      <div>
+        <label className="block text-sm font-medium text-foreground mb-1">Scheduled Date/Time *</label>
+        <Input
+          type="datetime-local"
+          value={formData.scheduled_at}
+          onChange={(e) => onChange('scheduled_at', e.target.value)}
+        />
+      </div>
 
       {/* Venue */}
       <div>

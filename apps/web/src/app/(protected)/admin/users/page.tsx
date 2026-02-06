@@ -92,7 +92,7 @@ export default function AdminUsersPage() {
       // Build query
       let query = supabase
         .from('users')
-        .select('id, display_name, email, phone, is_super_admin, is_admin, is_trusted_reporter, has_beta_access, tier, reputation_score, submission_count, created_at', { count: 'exact' })
+        .select('id, display_name, email, phone, is_super_admin, is_admin, is_trusted_reporter, has_beta_access, is_banned, tier, reputation_score, submission_count, created_at', { count: 'exact' })
 
       // Apply search filter
       if (debouncedSearch) {
