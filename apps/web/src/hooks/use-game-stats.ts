@@ -163,6 +163,7 @@ export function useGameStats(options: UseGameStatsOptions): UseGameStatsReturn {
           .eq('school_id', schoolId)
           .eq('is_active', true)
           .eq('player_seasons.sport_id', gameWithDetails.sport_id)
+          .eq('player_seasons.season_year', seasonYear)
 
         if (!fallbackError && fallbackPlayers) {
           return fallbackPlayers.map((row: any) => ({
@@ -342,7 +343,7 @@ export function useGameStatsMutations(gameId: string): UseGameStatsMutationsRetu
         .filter(({ stats }) => {
           // Check if any stat field has a non-null value
           const { id, created_at, updated_at, game_id, player_id, school_id, is_starter, ...statFields } = stats as any
-          return Object.values(statFields).some(v => v !== null && v !== undefined && v !== 0)
+          return Object.values(statFields).some(v => v !== null && v !== undefined)
         })
         .map(({ playerId, schoolId, stats }) => {
           const { id, created_at, updated_at, game_id, player_id, school_id, ...statFields } = stats as any

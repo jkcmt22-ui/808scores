@@ -56,18 +56,14 @@ export function useLeaderboard(options: UseLeaderboardOptions = {}): UseLeaderbo
         // Get current user for rank calculation
         const { data: { user } } = await supabase.auth.getUser()
 
-        // Fetch from public_leaderboard view
-        // The view already orders by total_points DESC
-        const query = supabase
+        // Fetch from public_leaderboard view, sorted by the active time frame
+        const pointsColumn = timeFrame === 'season' ? 'season_points' : 'total_points'
+
+        const { data, error: fetchError } = await supabase
           .from('public_leaderboard')
           .select('*')
+          .order(pointsColumn, { ascending: false })
           .limit(limit)
-
-        // For now, we use total_points for all time frames
-        // In a real implementation, you'd have separate columns for each period
-        // or calculate based on submission dates
-
-        const { data, error: fetchError } = await query
 
         if (fetchError) {
           throw fetchError
@@ -81,23 +77,23 @@ export function useLeaderboard(options: UseLeaderboardOptions = {}): UseLeaderbo
           const userIndex = leaders.findIndex(u => u.id === user.id)
           if (userIndex !== -1) {
             setUserRank(userIndex + 1)
-            setUserPoints(leaders[userIndex].total_points)
+            setUserPoints(leaders[userIndex][pointsColumn])
           } else {
             // User not in top N, fetch their actual rank
             const { data: userData } = await supabase
               .from('public_leaderboard')
-              .select('total_points')
+              .select(pointsColumn)
               .eq('id', user.id)
               .single()
 
             if (userData) {
-              const userDataTyped = userData as { total_points: number }
-              setUserPoints(userDataTyped.total_points)
+              const userDataTyped = userData as Record<string, number>
+              setUserPoints(userDataTyped[pointsColumn])
               // Count users with more points to get rank
               const { count } = await supabase
                 .from('public_leaderboard')
                 .select('*', { count: 'exact', head: true })
-                .gt('total_points', userDataTyped.total_points)
+                .gt(pointsColumn, userDataTyped[pointsColumn])
 
               setUserRank(count !== null ? count + 1 : null)
             }
