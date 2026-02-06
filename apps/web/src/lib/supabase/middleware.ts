@@ -58,6 +58,11 @@ export async function updateSession(request: NextRequest) {
 
   const path = request.nextUrl.pathname
 
+  // API routes handle their own auth (CRON_SECRET, session, etc.) — skip beta check
+  if (path.startsWith('/api/')) {
+    return supabaseResponse
+  }
+
   // Public routes that don't require beta access (using Set for O(1) lookup)
   const PUBLIC_PATHS = new Set([
     '/beta-landing',
@@ -67,7 +72,6 @@ export async function updateSession(request: NextRequest) {
     '/privacy',
     '/terms/raffle',
     '/terms/scholarship',
-    '/api/auth/callback',
   ])
 
   // Check if path starts with any public path
