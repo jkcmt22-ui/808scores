@@ -184,84 +184,36 @@ export function onOnlineStatusChange(callback: (online: boolean) => void): () =>
   }
 }
 
-// Sync a single submission (called by service worker or manual retry)
+// Sync a single submission via the submit-score API
+// This ensures all safeguards (rate limiting, verification, atomic point awards) are applied
 export async function syncSubmission(
-  submission: PendingSubmission,
-  supabase: {
-    from: (table: string) => {
-      insert: (data: Record<string, unknown>) => { select: () => { single: () => Promise<{ error: Error | null }> } }
-      update: (data: Record<string, unknown>) => { eq: (col: string, val: string) => Promise<{ error: Error | null }> }
-    }
-  },
-  userId: string,
-  profile: { tier?: string; total_points?: number; submission_count?: number } | null
+  submission: PendingSubmission
 ): Promise<{ success: boolean; error?: string }> {
   try {
     await updateSubmissionStatus(submission.id, 'syncing')
 
-    // Create the submission record
-    const submissionData = {
-      game_id: submission.gameId,
-      user_id: userId,
-      submission_type: submission.submissionType,
-      period: submission.submissionType === 'final_score' ? null : submission.period,
-      home_score: submission.homeScore,
-      away_score: submission.awayScore,
-      time_remaining: submission.timeRemaining,
-      photo_url: submission.hasPhoto ? 'pending_upload' : null,
-      at_game: submission.hasLocation,
-      points_earned: submission.pointsEarned,
-      status: 'pending',
-    }
+    const response = await fetch(`/api/games/${submission.gameId}/submit-score`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        submission_type: submission.submissionType,
+        home_score: submission.homeScore,
+        away_score: submission.awayScore,
+        period: submission.period,
+        time_remaining: submission.timeRemaining,
+        photo_url: submission.hasPhoto ? 'pending_upload' : null,
+        at_game: submission.hasLocation,
+      }),
+    })
 
-    const { error: submissionError } = await supabase
-      .from('submissions')
-      .insert(submissionData)
-      .select()
-      .single()
-
-    if (submissionError) throw submissionError
-
-    // Update game status
-    const isTrusted = profile?.tier === 'trusted' || profile?.tier === 'elite'
-
-    if (submission.submissionType === 'final_score') {
-      await supabase
-        .from('games')
-        .update({
-          status: 'final',
-          home_score: submission.homeScore,
-          away_score: submission.awayScore,
-          current_period: null,
-          time_remaining: null,
-          is_verified: isTrusted,
-          verification_method: isTrusted ? 'trusted' : null,
-        })
-        .eq('id', submission.gameId)
-    } else {
-      await supabase
-        .from('games')
-        .update({
-          status: 'in_progress',
-          home_score: submission.homeScore,
-          away_score: submission.awayScore,
-          current_period: submission.period,
-          time_remaining: submission.timeRemaining,
-          is_verified: isTrusted,
-          verification_method: isTrusted ? 'trusted' : null,
-        })
-        .eq('id', submission.gameId)
-    }
-
-    // Update user points
-    if (profile) {
-      await supabase
-        .from('users')
-        .update({
-          total_points: (profile.total_points || 0) + submission.pointsEarned,
-          submission_count: (profile.submission_count || 0) + 1,
-        })
-        .eq('id', userId)
+    if (!response.ok) {
+      const data = await response.json().catch(() => ({ message: 'Unknown error' }))
+      // Rate limited means a duplicate was likely already submitted — treat as success
+      if (response.status === 429) {
+        await removeFromQueue(submission.id)
+        return { success: true }
+      }
+      throw new Error(data.message || `HTTP ${response.status}`)
     }
 
     // Remove from queue on success

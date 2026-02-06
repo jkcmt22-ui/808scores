@@ -10,7 +10,6 @@ import {
   isOnline as checkIsOnline,
   type PendingSubmission,
 } from '@/lib/offline-queue'
-import { createClient } from '@/lib/supabase/client'
 import { useAuth } from './use-auth'
 
 export function useOfflineQueue() {
@@ -18,8 +17,7 @@ export function useOfflineQueue() {
   const [pendingCount, setPendingCount] = useState(0)
   const [isOnline, setIsOnline] = useState(true)
   const [isSyncing, setIsSyncing] = useState(false)
-  const { user, profile } = useAuth()
-  const supabase = createClient()
+  const { user } = useAuth()
 
   // Load pending submissions
   const loadPendingSubmissions = useCallback(async () => {
@@ -33,9 +31,9 @@ export function useOfflineQueue() {
     }
   }, [])
 
-  // Sync all pending submissions
+  // Sync all pending submissions via the submit-score API
   const syncAll = useCallback(async () => {
-    if (!user || !supabase || isSyncing) return
+    if (!user || isSyncing) return
 
     setIsSyncing(true)
     const submissions = await getPendingSubmissions()
@@ -47,7 +45,7 @@ export function useOfflineQueue() {
         continue
       }
 
-      const result = await syncSubmission(submission, supabase as never, user.id, profile)
+      const result = await syncSubmission(submission)
       if (result.success) {
         console.log('[OfflineQueue] Synced submission:', submission.id)
       } else {
@@ -57,7 +55,7 @@ export function useOfflineQueue() {
 
     await loadPendingSubmissions()
     setIsSyncing(false)
-  }, [user, supabase, profile, isSyncing, loadPendingSubmissions])
+  }, [user, isSyncing, loadPendingSubmissions])
 
   // Remove a submission
   const removePending = useCallback(async (id: string) => {

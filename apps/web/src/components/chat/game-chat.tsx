@@ -393,11 +393,10 @@ export function GameChat({ gameId }: GameChatProps) {
   const handleToggleLike = async (messageId: string) => {
     if (!user) return
 
-    const wasLiked = likedMessageIds.has(messageId)
-    await toggleLike(messageId)
+    const result = await toggleLike(messageId)
 
-    // Award points if it's a new like (not unlinking)
-    if (!wasLiked) {
+    // Award points only if a new like was actually created (not a no-op or unlike)
+    if (result === 'liked') {
       const message = messages.find((m) => m.id === messageId)
       if (message && message.user_id !== user.id) {
         await awardChatPoints(message.user_id, 'like_received', messageId)

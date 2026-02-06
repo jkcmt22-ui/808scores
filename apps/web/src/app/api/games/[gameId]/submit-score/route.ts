@@ -203,7 +203,23 @@ export async function POST(
 
       if (gameUpdateError) {
         console.error('Game update error:', gameUpdateError)
-        // Don't fail the request - submission was created
+        // Game update failed — revert submission to pending so the cron job can retry
+        await supabase
+          .from('submissions')
+          .update({ status: 'pending', promoted_at: null, promotion_reason: null } as never)
+          .eq('id', submissionData.id)
+
+        return NextResponse.json({
+          success: true,
+          submission: {
+            id: submissionData.id,
+            status: 'pending',
+            points_earned: totalPoints,
+          },
+          game_updated: false,
+          is_verified: false,
+          message: 'Score submitted but game update failed. It will be promoted automatically.',
+        })
       }
 
       // Mark any other pending submissions as superseded

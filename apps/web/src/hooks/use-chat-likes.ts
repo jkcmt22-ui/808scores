@@ -11,7 +11,7 @@ interface UseChatLikesOptions {
 
 interface UseChatLikesReturn {
   likedMessageIds: Set<string>
-  toggleLike: (messageId: string) => Promise<void>
+  toggleLike: (messageId: string) => Promise<'liked' | 'unliked' | null>
   isLoading: boolean
 }
 
@@ -97,9 +97,9 @@ export function useChatLikes({ gameId, userId }: UseChatLikesOptions): UseChatLi
   likedRef.current = likedMessageIds
 
   const toggleLike = useCallback(
-    async (messageId: string) => {
-      if (!supabase || !userId) return
-      if (pendingToggles.current.has(messageId)) return
+    async (messageId: string): Promise<'liked' | 'unliked' | null> => {
+      if (!supabase || !userId) return null
+      if (pendingToggles.current.has(messageId)) return null
 
       pendingToggles.current.add(messageId)
       try {
@@ -116,7 +116,7 @@ export function useChatLikes({ gameId, userId }: UseChatLikesOptions): UseChatLi
 
           if (error) {
             console.error('Error removing like:', error)
-            return
+            return null
           }
 
           setLikedMessageIds((prev) => {
@@ -124,6 +124,7 @@ export function useChatLikes({ gameId, userId }: UseChatLikesOptions): UseChatLi
             next.delete(messageId)
             return next
           })
+          return 'unliked'
         } else {
           // Add like
           // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -133,10 +134,11 @@ export function useChatLikes({ gameId, userId }: UseChatLikesOptions): UseChatLi
 
           if (error) {
             console.error('Error adding like:', error)
-            return
+            return null
           }
 
           setLikedMessageIds((prev) => new Set([...prev, messageId]))
+          return 'liked'
         }
       } finally {
         pendingToggles.current.delete(messageId)
