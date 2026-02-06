@@ -36,7 +36,10 @@ const PROFILE_FIELDS = `
   verified_count,
   reputation_score,
   accuracy_rate,
-  onboarding_completed
+  onboarding_completed,
+  notifications_enabled,
+  regular_season_notifications,
+  marketing_opt_in
 `.replace(/\s+/g, '')
 
 interface AuthContextType {
@@ -160,6 +163,22 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           try {
             const userProfile = await fetchProfile(session.user.id, 'onAuthStateChange')
             setProfile(userProfile)
+
+            // Persist terms acceptance from signup if stored in sessionStorage
+            if (typeof window !== 'undefined') {
+              const accepted = sessionStorage.getItem('acceptedTerms')
+              if (accepted === 'true') {
+                const termsAt = sessionStorage.getItem('termsAcceptedAt')
+                const optIn = sessionStorage.getItem('marketingOptIn') === 'true'
+                await supabase?.from('users').update({
+                  terms_accepted_at: termsAt || new Date().toISOString(),
+                  marketing_opt_in: optIn,
+                } as never).eq('id', session.user.id)
+                sessionStorage.removeItem('acceptedTerms')
+                sessionStorage.removeItem('termsAcceptedAt')
+                sessionStorage.removeItem('marketingOptIn')
+              }
+            }
           } finally {
             setIsProfileLoading(false)
           }

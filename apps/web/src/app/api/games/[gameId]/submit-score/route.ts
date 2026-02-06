@@ -169,6 +169,8 @@ export async function POST(
         time_remaining: time_remaining || null,
         photo_url: photo_url || null,
         at_game,
+        is_overtime: is_overtime || false,
+        overtime_count: overtime_count || 0,
         status: submissionStatus,
         submitted_by_role: userRole,
         promoted_at: isTrustedOrHigher ? new Date().toISOString() : null,
