@@ -275,7 +275,7 @@ export function GlobalSearch({ isOpen, onClose }: GlobalSearchProps) {
                     {popularSchools.map((school) => (
                       <button
                         key={school.name}
-                        onClick={() => handleRecentSearch(school.name)}
+                        onClick={() => handleQuickLink(school.href)}
                         className="px-3 py-1.5 text-sm bg-background-secondary border border-border rounded hover:border-neon-pink hover:text-neon-pink transition-colors"
                       >
                         {school.name}

@@ -220,10 +220,17 @@ export function useEnterRaffle() {
       setIsLoading(true)
       setError(null)
 
+      const currentUser = (await supabase.auth.getUser()).data.user
+      if (!currentUser?.id) {
+        setIsLoading(false)
+        setError('Session expired. Please log in again.')
+        return { success: false, error: 'Session expired. Please log in again.' }
+      }
+
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const { data, error: rpcError } = await (supabase as any).rpc('enter_raffle', {
         p_raffle_id: raffleId,
-        p_user_id: (await supabase.auth.getUser()).data.user?.id,
+        p_user_id: currentUser.id,
         p_entry_count: entryCount,
       })
 

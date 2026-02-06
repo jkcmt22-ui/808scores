@@ -117,18 +117,20 @@ export default function SubmitPage({ params }: SubmitPageProps) {
     return period
   }
 
+  const isTrustedOrHigher = profile?.is_trusted_reporter || profile?.is_admin || profile?.is_super_admin
+
   const calculatePoints = () => {
-    let points = 0
-    if (submissionType === 'final_score') points = 10
-    else if (submissionType === 'period_score') points = 5
-    else if (submissionType === 'live_update') points = 5
+    let base = 0
+    if (submissionType === 'final_score') base = 10
+    else if (submissionType === 'period_score') base = 5
+    else if (submissionType === 'live_update') base = 5
 
-    if (hasPhoto) points += 3
-    if (hasLocation) points += 2
-    if (game.golden_game) points *= 3
+    const subtotal = base + (hasPhoto ? 3 : 0) + (hasLocation ? 2 : 0)
+    const goldenGameMultiplier = game.golden_game ? 3 : 1
+    const trustedMultiplier = isTrustedOrHigher ? 2 : 1
 
-    // Match server-side per-game cap (MAX_POINTS_PER_GAME = 20)
-    return Math.min(points, 20)
+    // Match server-side logic (submit-score/route.ts)
+    return Math.min(Math.round(subtotal * goldenGameMultiplier * trustedMultiplier), 20)
   }
 
   // Build a points breakdown for the ledger
@@ -143,12 +145,14 @@ export default function SubmitPage({ params }: SubmitPageProps) {
     const goldenGameMultiplier = game.golden_game ? 3 : 1
 
     const subtotal = base + photoBonus + locationBonus
-    const total = subtotal * goldenGameMultiplier
+    const trustedMult = isTrustedOrHigher ? 2 : 1
+    const total = Math.min(Math.round(subtotal * goldenGameMultiplier * trustedMult), 20)
 
     const breakdown: string[] = [`Base: ${base} pts`]
     if (photoBonus > 0) breakdown.push(`Photo bonus: +${photoBonus} pts`)
     if (locationBonus > 0) breakdown.push(`At game bonus: +${locationBonus} pts`)
     if (game.golden_game) breakdown.push('Golden game: 3x')
+    if (trustedMult > 1) breakdown.push('Trusted reporter: 2x')
 
     return {
       base,
@@ -156,7 +160,7 @@ export default function SubmitPage({ params }: SubmitPageProps) {
       photoBonus,
       locationBonus,
       streakMultiplier: 1,
-      trustedMultiplier: 1,
+      trustedMultiplier: trustedMult,
       goldenGameMultiplier,
       total,
       breakdown,
