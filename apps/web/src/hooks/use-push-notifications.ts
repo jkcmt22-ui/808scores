@@ -73,6 +73,11 @@ export function usePushNotifications(): UsePushNotificationsReturn {
 
   // Subscribe to push notifications
   const subscribe = useCallback(async (): Promise<boolean> => {
+    if (!user) {
+      setError('Please sign in first')
+      return false
+    }
+
     if (!isSupported) {
       setError('Push notifications are not supported in this browser')
       return false

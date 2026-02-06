@@ -251,23 +251,25 @@ export async function POST(
         } as never)
     }
 
-    // 10. Award points
-    const pointsBreakdown = {
-      base: basePoints,
-      photo_bonus: photoBonus,
-      location_bonus: locationBonus,
-      submission_type,
-    }
+    // 10. Award points (only for published submissions — pending ones get points when promoted)
+    if (submissionStatus === 'published') {
+      const pointsBreakdown = {
+        base: basePoints,
+        photo_bonus: photoBonus,
+        location_bonus: locationBonus,
+        submission_type,
+      }
 
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    await (supabase.rpc as any)('award_points', {
-      p_user_id: user.id,
-      p_event_type: 'submission',
-      p_points: totalPoints,
-      p_source_type: 'submission',
-      p_source_id: submissionData.id,
-      p_metadata: pointsBreakdown,
-    })
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      await (supabase.rpc as any)('award_points', {
+        p_user_id: user.id,
+        p_event_type: 'submission',
+        p_points: totalPoints,
+        p_source_type: 'submission',
+        p_source_id: submissionData.id,
+        p_metadata: pointsBreakdown,
+      })
+    }
 
     // 11. Return response
     return NextResponse.json({
