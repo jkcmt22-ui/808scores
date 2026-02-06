@@ -35,7 +35,7 @@ function getSeasonYear(season: string | null): number {
   }
   // Spring sports (Feb-May) use previous year if we're in Aug-Dec
   if (season === 'spring') {
-    return currentMonth >= 8 ? currentYear : currentYear
+    return currentMonth >= 8 ? currentYear - 1 : currentYear
   }
   // Winter sports (Dec-Feb) use current calendar year
   return currentYear

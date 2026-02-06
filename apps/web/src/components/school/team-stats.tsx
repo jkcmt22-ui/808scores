@@ -3,7 +3,7 @@
 import { useMemo } from 'react'
 import { cn } from '@/lib/utils'
 import { getSportEmoji } from '@/lib/sport-utils'
-import type { GameWithTeams } from '@/types/database'
+import { getHomeSchool, type GameWithTeams } from '@/types/database'
 
 interface TeamStatsProps {
   schoolId: string
@@ -51,7 +51,7 @@ export function TeamStats({ schoolId, games, className }: TeamStatsProps) {
       }
 
       const sportStats = stats.get(sportId)!
-      const isHome = game.home_team_id === schoolId
+      const isHome = getHomeSchool(game).id === schoolId
       const schoolScore = isHome ? game.home_score : game.away_score
       const opponentScore = isHome ? game.away_score : game.home_score
 

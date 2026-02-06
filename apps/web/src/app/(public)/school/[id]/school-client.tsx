@@ -179,7 +179,7 @@ export function SchoolClient({ params }: SchoolPageProps) {
   // Helper to determine if school won the game
   const didSchoolWin = (game: GameWithTeams): boolean | null => {
     if (game.status !== 'final') return null
-    const isHome = game.home_team_id === id
+    const isHome = getHomeSchool(game).id === id
     if (isHome) {
       return game.home_score > game.away_score
     }
