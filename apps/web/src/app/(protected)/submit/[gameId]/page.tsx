@@ -127,7 +127,8 @@ export default function SubmitPage({ params }: SubmitPageProps) {
     if (hasLocation) points += 2
     if (game.golden_game) points *= 3
 
-    return points
+    // Match server-side per-game cap (MAX_POINTS_PER_GAME = 20)
+    return Math.min(points, 20)
   }
 
   // Build a points breakdown for the ledger

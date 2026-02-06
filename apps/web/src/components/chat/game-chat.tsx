@@ -29,6 +29,8 @@ export function GameChat({ gameId }: GameChatProps) {
   const { user, profile, isAuthenticated } = useAuth()
   const [messages, setMessages] = useState<ChatMessageWithUser[]>([])
   const [chatUsers, setChatUsers] = useState<MentionUser[]>([])
+  const chatUsersRef = useRef<MentionUser[]>([])
+  chatUsersRef.current = chatUsers
   const [newMessage, setNewMessage] = useState('')
   const [mentions, setMentions] = useState<string[]>([])
   const [replyingTo, setReplyingTo] = useState<ChatMessageWithUser | null>(null)
@@ -148,8 +150,8 @@ export function GameChat({ gameId }: GameChatProps) {
 
           if (newMessage.is_hidden) return
 
-          // Check if we already have this user's data cached
-          const cachedUser = chatUsers.find(u => u.id === newMessage.user_id)
+          // Check if we already have this user's data cached (use ref to avoid stale closure)
+          const cachedUser = chatUsersRef.current.find(u => u.id === newMessage.user_id)
 
           let userData: any = cachedUser
           if (!cachedUser) {
