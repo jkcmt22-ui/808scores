@@ -930,8 +930,8 @@ function TournamentRow({
           <div className="flex items-center gap-4 text-xs text-foreground-muted flex-wrap">
             <span className="flex items-center gap-1">
               <Calendar className="h-3 w-3" />
-              {new Date(tournament.start_date).toLocaleDateString()}
-              {tournament.end_date && ` - ${new Date(tournament.end_date).toLocaleDateString()}`}
+              {new Date(tournament.start_date).toLocaleDateString('en-US', { timeZone: 'Pacific/Honolulu' })}
+              {tournament.end_date && ` - ${new Date(tournament.end_date).toLocaleDateString('en-US', { timeZone: 'Pacific/Honolulu' })}`}
             </span>
             {tournament.venue && (
               <span className="flex items-center gap-1">

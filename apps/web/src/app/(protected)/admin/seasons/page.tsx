@@ -495,8 +495,8 @@ export default function AdminSeasonsPage() {
                       <span>Year: {season.year}</span>
                       {season.start_date && season.end_date && (
                         <span>
-                          {new Date(season.start_date).toLocaleDateString()} -{' '}
-                          {new Date(season.end_date).toLocaleDateString()}
+                          {new Date(season.start_date).toLocaleDateString('en-US', { timeZone: 'Pacific/Honolulu' })} -{' '}
+                          {new Date(season.end_date).toLocaleDateString('en-US', { timeZone: 'Pacific/Honolulu' })}
                         </span>
                       )}
                     </div>

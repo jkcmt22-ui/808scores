@@ -26,6 +26,7 @@ interface GameRow {
   status: string
   is_verified: boolean
   official_submission_id: string | null
+  golden_game: boolean
 }
 
 interface SubmissionRow {
@@ -118,7 +119,7 @@ export async function POST(
     // 6. Get current game state
     const { data: game, error: gameError } = await supabase
       .from('games')
-      .select('id, home_score, away_score, status, is_verified, official_submission_id')
+      .select('id, home_score, away_score, status, is_verified, official_submission_id, golden_game')
       .eq('id', gameId)
       .single()
 
@@ -131,7 +132,9 @@ export async function POST(
 
     const gameData = game as unknown as GameRow
 
-    // 7. Calculate points
+    // 7. Calculate points (must match lib/points/calculator.ts logic)
+    const MAX_POINTS_PER_GAME = 20
+
     let basePoints = 0
     if (submission_type === 'final_score') basePoints = 10
     else if (submission_type === 'period_score') basePoints = 5
@@ -139,7 +142,16 @@ export async function POST(
 
     const photoBonus = photo_url ? 3 : 0
     const locationBonus = at_game ? 2 : 0
-    const totalPoints = basePoints + photoBonus + locationBonus
+    const subtotal = basePoints + photoBonus + locationBonus
+
+    // Apply multipliers
+    const goldenGameMultiplier = gameData.golden_game ? 3 : 1
+    const trustedMultiplier = isTrustedOrHigher ? 2 : 1
+
+    const totalPoints = Math.min(
+      Math.round(subtotal * goldenGameMultiplier * trustedMultiplier),
+      MAX_POINTS_PER_GAME
+    )
 
     // 8. Create submission record
     const submissionStatus = isTrustedOrHigher ? 'published' : 'pending'
@@ -257,6 +269,8 @@ export async function POST(
         base: basePoints,
         photo_bonus: photoBonus,
         location_bonus: locationBonus,
+        golden_game_multiplier: goldenGameMultiplier,
+        trusted_multiplier: trustedMultiplier,
         submission_type,
       }
 

@@ -19,6 +19,10 @@ interface MentionUser {
   id: string
   display_name: string | null
   avatar_url: string | null
+  tier?: string
+  is_trusted_reporter?: boolean
+  is_admin?: boolean
+  is_super_admin?: boolean
 }
 
 interface GameChatProps {
@@ -164,12 +168,16 @@ export function GameChat({ gameId }: GameChatProps) {
 
             userData = userResult
 
-            // Add to cached users
+            // Add to cached users (include all fields used by chat-message rendering)
             if (userData) {
               setChatUsers((prev) => [...prev, {
                 id: userData.id,
                 display_name: userData.display_name,
                 avatar_url: userData.avatar_url,
+                tier: userData.tier,
+                is_trusted_reporter: userData.is_trusted_reporter,
+                is_admin: userData.is_admin,
+                is_super_admin: userData.is_super_admin,
               }])
             }
           }
