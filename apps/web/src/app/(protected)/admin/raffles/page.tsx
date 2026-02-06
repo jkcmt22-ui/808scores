@@ -9,7 +9,7 @@ import {
 } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import { useAuth } from '@/hooks'
-import { cn } from '@/lib/utils'
+import { cn, utcToHawaiiDatetime, hawaiiDatetimeToUTC } from '@/lib/utils'
 import { useToast } from '@/components/ui/toast'
 import { ConfirmModal } from '@/components/admin/confirm-modal'
 import Link from 'next/link'
@@ -129,7 +129,7 @@ export default function AdminRafflesPage() {
 
   const formatDateForInput = (isoDate: string) => {
     if (!isoDate) return ''
-    return new Date(isoDate).toISOString().slice(0, 16)
+    return utcToHawaiiDatetime(isoDate)
   }
 
   const handleEdit = (raffle: RaffleWithPrize) => {
@@ -194,9 +194,9 @@ export default function AdminRafflesPage() {
       description: formData.description || null,
       raffle_type: formData.raffle_type,
       prize_id: formData.prize_id || null,
-      entries_open_at: formData.entries_open_at ? new Date(formData.entries_open_at).toISOString() : null,
-      entries_close_at: formData.entries_close_at ? new Date(formData.entries_close_at).toISOString() : null,
-      drawing_at: formData.drawing_at ? new Date(formData.drawing_at).toISOString() : null,
+      entries_open_at: formData.entries_open_at ? hawaiiDatetimeToUTC(formData.entries_open_at) : null,
+      entries_close_at: formData.entries_close_at ? hawaiiDatetimeToUTC(formData.entries_close_at) : null,
+      drawing_at: formData.drawing_at ? hawaiiDatetimeToUTC(formData.drawing_at) : null,
       min_points_to_enter: formData.min_points_to_enter,
       points_per_entry: formData.points_per_entry,
       max_entries_per_user: formData.max_entries_per_user,

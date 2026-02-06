@@ -96,7 +96,8 @@ function buildProfanityRegex(word: string): RegExp {
   }
   // Remove trailing separator pattern
   pattern = pattern.replace(/\[\\s\._-\]\*$/, '')
-  return new RegExp(pattern, 'gi')
+  // Word boundaries prevent matching inside legitimate words (e.g., "pass", "assist", "hello")
+  return new RegExp(`\\b${pattern}\\b`, 'gi')
 }
 
 // Pre-build regex patterns for all profanity words
@@ -127,11 +128,11 @@ export function containsProfanity(text: string): boolean {
 
   // Check against all profanity patterns
   for (const { regex } of PROFANITY_PATTERNS) {
+    regex.lastIndex = 0
     if (regex.test(normalizedText)) {
+      regex.lastIndex = 0
       return true
     }
-    // Reset regex lastIndex
-    regex.lastIndex = 0
   }
 
   return false
@@ -142,11 +143,11 @@ export function containsProfanity(text: string): boolean {
  */
 export function isSpam(text: string): boolean {
   for (const pattern of SPAM_PATTERNS) {
+    pattern.lastIndex = 0
     if (pattern.test(text)) {
+      pattern.lastIndex = 0
       return true
     }
-    // Reset regex lastIndex
-    pattern.lastIndex = 0
   }
   return false
 }
