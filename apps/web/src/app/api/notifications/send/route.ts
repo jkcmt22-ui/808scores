@@ -228,12 +228,22 @@ export async function POST(request: NextRequest) {
     let subscriptions: PushSubscription[] = []
 
     if (isTargetedNotification) {
-      // Get users who follow either team with notifications enabled
-      const { data: teamFollowers, error: followError } = await supabase
-        .from('team_follows')
-        .select('user_id')
-        .in('school_id', [homeTeamId, awayTeamId])
-        .eq('notify', true)
+      // Resolve team IDs to school IDs (after migration 072, game IDs reference teams, not schools)
+      const { data: teams } = await supabase
+        .from('teams')
+        .select('school_id')
+        .in('id', [homeTeamId, awayTeamId])
+
+      const schoolIds = teams?.map(t => t.school_id).filter(Boolean) || []
+
+      // Get users who follow either school with notifications enabled
+      const { data: teamFollowers, error: followError } = schoolIds.length > 0
+        ? await supabase
+            .from('team_follows')
+            .select('user_id')
+            .in('school_id', schoolIds)
+            .eq('notify', true)
+        : { data: null, error: null }
 
       if (followError) {
         console.error('Error fetching team followers:', followError)

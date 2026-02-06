@@ -93,7 +93,7 @@ export function useSchoolSchedule(
       // After migration, check if home_team's school_id matches the schoolId
       const processedGames: ScheduleGame[] = games.map(game => {
         const homeTeam = game.home_team as any
-        const isHome = homeTeam?.school_id === schoolId || homeTeam?.id === schoolId
+        const isHome = homeTeam?.school_id === schoolId
 
         let result: 'W' | 'L' | 'T' | null = null
         if (game.status === 'final') {
