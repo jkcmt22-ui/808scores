@@ -140,9 +140,6 @@ export default function AdminStandingsPage() {
       return
     }
 
-    // Convert season to INT for season_standings lookup
-    const seasonYearInt = parseInt(selectedSeason.split('-')[1])
-
     try {
       // Fetch both computed standings and manual overrides in parallel
       const [computedResult, manualResult] = await Promise.all([
@@ -154,11 +151,13 @@ export default function AdminStandingsPage() {
           p_league: selectedLeague
         }),
         // Fetch manual overrides from season_standings
+        // season_year is TEXT (e.g., '2025-2026') after migration 055
         supabase
           .from('season_standings')
           .select('school_id, overall_wins, overall_losses, overall_ties, league_wins, league_losses, league_ties')
           .eq('sport_id', selectedSportId)
-          .eq('season_year', seasonYearInt)
+          .eq('season_year', selectedSeason)
+          .eq('league', selectedLeague)
       ])
 
       const { data, error } = computedResult

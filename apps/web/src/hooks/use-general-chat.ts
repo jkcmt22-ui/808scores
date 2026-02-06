@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useCallback, useRef, useMemo } from 'react'
 import { createClient } from '@/lib/supabase/client'
-import { isValidGifUrl } from '@808scores/shared'
+import { isValidGifUrl, validateMessage, recordMessage } from '@808scores/shared'
 import type { User } from '@supabase/supabase-js'
 
 export interface GeneralChatMessage {
@@ -206,6 +206,13 @@ export function useGeneralChat(
       return false
     }
 
+    // Content filtering: profanity, spam, rate limiting, length checks
+    const validation = validateMessage(content, user.id)
+    if (!validation.valid) {
+      setError(new Error(validation.error || 'Message not allowed'))
+      return false
+    }
+
     setIsSending(true)
 
     try {
@@ -236,6 +243,9 @@ export function useGeneralChat(
         })
 
       if (insertError) throw insertError
+
+      // Record for rate limiting
+      recordMessage(user.id)
 
       return true
     } catch (err) {
