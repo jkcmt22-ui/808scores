@@ -122,9 +122,6 @@ export function GameClient({ params }: GamePageProps) {
       try {
         await navigator.share(shareData)
         setShareStatus('shared')
-        // Timeout will be cleaned up in useEffect
-        const timeoutId = setTimeout(() => setShareStatus('idle'), 2000)
-        return () => clearTimeout(timeoutId)
       } catch (err) {
         // User cancelled or error - fall through to clipboard
         if ((err as Error).name === 'AbortError') return
@@ -135,9 +132,6 @@ export function GameClient({ params }: GamePageProps) {
     try {
       await navigator.clipboard.writeText(`${shareText}\n${shareUrl}`)
       setShareStatus('copied')
-      // Timeout will be cleaned up in useEffect
-      const timeoutId = setTimeout(() => setShareStatus('idle'), 2000)
-      return () => clearTimeout(timeoutId)
     } catch {
       // Failed to copy
     }

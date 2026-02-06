@@ -97,10 +97,15 @@ export function FavoritesModal({ userId, onComplete }: FavoritesModalProps) {
       await Promise.all([...teamPromises, ...sportPromises])
 
       // Mark onboarding as complete
-      await supabase
+      const { error: updateError } = await supabase
         .from('users')
         .update({ onboarding_completed: true } as never)
         .eq('id', userId)
+
+      if (updateError) {
+        console.error('Error marking onboarding complete:', updateError)
+        return
+      }
 
       onComplete()
     } catch (err) {
@@ -116,10 +121,16 @@ export function FavoritesModal({ userId, onComplete }: FavoritesModalProps) {
 
     setIsSubmitting(true)
     try {
-      await supabase
+      const { error: updateError } = await supabase
         .from('users')
         .update({ onboarding_completed: true } as never)
         .eq('id', userId)
+
+      if (updateError) {
+        console.error('Error skipping onboarding:', updateError)
+        return
+      }
+
       onComplete()
     } catch (err) {
       console.error('Error skipping onboarding:', err)

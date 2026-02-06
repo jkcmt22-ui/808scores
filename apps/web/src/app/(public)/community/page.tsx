@@ -204,13 +204,14 @@ export default function CommunityPage() {
     if (!inputText.trim() || isSending) return
 
     const text = inputText
+    const savedReply = replyingTo
     setInputText('')
-    const replyId = replyingTo?.id || null
     setReplyingTo(null)
 
-    const success = await sendMessage(text, replyId)
+    const success = await sendMessage(text, savedReply?.id || null)
     if (!success) {
       setInputText(text)
+      setReplyingTo(savedReply)
     }
   }
 
