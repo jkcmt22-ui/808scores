@@ -165,7 +165,7 @@ export default function ProfilePage() {
                 </div>
                 <p className="text-sm text-foreground-muted">{profile.email || formatPhone(profile.phone)}</p>
                 <p className="text-xs text-foreground-subtle">
-                  Member since {new Date(profile.created_at).toLocaleDateString()}
+                  Member since {new Date(profile.created_at).toLocaleDateString('en-US', { timeZone: 'Pacific/Honolulu' })}
                 </p>
               </div>
             </div>

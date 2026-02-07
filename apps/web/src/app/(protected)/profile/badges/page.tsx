@@ -140,7 +140,7 @@ export default function BadgesPage() {
                       )}
                       {isEarned && earnedDate && (
                         <p className="text-xs text-neon-green mt-2">
-                          Earned {new Date(earnedDate).toLocaleDateString()}
+                          Earned {new Date(earnedDate).toLocaleDateString('en-US', { timeZone: 'Pacific/Honolulu' })}
                         </p>
                       )}
                     </div>

@@ -352,7 +352,7 @@ export default function BetaCodesPage() {
                         {code.expires_at && (
                           <span className="flex items-center gap-1">
                             <Clock className="h-3 w-3" />
-                            Expires {new Date(code.expires_at).toLocaleDateString()}
+                            Expires {new Date(code.expires_at).toLocaleDateString('en-US', { timeZone: 'Pacific/Honolulu' })}
                           </span>
                         )}
                       </div>

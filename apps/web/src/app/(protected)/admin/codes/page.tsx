@@ -194,9 +194,9 @@ export default function AdminCodesPage() {
                     <p className="text-sm text-foreground-muted mb-1">{code.note}</p>
                   )}
                   <p className="text-xs text-foreground-subtle">
-                    Created: {new Date(code.created_at).toLocaleDateString()}
+                    Created: {new Date(code.created_at).toLocaleDateString('en-US', { timeZone: 'Pacific/Honolulu' })}
                     {code.redeemed_at && (
-                      <> &middot; Redeemed: {new Date(code.redeemed_at).toLocaleDateString()}</>
+                      <> &middot; Redeemed: {new Date(code.redeemed_at).toLocaleDateString('en-US', { timeZone: 'Pacific/Honolulu' })}</>
                     )}
                     <> &middot; Uses: {code.use_count}/{code.max_uses}</>
                   </p>

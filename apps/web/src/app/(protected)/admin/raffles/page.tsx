@@ -533,7 +533,7 @@ export default function AdminRafflesPage() {
                         {raffle.entries_close_at && (
                           <span className="flex items-center gap-1">
                             <Calendar className="h-3 w-3" />
-                            Closes: {new Date(raffle.entries_close_at).toLocaleDateString()}
+                            Closes: {new Date(raffle.entries_close_at).toLocaleDateString('en-US', { timeZone: 'Pacific/Honolulu' })}
                           </span>
                         )}
                       </div>

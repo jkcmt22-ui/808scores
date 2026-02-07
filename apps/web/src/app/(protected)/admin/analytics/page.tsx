@@ -413,7 +413,7 @@ export default function AnalyticsPage() {
                   {data.recentSubmissions.map((sub) => (
                     <tr key={sub.id} className="border-b border-border last:border-b-0">
                       <td className="py-2 px-3 font-mono text-xs text-foreground-muted">
-                        {new Date(sub.created_at).toLocaleTimeString()}
+                        {new Date(sub.created_at).toLocaleTimeString('en-US', { timeZone: 'Pacific/Honolulu' })}
                       </td>
                       <td className="py-2 px-3 text-foreground">
                         {sub.user?.display_name || 'Anonymous'}

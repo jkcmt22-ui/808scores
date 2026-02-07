@@ -237,15 +237,15 @@ export default function AdminRaffleDetailPage() {
           <div className="grid grid-cols-3 gap-4 text-xs text-foreground-muted mb-4">
             <div>
               <Calendar className="h-3.5 w-3.5 inline mr-1" />
-              Opens: {raffle.entries_open_at ? new Date(raffle.entries_open_at).toLocaleString() : 'Not set'}
+              Opens: {raffle.entries_open_at ? new Date(raffle.entries_open_at).toLocaleString('en-US', { timeZone: 'Pacific/Honolulu' }) : 'Not set'}
             </div>
             <div>
               <Clock className="h-3.5 w-3.5 inline mr-1" />
-              Closes: {raffle.entries_close_at ? new Date(raffle.entries_close_at).toLocaleString() : 'Not set'}
+              Closes: {raffle.entries_close_at ? new Date(raffle.entries_close_at).toLocaleString('en-US', { timeZone: 'Pacific/Honolulu' }) : 'Not set'}
             </div>
             <div>
               <Trophy className="h-3.5 w-3.5 inline mr-1" />
-              Drawing: {raffle.drawing_at ? new Date(raffle.drawing_at).toLocaleString() : 'Not set'}
+              Drawing: {raffle.drawing_at ? new Date(raffle.drawing_at).toLocaleString('en-US', { timeZone: 'Pacific/Honolulu' }) : 'Not set'}
             </div>
           </div>
 

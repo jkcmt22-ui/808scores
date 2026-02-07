@@ -691,6 +691,7 @@ function GameCard({ game, isHomeTeam, opponent, result }: GameCardProps) {
                 {new Date(game.scheduled_at).toLocaleDateString('en-US', {
                   month: 'short',
                   day: 'numeric',
+                  timeZone: 'Pacific/Honolulu',
                 })}
               </div>
             )}

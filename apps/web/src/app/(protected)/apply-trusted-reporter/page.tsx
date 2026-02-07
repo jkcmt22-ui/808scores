@@ -237,7 +237,7 @@ export default function ApplyTrustedReporterPage() {
                 Your application is being reviewed by our team.
               </p>
               <p className="text-xs text-foreground-subtle mb-4">
-                Submitted on {new Date(existingApplication.created_at).toLocaleDateString()}
+                Submitted on {new Date(existingApplication.created_at).toLocaleDateString('en-US', { timeZone: 'Pacific/Honolulu' })}
               </p>
               <Button variant="outline" onClick={() => router.push('/profile')}>
                 Back to Profile

@@ -398,7 +398,7 @@ export default function AdminUsersPage() {
                           </p>
                         </div>
                         <span className="text-xs text-foreground-subtle whitespace-nowrap">
-                          {new Date(entry.created_at).toLocaleString()}
+                          {new Date(entry.created_at).toLocaleString('en-US', { timeZone: 'Pacific/Honolulu' })}
                         </span>
                       </div>
                     </div>
@@ -481,7 +481,7 @@ function UserRow({
             {user.email && <p>{user.email}</p>}
             {user.phone && <p>{user.phone}</p>}
             <p className="text-xs text-foreground-subtle">
-              Joined: {new Date(user.created_at).toLocaleDateString()}
+              Joined: {new Date(user.created_at).toLocaleDateString('en-US', { timeZone: 'Pacific/Honolulu' })}
               {' | '}Rep: {user.reputation_score}
               {' | '}Submissions: {user.submission_count}
             </p>
