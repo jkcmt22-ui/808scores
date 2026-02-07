@@ -198,7 +198,7 @@ function LoginForm() {
           email,
           password,
           options: {
-            emailRedirectTo: `${window.location.origin}/api/auth/callback?redirect=${redirect}`,
+            emailRedirectTo: `${window.location.origin}/api/auth/callback?redirect=${encodeURIComponent(redirect)}`,
             data: {
               accepted_terms: true,
               terms_accepted_at: new Date().toISOString(),
@@ -226,41 +226,18 @@ function LoginForm() {
           const { data: { user } } = await supabase.auth.getUser()
 
           if (user) {
-            // Verify and consume beta code
-            const { data: code } = await supabase
-              .from('beta_codes' as any)
-              .select('*')
-              .eq('code', betaCode)
-              .eq('is_active', true)
-              .single()
+            // Use the same atomic RPC as phone auth path
+            const { data: result, error: redeemError } = await (supabase as any)
+              .rpc('redeem_beta_code', { p_code: betaCode })
 
-            if (code) {
-              // Grant beta access
-              // @ts-expect-error - Beta tables not yet in generated types
-              await supabase.from('beta_access').insert({
-                user_id: user.id,
-                beta_code_id: (code as any).id,
-                granted_at: new Date().toISOString(),
-              })
-
-              // Update user flag
-              // @ts-expect-error - Beta fields not yet in generated types
-              await supabase.from('users').update({
-                has_beta_access: true,
-                beta_granted_at: new Date().toISOString(),
-              }).eq('id', user.id)
-
-              // Increment code use count
-              // @ts-expect-error - Beta tables not yet in generated types
-              await supabase.from('beta_codes').update({
-                use_count: (code as any).use_count + 1
-              }).eq('id', (code as any).id)
-
-              sessionStorage.removeItem('betaCode')
-
-              // Use hard redirect to ensure middleware sees updated beta access
-              window.location.href = redirect
-              return
+            if (!redeemError) {
+              const redemption = result as { success: boolean; message?: string; error?: string }
+              if (redemption.success) {
+                sessionStorage.removeItem('betaCode')
+                // Use hard redirect to ensure middleware sees updated beta access
+                window.location.href = redirect
+                return
+              }
             }
           }
         }

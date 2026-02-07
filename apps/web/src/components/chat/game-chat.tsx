@@ -89,7 +89,7 @@ export function GameChat({ gameId }: GameChatProps) {
       .from('chat_messages')
       .select(`
         *,
-        user:users(id, display_name, avatar_url, tier, is_trusted_reporter, is_admin, is_super_admin),
+        user:users(id, display_name, avatar_url, tier, is_trusted_reporter, is_admin, is_super_admin, is_school_manager),
         reply_to:chat_messages!reply_to_id(
           id,
           content,
@@ -162,7 +162,7 @@ export function GameChat({ gameId }: GameChatProps) {
             // Only fetch user data if we don't have it
             const { data: userResult } = await supabase
               .from('users')
-              .select('id, display_name, avatar_url, tier, is_trusted_reporter, is_admin, is_super_admin')
+              .select('id, display_name, avatar_url, tier, is_trusted_reporter, is_admin, is_super_admin, is_school_manager')
               .eq('id', newMessage.user_id)
               .single()
 
@@ -178,6 +178,7 @@ export function GameChat({ gameId }: GameChatProps) {
                 is_trusted_reporter: userData.is_trusted_reporter,
                 is_admin: userData.is_admin,
                 is_super_admin: userData.is_super_admin,
+                is_school_manager: userData.is_school_manager,
               }])
             }
           }
