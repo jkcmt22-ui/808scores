@@ -111,7 +111,15 @@ export async function POST(
 
     // 5. Get user role
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const { data: roleData } = await (supabase.rpc as any)('get_submission_role', { p_user_id: user.id })
+    const { data: roleData, error: roleError } = await (supabase.rpc as any)('get_submission_role', { p_user_id: user.id })
+
+    if (roleError) {
+      console.error('Role lookup error:', roleError)
+      return NextResponse.json(
+        { error: 'Failed to determine user role', message: roleError.message },
+        { status: 500 }
+      )
+    }
 
     const userRole = (roleData as string) || 'general'
     const isTrustedOrHigher = ['trusted_reporter', 'admin', 'super_admin'].includes(userRole)
@@ -277,7 +285,7 @@ export async function POST(
       }
 
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      await (supabase.rpc as any)('award_points', {
+      const { error: pointsError } = await (supabase.rpc as any)('award_points', {
         p_user_id: user.id,
         p_event_type: 'submission',
         p_points: totalPoints,
@@ -285,6 +293,11 @@ export async function POST(
         p_source_id: submissionData.id,
         p_metadata: pointsBreakdown,
       })
+
+      if (pointsError) {
+        console.error('Points award error:', pointsError)
+        // Non-fatal: submission was saved, but log for investigation
+      }
     }
 
     // 11. Return response

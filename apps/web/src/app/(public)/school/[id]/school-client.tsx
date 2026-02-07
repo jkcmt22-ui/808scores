@@ -176,14 +176,15 @@ export function SchoolClient({ params }: SchoolPageProps) {
     setFollowLoading(false)
   }
 
-  // Helper to determine if school won the game
-  const didSchoolWin = (game: GameWithTeams): boolean | null => {
+  // Helper to determine game result for the school
+  const getGameResult = (game: GameWithTeams): 'win' | 'loss' | 'tie' | null => {
     if (game.status !== 'final') return null
     const isHome = getHomeSchool(game).id === id
-    if (isHome) {
-      return game.home_score > game.away_score
-    }
-    return game.away_score > game.home_score
+    const schoolScore = isHome ? game.home_score : game.away_score
+    const opponentScore = isHome ? game.away_score : game.home_score
+    if (schoolScore > opponentScore) return 'win'
+    if (schoolScore < opponentScore) return 'loss'
+    return 'tie'
   }
 
   // Get opponent for display
@@ -429,7 +430,7 @@ export function SchoolClient({ params }: SchoolPageProps) {
                     schoolId={id}
                     isHomeTeam={isHomeTeam(game)}
                     opponent={getOpponent(game)}
-                    result={didSchoolWin(game)}
+                    result={getGameResult(game)}
                   />
                 ))}
               </div>
@@ -596,7 +597,7 @@ interface GameCardProps {
   schoolId: string
   isHomeTeam: boolean
   opponent: School
-  result: boolean | null // true = win, false = loss, null = not final
+  result: 'win' | 'loss' | 'tie' | null
 }
 
 function GameCard({ game, isHomeTeam, opponent, result }: GameCardProps) {
@@ -612,8 +613,9 @@ function GameCard({ game, isHomeTeam, opponent, result }: GameCardProps) {
       <div className={cn(
         'rounded-lg border-2 bg-surface p-4 transition-all hover:border-neon-blue',
         isLive ? 'border-neon-pink' : 'border-border',
-        result === true && 'border-l-4 border-l-score-green',
-        result === false && 'border-l-4 border-l-score-red'
+        result === 'win' && 'border-l-4 border-l-score-green',
+        result === 'loss' && 'border-l-4 border-l-score-red',
+        result === 'tie' && 'border-l-4 border-l-score-amber'
       )}>
         <div className="flex items-center justify-between">
           {/* Game Info */}
@@ -655,16 +657,18 @@ function GameCard({ game, isHomeTeam, opponent, result }: GameCardProps) {
               <div className="flex items-center gap-2">
                 <span className={cn(
                   'font-mono text-xl font-bold',
-                  result === true && 'text-score-green',
-                  result === false && 'text-foreground-muted'
+                  result === 'win' && 'text-score-green',
+                  result === 'loss' && 'text-foreground-muted',
+                  result === 'tie' && 'text-score-amber'
                 )}>
                   {schoolScore}
                 </span>
                 <span className="text-foreground-muted">-</span>
                 <span className={cn(
                   'font-mono text-xl font-bold',
-                  result === false && 'text-score-green',
-                  result === true && 'text-foreground-muted'
+                  result === 'loss' && 'text-score-green',
+                  result === 'win' && 'text-foreground-muted',
+                  result === 'tie' && 'text-score-amber'
                 )}>
                   {opponentScore}
                 </span>
@@ -674,10 +678,11 @@ function GameCard({ game, isHomeTeam, opponent, result }: GameCardProps) {
             {isFinal && (
               <div className={cn(
                 'text-sm font-bold',
-                result === true && 'text-score-green',
-                result === false && 'text-score-red'
+                result === 'win' && 'text-score-green',
+                result === 'loss' && 'text-score-red',
+                result === 'tie' && 'text-score-amber'
               )}>
-                {result === true ? 'W' : 'L'}
+                {result === 'win' ? 'W' : result === 'tie' ? 'T' : 'L'}
               </div>
             )}
 
