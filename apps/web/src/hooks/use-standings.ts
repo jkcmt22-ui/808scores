@@ -37,17 +37,12 @@ interface ComputedStandingRow {
   points_against: number
 }
 
-// Helper to convert calendar year to season year TEXT format (e.g., "2025-2026")
-// School year runs Aug-Jul. All sports within a school year share the same season year.
-function getSeasonYearText(year: number): string {
-  // Determine which school year we're in based on current month
-  // Jan-Jul: school year started previous August → (year-1)-(year)
-  // Aug-Dec: school year started this August → (year)-(year+1)
-  const month = new Date().getMonth() + 1 // 1-12
-  if (month >= 8) {
-    return `${year}-${year + 1}`
-  }
-  return `${year - 1}-${year}`
+// Get current school year in TEXT format (e.g., '2025-2026') using Hawaii timezone
+function getCurrentSchoolYear(): string {
+  const now = new Date()
+  const m = parseInt(now.toLocaleDateString('en-CA', { timeZone: 'Pacific/Honolulu', month: 'numeric' }))
+  const y = parseInt(now.toLocaleDateString('en-CA', { timeZone: 'Pacific/Honolulu', year: 'numeric' }))
+  return m >= 8 ? `${y}-${y + 1}` : `${y - 1}-${y}`
 }
 
 export function useStandings(options: UseStandingsOptions = {}): UseStandingsReturn {
@@ -68,12 +63,6 @@ export function useStandings(options: UseStandingsOptions = {}): UseStandingsRet
     try {
       setIsLoading(true)
       setError(null)
-
-      // Get current year for default season
-      const currentYear = parseInt(new Date().toLocaleDateString('en-CA', {
-        timeZone: 'Pacific/Honolulu',
-        year: 'numeric'
-      }))
 
       // Fetch sport by code if specified
       let currentSport: Sport | null = null
@@ -96,9 +85,8 @@ export function useStandings(options: UseStandingsOptions = {}): UseStandingsRet
         return
       }
 
-      // Determine target season year in TEXT format
-      const targetYear = season ? parseInt(season) : currentYear
-      const seasonYearText = getSeasonYearText(targetYear)
+      // Use season text directly if provided (e.g., '2025-2026'), otherwise compute
+      const seasonYearText = season || getCurrentSchoolYear()
 
       // Call the new computed standings function
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -113,7 +101,7 @@ export function useStandings(options: UseStandingsOptions = {}): UseStandingsRet
         // If function doesn't exist, fall back to legacy behavior
         if (standingsError.message.includes('function') || standingsError.code === '42883') {
           console.warn('get_computed_standings function not found, falling back to legacy')
-          await fetchLegacyStandings(currentSport, targetYear, league)
+          await fetchLegacyStandings(currentSport, seasonYearText, league)
           return
         }
         throw standingsError
@@ -278,7 +266,7 @@ export function useStandings(options: UseStandingsOptions = {}): UseStandingsRet
   }, [supabase, sportCode, league, season])
 
   // Legacy fallback function for when get_computed_standings doesn't exist
-  const fetchLegacyStandings = async (currentSport: Sport, targetYear: number, leagueFilter: string | undefined) => {
+  const fetchLegacyStandings = async (currentSport: Sport, seasonYear: string, leagueFilter: string | undefined) => {
     if (!supabase) return
 
     try {
@@ -289,7 +277,7 @@ export function useStandings(options: UseStandingsOptions = {}): UseStandingsRet
           *,
           school:schools(*)
         `)
-        .eq('season_year', targetYear)
+        .eq('season_year', seasonYear)
         .eq('sport_id', currentSport.id)
 
       if (leagueFilter) {

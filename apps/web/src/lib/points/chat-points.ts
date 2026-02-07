@@ -74,8 +74,10 @@ export async function getDailyChatPoints(
     return {}
   }
 
-  const today = new Date()
-  today.setHours(0, 0, 0, 0)
+  // Get midnight Hawaii time (HST is always UTC-10, no DST)
+  const now = new Date()
+  const hawaiiDateStr = now.toLocaleDateString('en-CA', { timeZone: 'Pacific/Honolulu' })
+  const today = new Date(hawaiiDateStr + 'T00:00:00-10:00')
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const { data, error } = await (supabase as any)

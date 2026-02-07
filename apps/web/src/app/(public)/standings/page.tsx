@@ -37,7 +37,10 @@ function getSeasonYear(season: string | null): number {
     timeZone: 'Pacific/Honolulu',
     year: 'numeric'
   }))
-  const currentMonth = now.getMonth() + 1 // 1-12
+  const currentMonth = parseInt(now.toLocaleDateString('en-CA', {
+    timeZone: 'Pacific/Honolulu',
+    month: 'numeric'
+  }))
 
   // Fall sports (Aug-Nov) use previous year if we're in Jan-Jul
   if (season === 'fall') {
@@ -74,13 +77,19 @@ export default function StandingsPage() {
     sports.find(s => s.code === effectiveSportCode),
     [sports, effectiveSportCode]
   )
-  const seasonYear = selectedSport ? getSeasonYear(selectedSport.season) : undefined
+  // Compute the current school year text (e.g., '2025-2026') for standings query
+  const seasonYearText = useMemo(() => {
+    const now = new Date()
+    const m = parseInt(now.toLocaleDateString('en-CA', { timeZone: 'Pacific/Honolulu', month: 'numeric' }))
+    const y = parseInt(now.toLocaleDateString('en-CA', { timeZone: 'Pacific/Honolulu', year: 'numeric' }))
+    return m >= 8 ? `${y}-${y + 1}` : `${y - 1}-${y}`
+  }, [])
 
   // Fetch standings - pass league filter to API if not 'All'
   const { standings, sport: currentSport, isLoading: standingsLoading, error } = useStandings({
     sportCode: effectiveSportCode || undefined,
     league: undefined, // Always fetch all, filter client-side for instant switching
-    season: seasonYear?.toString()
+    season: seasonYearText
   })
 
   const isLoading = sportsLoading || standingsLoading
