@@ -163,6 +163,11 @@ async function getMonthlyPointEntries(month?: string): Promise<DrawingEntry[]> {
   let startDate: Date
   let endDate: Date
 
+  // Use Hawaii timezone for all month boundary calculations
+  const now = new Date()
+  const hawaiiMonth = parseInt(now.toLocaleDateString('en-CA', { timeZone: 'Pacific/Honolulu', month: 'numeric' }))
+  const hawaiiYear = parseInt(now.toLocaleDateString('en-CA', { timeZone: 'Pacific/Honolulu', year: 'numeric' }))
+
   if (month) {
     // Support both 'YYYY-MM' format and month names like 'January'
     const monthNames = ['january', 'february', 'march', 'april', 'may', 'june',
@@ -170,23 +175,24 @@ async function getMonthlyPointEntries(month?: string): Promise<DrawingEntry[]> {
     const monthIndex = monthNames.indexOf(month.toLowerCase())
 
     if (monthIndex !== -1) {
-      // Month name format (e.g. "January") — use current year,
+      // Month name format (e.g. "January") — use current year (Hawaii TZ),
       // or previous year if the month is in the future
-      const now = new Date()
-      const year = monthIndex > now.getMonth() ? now.getFullYear() - 1 : now.getFullYear()
-      startDate = new Date(year, monthIndex, 1)
-      endDate = new Date(year, monthIndex + 1, 1)
+      const year = monthIndex >= hawaiiMonth ? hawaiiYear - 1 : hawaiiYear
+      // Use HST offset (-10:00) for consistent Hawaii midnight boundaries
+      startDate = new Date(`${year}-${String(monthIndex + 1).padStart(2, '0')}-01T00:00:00-10:00`)
+      endDate = new Date(`${monthIndex === 11 ? year + 1 : year}-${String(monthIndex === 11 ? 1 : monthIndex + 2).padStart(2, '0')}-01T00:00:00-10:00`)
     } else {
-      // Parse 'YYYY-MM' format
+      // Parse 'YYYY-MM' format — use Hawaii midnight boundaries
       const [year, monthNum] = month.split('-').map(Number)
-      startDate = new Date(year, monthNum - 1, 1)
-      endDate = new Date(year, monthNum, 1)
+      startDate = new Date(`${year}-${String(monthNum).padStart(2, '0')}-01T00:00:00-10:00`)
+      endDate = new Date(`${monthNum === 12 ? year + 1 : year}-${String(monthNum === 12 ? 1 : monthNum + 1).padStart(2, '0')}-01T00:00:00-10:00`)
     }
   } else {
-    // Default to current month
-    const now = new Date()
-    startDate = new Date(now.getFullYear(), now.getMonth(), 1)
-    endDate = new Date(now.getFullYear(), now.getMonth() + 1, 1)
+    // Default to current month in Hawaii timezone
+    startDate = new Date(`${hawaiiYear}-${String(hawaiiMonth).padStart(2, '0')}-01T00:00:00-10:00`)
+    const nextMonth = hawaiiMonth === 12 ? 1 : hawaiiMonth + 1
+    const nextYear = hawaiiMonth === 12 ? hawaiiYear + 1 : hawaiiYear
+    endDate = new Date(`${nextYear}-${String(nextMonth).padStart(2, '0')}-01T00:00:00-10:00`)
   }
 
   // Get points from point_events table (centralized ledger since migration 056)

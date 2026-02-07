@@ -58,6 +58,9 @@ export function useGeneralChat(
   const [isSending, setIsSending] = useState(false)
   const channelRef = useRef<ReturnType<NonNullable<typeof supabase>['channel']> | null>(null)
   const isSubscribedRef = useRef(false)
+  // Track how many messages were fetched from DB (excludes realtime inserts)
+  // so loadMore pagination offset stays correct
+  const fetchedCountRef = useRef(0)
 
   // Fetch messages
   const fetchMessages = useCallback(async (offset = 0) => {
@@ -119,8 +122,10 @@ export function useGeneralChat(
 
       if (offset === 0) {
         setMessages(messagesData.reverse()) // Oldest first for display
+        fetchedCountRef.current = messagesData.length
       } else {
         setMessages(prev => [...messagesData.reverse(), ...prev])
+        fetchedCountRef.current += messagesData.length
       }
 
       setHasMore(messagesData.length === limit)
@@ -400,11 +405,11 @@ export function useGeneralChat(
     }
   }, [supabase, user])
 
-  // Load more messages
+  // Load more messages (use fetchedCountRef so realtime inserts don't skew offset)
   const loadMore = useCallback(async () => {
     if (!hasMore || isLoading) return
-    await fetchMessages(messages.length)
-  }, [hasMore, isLoading, messages.length, fetchMessages])
+    await fetchMessages(fetchedCountRef.current)
+  }, [hasMore, isLoading, fetchMessages])
 
   return {
     messages,

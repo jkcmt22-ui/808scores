@@ -15,7 +15,7 @@ const PRECACHE_ASSETS = [
 
 // Install - Pre-cache critical assets
 self.addEventListener('install', (event) => {
-  console.log('[SW] Installing Service Worker v3')
+  console.log('[SW] Installing Service Worker v4')
 
   event.waitUntil(
     caches.open(STATIC_CACHE)
@@ -33,7 +33,7 @@ self.addEventListener('install', (event) => {
 
 // Activate - Clean up old caches
 self.addEventListener('activate', (event) => {
-  console.log('[SW] Activating Service Worker v3')
+  console.log('[SW] Activating Service Worker v4')
 
   event.waitUntil(
     caches.keys()
