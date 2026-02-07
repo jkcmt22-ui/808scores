@@ -5,6 +5,7 @@ import { MessageSquare, Send, Heart, Reply, Flag, Trash2, ChevronUp, LogIn } fro
 import { useAuth } from '@/hooks/use-auth'
 import { useGeneralChat, type GeneralChatMessage } from '@/hooks/use-general-chat'
 import { Avatar, Badge, Button, Input } from '@/components/ui'
+import { ConfirmModal } from '@/components/admin/confirm-modal'
 import { formatRelativeTime, cn } from '@/lib/utils'
 import Link from 'next/link'
 
@@ -33,15 +34,12 @@ function MessageItem({
 
   const handleDelete = async () => {
     if (!onDelete) return
-
-    if (window.confirm('Delete this message? This cannot be undone.')) {
-      setIsDeleting(true)
-      try {
-        await onDelete(message.id)
-      } catch (err) {
-        console.error('Failed to delete message:', err)
-        setIsDeleting(false)
-      }
+    setIsDeleting(true)
+    try {
+      await onDelete(message.id)
+    } catch (err) {
+      console.error('Failed to delete message:', err)
+      setIsDeleting(false)
     }
   }
 
@@ -187,6 +185,13 @@ export default function CommunityPage() {
 
   const [inputText, setInputText] = useState('')
   const [replyingTo, setReplyingTo] = useState<GeneralChatMessage | null>(null)
+  const [confirmAction, setConfirmAction] = useState<{
+    action: () => Promise<void>
+    title: string
+    description: string
+    confirmLabel: string
+    variant: 'destructive' | 'default'
+  } | null>(null)
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLInputElement>(null)
 
@@ -220,15 +225,25 @@ export default function CommunityPage() {
     inputRef.current?.focus()
   }
 
-  const handleReport = async (messageId: string) => {
-    if (window.confirm('Report this message for inappropriate content?')) {
-      await reportMessage(messageId)
-    }
+  const handleReport = (messageId: string) => {
+    setConfirmAction({
+      action: async () => { await reportMessage(messageId) },
+      title: 'Report Message',
+      description: 'Report this message for inappropriate content?',
+      confirmLabel: 'Report',
+      variant: 'destructive',
+    })
   }
 
-  const handleDelete = async (messageId: string) => {
+  const handleDelete = (messageId: string) => {
     const isAdmin = profile?.is_admin || profile?.is_super_admin
-    await deleteMessage(messageId, isAdmin)
+    setConfirmAction({
+      action: async () => { await deleteMessage(messageId, isAdmin) },
+      title: 'Delete Message',
+      description: 'Delete this message? This cannot be undone.',
+      confirmLabel: 'Delete',
+      variant: 'destructive',
+    })
   }
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
@@ -368,6 +383,16 @@ export default function CommunityPage() {
           </Link>
         )}
       </div>
+
+      <ConfirmModal
+        isOpen={!!confirmAction}
+        onConfirm={async () => { await confirmAction?.action(); setConfirmAction(null) }}
+        onCancel={() => setConfirmAction(null)}
+        title={confirmAction?.title || ''}
+        description={confirmAction?.description || ''}
+        confirmLabel={confirmAction?.confirmLabel}
+        variant={confirmAction?.variant}
+      />
     </div>
   )
 }

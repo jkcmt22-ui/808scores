@@ -13,7 +13,7 @@ import {
   AlertTriangle,
   Loader2,
 } from 'lucide-react'
-import { cn } from '@/lib/utils'
+import { cn, formatRelativeTime } from '@/lib/utils'
 import { useRequireAuth, useNotifications } from '@/hooks'
 
 export default function NotificationsPage() {
@@ -45,22 +45,6 @@ export default function NotificationsPage() {
       default:
         return <Bell className="h-5 w-5 text-foreground-muted" />
     }
-  }
-
-  const formatTime = (dateStr: string) => {
-    const date = new Date(dateStr)
-    const now = new Date()
-    const diff = now.getTime() - date.getTime()
-
-    const minutes = Math.floor(diff / 60000)
-    const hours = Math.floor(diff / 3600000)
-    const days = Math.floor(diff / 86400000)
-
-    if (minutes < 1) return 'Just now'
-    if (minutes < 60) return `${minutes}m ago`
-    if (hours < 24) return `${hours}h ago`
-    if (days < 7) return `${days}d ago`
-    return date.toLocaleDateString()
   }
 
   // Get link from notification data
@@ -150,7 +134,7 @@ export default function NotificationsPage() {
                           {notification.title}
                         </p>
                         <span className="flex-shrink-0 text-xs text-foreground-subtle font-display">
-                          {formatTime(notification.created_at)}
+                          {formatRelativeTime(notification.created_at)}
                         </span>
                       </div>
                       {notification.body && (

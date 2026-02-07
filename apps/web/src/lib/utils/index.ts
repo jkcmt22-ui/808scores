@@ -129,7 +129,7 @@ export function formatRelativeTime(date: string | Date): string {
   } else if (diffDay < 7) {
     return `${diffDay}d ago`
   } else {
-    return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+    return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', timeZone: 'Pacific/Honolulu' })
   }
 }
 

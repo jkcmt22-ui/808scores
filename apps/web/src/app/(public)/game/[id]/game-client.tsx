@@ -30,7 +30,7 @@ import { ShareButtons, RemindMeButton, VerificationBadge } from '@/components/ga
 import { PredictionForm, AudienceExpectation, PredictionResults } from '@/components/predictions'
 import { useGame, useAuth } from '@/hooks'
 import { createClient } from '@/lib/supabase/client'
-import { cn, formatGameTime, isGameLive, isGameFinal } from '@/lib/utils'
+import { cn, formatGameTime, formatRelativeTime, isGameLive, isGameFinal } from '@/lib/utils'
 import type { GameType, SubmissionWithUser } from '@/types/database'
 import { getHomeSchool, getAwaySchool } from '@/types/database'
 
@@ -63,21 +63,6 @@ function getOvertimeDisplay(overtimeCount: number): string | null {
   return `${overtimeCount}OT`
 }
 
-// Format relative time
-function formatRelativeTime(dateString: string): string {
-  const date = new Date(dateString)
-  const now = new Date()
-  const diffMs = now.getTime() - date.getTime()
-  const diffMins = Math.floor(diffMs / 60000)
-  const diffHours = Math.floor(diffMs / 3600000)
-  const diffDays = Math.floor(diffMs / 86400000)
-
-  if (diffMins < 1) return 'Just now'
-  if (diffMins < 60) return `${diffMins}m ago`
-  if (diffHours < 24) return `${diffHours}h ago`
-  if (diffDays < 7) return `${diffDays}d ago`
-  return date.toLocaleDateString()
-}
 
 export function GameClient({ params }: GamePageProps) {
   const { id } = use(params)

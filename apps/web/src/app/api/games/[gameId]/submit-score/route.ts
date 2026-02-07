@@ -245,15 +245,19 @@ export async function POST(
       }
 
       // Mark any other pending submissions as superseded
-      await supabase
+      const { error: rejectError } = await supabase
         .from('submissions')
         .update({ status: 'rejected' } as never)
         .eq('game_id', gameId)
         .eq('status', 'pending')
         .neq('id', submissionData.id)
 
+      if (rejectError) {
+        console.error('Failed to reject other pending submissions:', rejectError)
+      }
+
       // Log the promotion
-      await supabase
+      const { error: logError } = await supabase
         .from('score_promotion_log')
         .insert({
           game_id: gameId,
@@ -271,6 +275,10 @@ export async function POST(
             at_game,
           },
         } as never)
+
+      if (logError) {
+        console.error('Failed to log score promotion:', logError)
+      }
     }
 
     // 10. Award points (only for published submissions — pending ones get points when promoted)
