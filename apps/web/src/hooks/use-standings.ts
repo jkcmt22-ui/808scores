@@ -37,15 +37,17 @@ interface ComputedStandingRow {
   points_against: number
 }
 
-// Helper to convert season year to TEXT format (e.g., "2025-2026")
-function getSeasonYearText(year: number, season: string | null): string {
-  // Fall sports span two calendar years (e.g., fall 2025 = "2025-2026")
-  // Winter sports also span (e.g., winter 2025-26 = "2025-2026")
-  // Spring sports are single year (e.g., spring 2026 = "2025-2026")
-  if (season === 'spring') {
-    return `${year - 1}-${year}`
+// Helper to convert calendar year to season year TEXT format (e.g., "2025-2026")
+// School year runs Aug-Jul. All sports within a school year share the same season year.
+function getSeasonYearText(year: number): string {
+  // Determine which school year we're in based on current month
+  // Jan-Jul: school year started previous August → (year-1)-(year)
+  // Aug-Dec: school year started this August → (year)-(year+1)
+  const month = new Date().getMonth() + 1 // 1-12
+  if (month >= 8) {
+    return `${year}-${year + 1}`
   }
-  return `${year}-${year + 1}`
+  return `${year - 1}-${year}`
 }
 
 export function useStandings(options: UseStandingsOptions = {}): UseStandingsReturn {
@@ -96,7 +98,7 @@ export function useStandings(options: UseStandingsOptions = {}): UseStandingsRet
 
       // Determine target season year in TEXT format
       const targetYear = season ? parseInt(season) : currentYear
-      const seasonYearText = getSeasonYearText(targetYear, currentSport.season)
+      const seasonYearText = getSeasonYearText(targetYear)
 
       // Call the new computed standings function
       // eslint-disable-next-line @typescript-eslint/no-explicit-any

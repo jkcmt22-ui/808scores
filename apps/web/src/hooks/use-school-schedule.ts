@@ -48,16 +48,21 @@ export function useSchoolSchedule(
       setIsLoading(true)
       setError(null)
 
-      // Get current year for default season
-      const currentYear = new Date().toLocaleDateString('en-CA', {
-        timeZone: 'Pacific/Honolulu',
-        year: 'numeric'
-      })
-      const targetSeason = season || currentYear
+      // Determine current school year (Aug-Jul)
+      // In Hawaii (UTC-10), get current year and month
+      const now = new Date()
+      const hawaiiDate = new Date(now.toLocaleString('en-US', { timeZone: 'Pacific/Honolulu' }))
+      const currentYear = hawaiiDate.getFullYear()
+      const currentMonth = hawaiiDate.getMonth() + 1 // 1-12
 
-      // Build date range for the season
-      const seasonStart = `${targetSeason}-01-01`
-      const seasonEnd = `${parseInt(targetSeason) + 1}-01-01`
+      // School year starts in August: Aug 2025 through Jul 2026 = "2025"
+      const schoolYearStart = season
+        ? parseInt(season)
+        : (currentMonth >= 8 ? currentYear : currentYear - 1)
+
+      // Build date range for the school year (Aug 1 to Jul 31)
+      const seasonStart = `${schoolYearStart}-08-01`
+      const seasonEnd = `${schoolYearStart + 1}-08-01`
 
       // After migration 072, games reference teams, so we need to filter by team's school_id
       // First get all team IDs for this school

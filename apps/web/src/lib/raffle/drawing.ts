@@ -189,10 +189,10 @@ async function getMonthlyPointEntries(month?: string): Promise<DrawingEntry[]> {
     endDate = new Date(now.getFullYear(), now.getMonth() + 1, 1)
   }
 
-  // Get points from point_logs table (tracks all point earnings)
+  // Get points from point_events table (centralized ledger since migration 056)
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const { data, error } = await (supabase as any)
-    .from('point_logs')
+    .from('point_events')
     .select(`
       user_id,
       points,
@@ -203,7 +203,7 @@ async function getMonthlyPointEntries(month?: string): Promise<DrawingEntry[]> {
 
   if (error) {
     console.error('Error fetching monthly point entries:', error)
-    // Fall back to season points if point_logs doesn't exist
+    // Fall back to season points if point_events query fails
     return getSeasonPointEntries()
   }
 
