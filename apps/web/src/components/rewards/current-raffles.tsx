@@ -1,8 +1,10 @@
 'use client'
 
+import { useState, useEffect, useMemo } from 'react'
 import { Ticket, Loader2 } from 'lucide-react'
 import { RaffleCard } from './raffle-card'
 import { useRaffles, useAuth } from '@/hooks'
+import { createClient } from '@/lib/supabase/client'
 
 interface CurrentRafflesProps {
   showTitle?: boolean
@@ -11,9 +13,35 @@ interface CurrentRafflesProps {
 export function CurrentRaffles({ showTitle = true }: CurrentRafflesProps) {
   const { profile } = useAuth()
   const { raffles, isLoading } = useRaffles({ status: 'open' })
+  const [totalEntriesMap, setTotalEntriesMap] = useState<Record<string, number>>({})
+  const supabase = useMemo(() => createClient(), [])
 
   // User's points are their automatic entries
   const userPoints = profile?.season_points || 0
+
+  // Fetch total entries for each open raffle
+  useEffect(() => {
+    if (raffles.length === 0 || !supabase) return
+
+    async function fetchTotalEntries() {
+      const raffleIds = raffles.map(r => r.id)
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const { data } = await (supabase as any)
+        .from('raffle_entries')
+        .select('raffle_id, entry_count')
+        .in('raffle_id', raffleIds)
+
+      if (data) {
+        const totals: Record<string, number> = {}
+        for (const entry of data as { raffle_id: string; entry_count: number }[]) {
+          totals[entry.raffle_id] = (totals[entry.raffle_id] || 0) + (entry.entry_count || 0)
+        }
+        setTotalEntriesMap(totals)
+      }
+    }
+
+    fetchTotalEntries()
+  }, [raffles, supabase])
 
   if (isLoading) {
     return (
@@ -50,8 +78,7 @@ export function CurrentRaffles({ showTitle = true }: CurrentRafflesProps) {
             key={raffle.id}
             raffle={raffle}
             userPoints={userPoints}
-            // TODO: totalEntries would ideally come from a server query
-            totalEntries={0}
+            totalEntries={totalEntriesMap[raffle.id] || 0}
           />
         ))}
       </div>

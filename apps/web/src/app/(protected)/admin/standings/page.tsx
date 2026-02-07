@@ -395,16 +395,13 @@ export default function AdminStandingsPage() {
       throw new Error('Team not found')
     }
 
-    // Convert season_year format to INT (e.g., "2025-2026" -> 2026)
-    const seasonYearInt = parseInt(selectedSeason.split('-')[1])
-
     // Check if a manual standing already exists
     const { data: existing } = await supabase
       .from('season_standings')
       .select('id')
       .eq('team_id', team.id)
       .eq('sport_id', selectedSportId)
-      .eq('season_year', seasonYearInt)
+      .eq('season_year', selectedSeason)
       .single()
 
     if (existing) {
@@ -434,7 +431,7 @@ export default function AdminStandingsPage() {
           school_id: edit.schoolId,
           team_id: team.id,
           sport_id: selectedSportId,
-          season_year: seasonYearInt,
+          season_year: selectedSeason,
           league: `${selectedLeague} ${selectedDivision}${selectedRegion ? ` ${selectedRegion}` : ''}`,
           overall_wins: edit.overallWins,
           overall_losses: edit.overallLosses,

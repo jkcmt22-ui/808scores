@@ -103,10 +103,10 @@ export function useGameStats(options: UseGameStatsOptions): UseGameStatsReturn {
       const gameWithDetails = gameData as unknown as GameWithDetails
       setGame(gameWithDetails)
 
-      // Get current season year for roster lookup
+      // Get current season year for roster lookup (use Hawaii timezone)
       const gameDate = new Date(gameWithDetails.scheduled_at)
-      const month = gameDate.getMonth() + 1
-      const year = gameDate.getFullYear()
+      const month = parseInt(gameDate.toLocaleDateString('en-CA', { timeZone: 'Pacific/Honolulu', month: 'numeric' }))
+      const year = parseInt(gameDate.toLocaleDateString('en-CA', { timeZone: 'Pacific/Honolulu', year: 'numeric' }))
       const seasonYear = month >= 8 ? `${year}-${year + 1}` : `${year - 1}-${year}`
 
       // After migration 072, games.home_team_id references teams table directly
