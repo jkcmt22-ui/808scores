@@ -163,13 +163,13 @@ export function GameClient({ params }: GamePageProps) {
     // eslint-disable-next-line react-hooks/set-state-in-effect
     fetchSubmissions()
 
-    // Subscribe to new submissions
+    // Subscribe to new and promoted submissions (INSERT + UPDATE)
     const channel = supabase
       .channel(`submissions-${id}`)
       .on(
         'postgres_changes',
         {
-          event: 'INSERT',
+          event: '*',
           schema: 'public',
           table: 'submissions',
           filter: `game_id=eq.${id}`,

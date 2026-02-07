@@ -143,6 +143,19 @@ export async function POST(
     // 7. Calculate points (must match lib/points/calculator.ts logic)
     const MAX_POINTS_PER_GAME = 20
 
+    // Query points already earned for this game by this user
+    const { data: existingPoints } = await supabase
+      .from('submissions')
+      .select('points_earned')
+      .eq('game_id', gameId)
+      .eq('user_id', user.id)
+      .in('status', ['published', 'pending'])
+
+    const currentGamePoints = (existingPoints || []).reduce(
+      (sum, s) => sum + ((s as { points_earned: number }).points_earned || 0),
+      0
+    )
+
     let basePoints = 0
     if (submission_type === 'final_score') basePoints = 10
     else if (submission_type === 'period_score') basePoints = 5
@@ -156,9 +169,10 @@ export async function POST(
     const goldenGameMultiplier = gameData.golden_game ? 3 : 1
     const trustedMultiplier = isTrustedOrHigher ? 2 : 1
 
+    const remainingCap = Math.max(0, MAX_POINTS_PER_GAME - currentGamePoints)
     const totalPoints = Math.min(
       Math.round(subtotal * goldenGameMultiplier * trustedMultiplier),
-      MAX_POINTS_PER_GAME
+      remainingCap
     )
 
     // 8. Create submission record

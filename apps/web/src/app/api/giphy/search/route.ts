@@ -91,22 +91,15 @@ export async function GET(request: NextRequest) {
 
     // Transform response to only include necessary data
     const transformedData = {
-      data: data.data.map((gif: {
-        id: string
-        title: string
-        images: {
-          fixed_height: { url: string; width: string; height: string }
-          fixed_height_small: { url: string; width: string; height: string }
-          preview_gif: { url: string }
-        }
-      }) => ({
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      data: (data.data || []).map((gif: any) => ({
         id: gif.id,
-        title: gif.title,
-        url: gif.images.fixed_height.url,
-        preview: gif.images.fixed_height_small?.url || gif.images.preview_gif?.url,
-        width: parseInt(gif.images.fixed_height.width),
-        height: parseInt(gif.images.fixed_height.height),
-      })),
+        title: gif.title || '',
+        url: gif.images?.fixed_height?.url || gif.images?.preview_gif?.url || '',
+        preview: gif.images?.fixed_height_small?.url || gif.images?.preview_gif?.url || '',
+        width: parseInt(gif.images?.fixed_height?.width || '200') || 200,
+        height: parseInt(gif.images?.fixed_height?.height || '200') || 200,
+      })).filter((g: { url: string }) => g.url),
       pagination: data.pagination,
     }
 
