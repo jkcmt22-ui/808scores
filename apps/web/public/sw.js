@@ -77,10 +77,12 @@ self.addEventListener('fetch', (event) => {
     event.respondWith(
       fetch(event.request)
         .catch(() => {
-          return caches.match('/offline') || new Response(
-            '<html><body><h1>Offline</h1><p>Please check your connection.</p></body></html>',
-            { headers: { 'Content-Type': 'text/html' } }
-          )
+          return caches.match('/offline').then((cached) => {
+            return cached || new Response(
+              '<html><body><h1>Offline</h1><p>Please check your connection.</p></body></html>',
+              { headers: { 'Content-Type': 'text/html' } }
+            )
+          })
         })
     )
     return
