@@ -229,10 +229,18 @@ export async function POST(request: NextRequest) {
 
     if (isTargetedNotification) {
       // Resolve team IDs to school IDs (after migration 072, game IDs reference teams, not schools)
-      const { data: teams } = await supabase
+      const { data: teams, error: teamsError } = await supabase
         .from('teams')
         .select('school_id')
         .in('id', [homeTeamId, awayTeamId])
+
+      if (teamsError) {
+        console.error('Error resolving team IDs to school IDs:', teamsError)
+        return NextResponse.json(
+          { error: 'Failed to resolve teams', message: teamsError.message },
+          { status: 500 }
+        )
+      }
 
       const schoolIds = teams?.map(t => t.school_id).filter(Boolean) || []
 

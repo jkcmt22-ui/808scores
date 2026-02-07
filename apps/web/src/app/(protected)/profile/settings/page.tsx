@@ -187,17 +187,20 @@ export default function ProfileSettingsPage() {
 
     try {
       if (pushSubscribed) {
-        // Unsubscribe
+        // Unsubscribe — get current endpoint first so we only delete this device
+        const currentSub = await getCurrentSubscription()
         const success = await unsubscribeFromPush()
         if (success) {
           setPushSubscribed(false)
 
-          // Remove subscription from database
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          await (supabase as any)
-            .from('push_subscriptions')
-            .delete()
-            .eq('user_id', user.id)
+          // Remove only this device's subscription from database
+          if (currentSub) {
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            await (supabase as any)
+              .from('push_subscriptions')
+              .delete()
+              .eq('endpoint', currentSub.endpoint)
+          }
         }
       } else {
         // Request permission if needed
@@ -222,7 +225,7 @@ export default function ProfileSettingsPage() {
           // Save subscription to database
           const subData = extractSubscriptionData(subscription)
           // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          await (supabase as any)
+          const { error: upsertError } = await (supabase as any)
             .from('push_subscriptions')
             .upsert({
               user_id: user.id,
@@ -233,6 +236,11 @@ export default function ProfileSettingsPage() {
             }, {
               onConflict: 'endpoint'
             })
+
+          if (upsertError) {
+            console.error('Error saving push subscription:', upsertError)
+            setPushError('Notifications enabled locally but failed to save to server')
+          }
         }
       }
     } catch (err) {
