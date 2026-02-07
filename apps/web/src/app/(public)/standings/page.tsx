@@ -11,10 +11,20 @@ import { LEAGUES } from '@/lib/league-config'
 
 // Season configuration for grouping sports
 const SEASON_ORDER = ['fall', 'winter', 'spring'] as const
-const SEASON_LABELS: Record<string, string> = {
-  fall: 'FALL 2025',
-  winter: 'WINTER 2025-26',
-  spring: 'SPRING 2025'
+
+function getSeasonLabel(season: string): string {
+  const year = getSeasonYear(season)
+  if (season === 'winter') {
+    // Winter spans Dec-Feb across calendar years
+    const now = new Date()
+    const currentMonth = parseInt(now.toLocaleDateString('en-CA', {
+      timeZone: 'Pacific/Honolulu',
+      month: 'numeric'
+    }))
+    const startYear = currentMonth < 8 ? year - 1 : year
+    return `WINTER ${startYear}-${String(startYear + 1).slice(-2)}`
+  }
+  return `${season.toUpperCase()} ${year}`
 }
 
 // League tabs configuration
@@ -144,7 +154,7 @@ export default function StandingsPage() {
                 const seasonSports = sportsByseason.get(season) || []
                 if (seasonSports.length === 0) return null
                 return (
-                  <optgroup key={season} label={SEASON_LABELS[season]}>
+                  <optgroup key={season} label={getSeasonLabel(season)}>
                     {seasonSports.map(sport => (
                       <option key={sport.code} value={sport.code}>
                         {getSportEmoji(sport.code)} {sport.display_name || sport.name}

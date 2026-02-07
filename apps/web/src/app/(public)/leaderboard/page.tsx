@@ -8,7 +8,7 @@ import { Trophy, Medal, TrendingUp, Star, Loader2, Ticket } from 'lucide-react'
 import { cn, getTierColor, getTierLabel } from '@/lib/utils'
 import { useLeaderboard, useAuth } from '@/hooks'
 
-type TimeFrame = 'season' | 'month' | 'week' | 'all'
+type TimeFrame = 'season' | 'all'
 
 export default function LeaderboardPage() {
   const [timeFrame, setTimeFrame] = useState<TimeFrame>('season')
@@ -41,8 +41,6 @@ export default function LeaderboardPage() {
         <div className="hide-scrollbar flex items-center gap-2 overflow-x-auto px-4 py-3">
           {[
             { value: 'season', label: 'Season' },
-            { value: 'month', label: 'Month' },
-            { value: 'week', label: 'Week' },
             { value: 'all', label: 'All Time' },
           ].map((option) => (
             <button
@@ -190,7 +188,7 @@ export default function LeaderboardPage() {
               </div>
               <div className="flex-1">
                 <p className="font-display font-bold text-foreground">Your Rank: #{userRank}</p>
-                <p className="text-xs text-foreground-muted font-display">{userPoints.toLocaleString()} points this season</p>
+                <p className="text-xs text-foreground-muted font-display">{userPoints.toLocaleString()} {timeFrame === 'season' ? 'season' : 'total'} points</p>
               </div>
             </div>
           </div>

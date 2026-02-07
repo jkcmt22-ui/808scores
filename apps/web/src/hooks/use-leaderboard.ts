@@ -16,7 +16,7 @@ export interface LeaderboardUser {
   verified_count: number
 }
 
-type TimeFrame = 'season' | 'month' | 'week' | 'all'
+type TimeFrame = 'season' | 'all'
 
 interface UseLeaderboardOptions {
   timeFrame?: TimeFrame

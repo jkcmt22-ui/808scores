@@ -135,6 +135,7 @@ export async function generateMetadata({ params }: GamePageProps): Promise<Metad
       weekday: 'long',
       month: 'long',
       day: 'numeric',
+      timeZone: 'Pacific/Honolulu',
     })
     description = `${game.away_team.name} vs ${game.home_team.name} - ${sportName} on ${gameDate}. Get live scores and updates.`
   }
