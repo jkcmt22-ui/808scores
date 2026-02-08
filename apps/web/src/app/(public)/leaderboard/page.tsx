@@ -151,7 +151,7 @@ export default function LeaderboardPage() {
                       </div>
                       <div className="flex items-center gap-3 text-xs text-foreground-muted font-display">
                         <span>{user.submission_count} submissions</span>
-                        {user.accuracy_rate && <span>{user.accuracy_rate.toFixed(1)}% accuracy</span>}
+                        {user.accuracy_rate != null && <span>{user.accuracy_rate.toFixed(1)}% accuracy</span>}
                       </div>
                     </div>
 

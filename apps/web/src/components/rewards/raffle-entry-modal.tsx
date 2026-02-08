@@ -30,11 +30,11 @@ export function RaffleEntryModal({
   const [error, setError] = useState<string | null>(null)
   const [success, setSuccess] = useState(false)
   const { enterRaffle, isLoading } = useEnterRaffle()
-  const { trustScore } = useTrustScore(user.id)
+  const { trustScore, isLoading: trustScoreLoading } = useTrustScore(user.id)
   const { handleVerify, handleExpire, getToken } = useTurnstile()
 
-  // Require Turnstile for low trust users
-  const requiresTurnstile = trustScore !== null && trustScore < 50
+  // Require Turnstile for low trust users (default to required while loading)
+  const requiresTurnstile = trustScoreLoading || trustScore === null || trustScore < 50
 
   const pointsCost = entryCount * raffle.points_per_entry
   const maxNewEntries = raffle.max_entries_per_user

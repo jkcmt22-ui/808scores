@@ -73,6 +73,15 @@ export async function POST(
       )
     }
 
+    if (typeof home_score !== 'number' || typeof away_score !== 'number' ||
+        !Number.isFinite(home_score) || !Number.isFinite(away_score) ||
+        !Number.isInteger(home_score) || !Number.isInteger(away_score)) {
+      return NextResponse.json(
+        { error: 'Invalid scores', message: 'Scores must be whole numbers' },
+        { status: 400 }
+      )
+    }
+
     if (home_score < 0 || away_score < 0) {
       return NextResponse.json(
         { error: 'Invalid scores', message: 'Scores cannot be negative' },
