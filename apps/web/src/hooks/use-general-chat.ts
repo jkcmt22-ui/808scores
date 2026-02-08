@@ -363,10 +363,15 @@ export function useGeneralChat(
 
       if (error) {
         // If function doesn't exist, just increment report count directly
-        await (supabase as any)
+        const { error: updateError } = await (supabase as any)
           .from('general_chat_messages')
           .update({ report_count: (messages.find(m => m.id === messageId)?.report_count ?? 0) + 1 })
           .eq('id', messageId)
+
+        if (updateError) {
+          console.error('Error reporting message (fallback):', updateError)
+          return false
+        }
       }
 
       return true

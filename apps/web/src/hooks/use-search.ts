@@ -70,7 +70,9 @@ export function useSearch(options: UseSearchOptions = {}): UseSearchReturn {
       setError(null)
 
       try {
-        const searchTerm = debouncedQuery.toLowerCase()
+        // Sanitize search term: strip PostgREST filter syntax characters
+        // to prevent filter injection via commas, parens, etc.
+        const searchTerm = debouncedQuery.toLowerCase().replace(/[,()]/g, '')
         const searchResults: SearchResult[] = []
 
         // Search schools

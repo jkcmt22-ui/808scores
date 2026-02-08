@@ -5,6 +5,9 @@ import { usePushNotifications } from './use-push-notifications'
 
 const REMINDERS_KEY = '808scores_game_reminders'
 
+// Track scheduled notification timers so they can be canceled
+const reminderTimers = new Map<string, ReturnType<typeof setTimeout>>()
+
 export interface GameReminder {
   gameId: string
   scheduledAt: string
@@ -87,6 +90,13 @@ export function useGameReminders(): UseGameRemindersReturn {
 
   // Remove a reminder
   const removeReminder = useCallback((gameId: string) => {
+    // Cancel the scheduled notification timer
+    const timer = reminderTimers.get(gameId)
+    if (timer) {
+      clearTimeout(timer)
+      reminderTimers.delete(gameId)
+    }
+
     const updated = reminders.filter(r => r.gameId !== gameId)
     setReminders(updated)
 
@@ -129,7 +139,12 @@ function scheduleLocalReminder(reminder: GameReminder) {
   // Don't schedule if more than 24 hours away (browser will likely clear it)
   if (delay > 24 * 60 * 60 * 1000) return
 
-  setTimeout(() => {
+  // Clear any existing timer for this game
+  const existing = reminderTimers.get(reminder.gameId)
+  if (existing) clearTimeout(existing)
+
+  const timerId = setTimeout(() => {
+    reminderTimers.delete(reminder.gameId)
     if (Notification.permission === 'granted') {
       new Notification('Game Starting Soon!', {
         body: `${reminder.awayTeam} vs ${reminder.homeTeam} - ${reminder.sport} starts in ${reminder.reminderTime} minutes`,
@@ -139,4 +154,6 @@ function scheduleLocalReminder(reminder: GameReminder) {
       })
     }
   }, delay)
+
+  reminderTimers.set(reminder.gameId, timerId)
 }
