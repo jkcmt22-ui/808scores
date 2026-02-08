@@ -16,6 +16,13 @@ export function LiveHero({ games }: LiveHeroProps) {
   const [currentIndex, setCurrentIndex] = useState(0)
   const [isAutoPlaying, setIsAutoPlaying] = useState(true)
 
+  // Clamp currentIndex when games array shrinks
+  useEffect(() => {
+    if (currentIndex >= games.length && games.length > 0) {
+      setCurrentIndex(games.length - 1)
+    }
+  }, [games.length, currentIndex])
+
   // Auto-rotate through games every 5 seconds
   useEffect(() => {
     if (!isAutoPlaying || games.length <= 1) return
@@ -30,7 +37,9 @@ export function LiveHero({ games }: LiveHeroProps) {
   // Don't render if no live games
   if (games.length === 0) return null
 
-  const currentGame = games[currentIndex]
+  const safeIndex = Math.min(currentIndex, games.length - 1)
+  const currentGame = games[safeIndex]
+  if (!currentGame) return null
   const sportEmoji = getSportEmoji(currentGame.sport.code)
 
   // After migration 072: Get school data from team or directly

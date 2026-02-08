@@ -173,6 +173,18 @@ export function useGeneralChat(
 
           const message = data as GeneralChatMessage | null
           if (message && !message.is_hidden) {
+            // Fetch reply_to data if this message is a reply
+            if (message.reply_to_id) {
+              const { data: replyData } = await supabase
+                .from('general_chat_messages')
+                .select(`
+                  *,
+                  user:users(id, display_name, avatar_url, is_admin, is_super_admin)
+                `)
+                .eq('id', message.reply_to_id)
+                .single()
+              message.reply_to = (replyData as unknown as GeneralChatMessage) || undefined
+            }
             setMessages(prev => [...prev, message])
           }
         }

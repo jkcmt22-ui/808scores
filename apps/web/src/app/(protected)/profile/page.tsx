@@ -185,7 +185,7 @@ export default function ProfilePage() {
             <div className="p-4 text-center">
               <Target className="mx-auto mb-2 h-6 w-6 text-neon-green" />
               <p className="text-2xl font-bold text-neon-green">
-                {profile.accuracy_rate ? `${profile.accuracy_rate}%` : '-'}
+                {profile.accuracy_rate != null ? `${profile.accuracy_rate}%` : '-'}
               </p>
               <p className="text-xs text-foreground-muted">Accuracy</p>
             </div>
