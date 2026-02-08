@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { useRouter } from 'next/navigation'
+import { useRouter, useSearchParams } from 'next/navigation'
 import { Zap, Trophy, Radio, Lock, Check, Heart, Gift, Award, Users } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -9,6 +9,8 @@ import { createClient } from '@/lib/supabase/client'
 
 export default function BetaLandingPage() {
   const router = useRouter()
+  const searchParams = useSearchParams()
+  const redirectTo = searchParams.get('redirect') || '/'
   const [code, setCode] = useState('')
   const [isVerifying, setIsVerifying] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -87,8 +89,8 @@ export default function BetaLandingPage() {
       // Store code in session for post-login
       sessionStorage.setItem('betaCode', code.trim().toUpperCase())
 
-      // Redirect to login
-      router.push('/login?redirect=/&beta=true')
+      // Redirect to login, preserving the original destination
+      router.push(`/login?redirect=${encodeURIComponent(redirectTo)}&beta=true`)
     } catch (err) {
       console.error('Beta code verification error:', err)
       setError('Something went wrong. Please try again.')

@@ -115,12 +115,14 @@ export async function updateSession(request: NextRequest) {
         // User logged in but no beta access
         const url = request.nextUrl.clone()
         url.pathname = '/beta-landing'
+        url.searchParams.set('redirect', path)
         return NextResponse.redirect(url)
       }
     } else if (!user) {
       // Not logged in at all - require beta code
       const url = request.nextUrl.clone()
       url.pathname = '/beta-landing'
+      url.searchParams.set('redirect', path)
       return NextResponse.redirect(url)
     }
   }
