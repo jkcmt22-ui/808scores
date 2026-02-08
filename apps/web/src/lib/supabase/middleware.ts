@@ -134,11 +134,9 @@ export async function updateSession(request: NextRequest) {
   }
 
   // Check admin access (using already-fetched userData)
-  if (isAdminPath && user && userData) {
-    const isAdmin = userData.is_admin || userData.is_super_admin
-
-    if (!isAdmin) {
-      // Not an admin - redirect to home
+  // IMPORTANT: If userData is null (RPC failed), deny access rather than fail open
+  if (isAdminPath && user) {
+    if (!userData || !(userData.is_admin || userData.is_super_admin)) {
       const url = request.nextUrl.clone()
       url.pathname = '/'
       return NextResponse.redirect(url)

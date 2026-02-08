@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import {
   getPendingSubmissions,
   getPendingCount,
@@ -17,6 +17,7 @@ export function useOfflineQueue() {
   const [pendingCount, setPendingCount] = useState(0)
   const [isOnline, setIsOnline] = useState(true)
   const [isSyncing, setIsSyncing] = useState(false)
+  const isSyncingRef = useRef(false)
   const { user } = useAuth()
 
   // Load pending submissions
@@ -32,9 +33,11 @@ export function useOfflineQueue() {
   }, [])
 
   // Sync all pending submissions via the submit-score API
+  // Uses a ref for the synchronous guard to prevent concurrent syncs
   const syncAll = useCallback(async () => {
-    if (!user || isSyncing) return
+    if (!user || isSyncingRef.current) return
 
+    isSyncingRef.current = true
     setIsSyncing(true)
     const submissions = await getPendingSubmissions()
     const pendingToSync = submissions.filter(s => s.status === 'pending' || s.status === 'failed')
@@ -54,8 +57,9 @@ export function useOfflineQueue() {
     }
 
     await loadPendingSubmissions()
+    isSyncingRef.current = false
     setIsSyncing(false)
-  }, [user, isSyncing, loadPendingSubmissions])
+  }, [user, loadPendingSubmissions])
 
   // Remove a submission
   const removePending = useCallback(async (id: string) => {

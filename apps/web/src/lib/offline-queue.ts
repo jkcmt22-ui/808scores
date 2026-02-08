@@ -140,17 +140,25 @@ export async function removeFromQueue(id: string): Promise<void> {
 // Clear all completed/synced submissions
 export async function clearSyncedSubmissions(): Promise<void> {
   const submissions = await getPendingSubmissions()
+  const toDelete = submissions.filter(
+    s => s.status !== 'pending' && s.status !== 'failed'
+  )
+
+  if (toDelete.length === 0) return
+
   const db = await openDB()
 
-  const transaction = db.transaction(STORE_NAME, 'readwrite')
-  const store = transaction.objectStore(STORE_NAME)
+  return new Promise((resolve, reject) => {
+    const transaction = db.transaction(STORE_NAME, 'readwrite')
+    const store = transaction.objectStore(STORE_NAME)
 
-  // Remove synced submissions (status !== 'pending' && status !== 'failed')
-  for (const submission of submissions) {
-    if (submission.status !== 'pending' && submission.status !== 'failed') {
+    transaction.oncomplete = () => resolve()
+    transaction.onerror = () => reject(transaction.error)
+
+    for (const submission of toDelete) {
       store.delete(submission.id)
     }
-  }
+  })
 }
 
 // Request background sync from service worker
