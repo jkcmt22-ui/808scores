@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useRef, useEffect } from 'react'
+import { useState, useRef, useEffect, useMemo } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import {
@@ -79,7 +79,7 @@ export default function ProfileSettingsPage() {
   const [isTogglingPush, setIsTogglingPush] = useState(false)
   const [pushError, setPushError] = useState<string | null>(null)
 
-  const supabase = createClient()
+  const supabase = useMemo(() => createClient(), [])
 
   // Initialize from profile
   useEffect(() => {

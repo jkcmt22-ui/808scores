@@ -48,6 +48,7 @@ function calculateStreak(results: ('W' | 'L' | 'T')[]): string {
 
 // Check if two schools are in the same league for league record calculation
 function sameLeague(school1: School, school2: School): boolean {
+  if (!school1.league || !school2.league) return false
   return school1.league === school2.league
 }
 

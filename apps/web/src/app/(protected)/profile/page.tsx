@@ -99,7 +99,7 @@ export default function ProfilePage() {
     }
 
     fetchRecentSubmissions()
-  }, [profile])
+  }, [profile?.id])
 
   // Wait for both auth AND profile to finish loading
   if (isLoading || isProfileLoading) {
