@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, Suspense } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { Zap, Trophy, Radio, Lock, Check, Heart, Gift, Award, Users } from 'lucide-react'
 import { Button } from '@/components/ui/button'
@@ -8,6 +8,14 @@ import { Input } from '@/components/ui/input'
 import { createClient } from '@/lib/supabase/client'
 
 export default function BetaLandingPage() {
+  return (
+    <Suspense>
+      <BetaLandingContent />
+    </Suspense>
+  )
+}
+
+function BetaLandingContent() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const redirectTo = searchParams.get('redirect') || '/'
