@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { X, ExternalLink, Check } from 'lucide-react'
 import { Button } from '@/components/ui'
 import { createClient } from '@/lib/supabase/client'
@@ -16,6 +16,16 @@ interface TermsModalProps {
 export function TermsModal({ isOpen, onClose, onAccept, userId }: TermsModalProps) {
   const [isAccepting, setIsAccepting] = useState(false)
   const [hasReadTerms, setHasReadTerms] = useState(false)
+
+  // Prevent body scroll when modal is open
+  useEffect(() => {
+    if (isOpen) {
+      document.body.style.overflow = 'hidden'
+    } else {
+      document.body.style.overflow = ''
+    }
+    return () => { document.body.style.overflow = '' }
+  }, [isOpen])
 
   if (!isOpen) return null
 

@@ -224,9 +224,7 @@ export default function ProfileSettingsPage() {
         // Subscribe
         const subscription = await subscribeToPush()
         if (subscription) {
-          setPushSubscribed(true)
-
-          // Save subscription to database
+          // Save subscription to database before updating UI state
           const subData = extractSubscriptionData(subscription)
           // eslint-disable-next-line @typescript-eslint/no-explicit-any
           const { error: upsertError } = await (supabase as any)
@@ -243,7 +241,9 @@ export default function ProfileSettingsPage() {
 
           if (upsertError) {
             console.error('Error saving push subscription:', upsertError)
-            setPushError('Notifications enabled locally but failed to save to server')
+            setPushError('Failed to save notification settings. Please try again.')
+          } else {
+            setPushSubscribed(true)
           }
         }
       }

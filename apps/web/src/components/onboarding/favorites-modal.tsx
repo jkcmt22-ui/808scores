@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Button, Card, Input } from '@/components/ui'
 import { useSchools, useSports, useFavoriteTeams, useFavoriteSports } from '@/hooks'
 import { createClient } from '@/lib/supabase/client'
@@ -24,6 +24,12 @@ type Step = 'schools' | 'sports'
 export function FavoritesModal({ userId, onComplete }: FavoritesModalProps) {
   const [step, setStep] = useState<Step>('schools')
   const [isSubmitting, setIsSubmitting] = useState(false)
+
+  // Prevent body scroll when modal is open
+  useEffect(() => {
+    document.body.style.overflow = 'hidden'
+    return () => { document.body.style.overflow = '' }
+  }, [])
 
   // Team selection state
   const [schoolSearch, setSchoolSearch] = useState('')

@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useRef, useEffect } from 'react'
+import Image from 'next/image'
 import { MessageSquare, Send, Heart, Reply, Flag, Trash2, ChevronUp, LogIn } from 'lucide-react'
 import { useAuth } from '@/hooks/use-auth'
 import { useGeneralChat, type GeneralChatMessage } from '@/hooks/use-general-chat'
@@ -101,10 +102,26 @@ function MessageItem({
             </span>
           </div>
 
-          {/* Content */}
-          <p className="text-sm text-foreground-muted mt-0.5 break-words">
-            {renderContentWithMentions(message.content)}
-          </p>
+          {/* Content - GIF or Text */}
+          {message.message_type === 'gif' && message.gif_url ? (
+            <div className="mt-1.5 max-w-[280px]">
+              <Image
+                src={message.gif_url}
+                alt="GIF"
+                width={280}
+                height={200}
+                className="rounded-lg border border-border max-h-[200px] w-auto h-auto"
+                unoptimized
+              />
+              <span className="text-[10px] text-foreground-subtle font-mono block mt-1">
+                via GIPHY
+              </span>
+            </div>
+          ) : (
+            <p className="text-sm text-foreground-muted mt-0.5 break-words">
+              {renderContentWithMentions(message.content)}
+            </p>
+          )}
 
           {/* Actions */}
           <div className="flex items-center gap-4 mt-1.5">

@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useEffect } from 'react'
 import { X, Minus, Plus, AlertCircle, Check, ShieldCheck } from 'lucide-react'
 import { Button } from '@/components/ui'
 import { Turnstile, useTurnstile } from '@/components/security'
@@ -44,6 +44,16 @@ export function RaffleEntryModal({
   const meetsMinimum = user.season_points >= raffle.min_points_to_enter
 
   const turnstileVerified = !requiresTurnstile || getToken() !== null
+
+  // Prevent body scroll when modal is open
+  useEffect(() => {
+    if (isOpen) {
+      document.body.style.overflow = 'hidden'
+    } else {
+      document.body.style.overflow = ''
+    }
+    return () => { document.body.style.overflow = '' }
+  }, [isOpen])
 
   const canEnter = useMemo(() => {
     return canAfford && meetsMinimum && entryCount > 0 && entryCount <= maxNewEntries && turnstileVerified
