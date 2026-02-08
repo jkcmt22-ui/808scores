@@ -7,6 +7,7 @@ import { cn } from '@/lib/utils'
 import { getCategoryEmoji, getSportEmoji } from '@/lib/sport-utils'
 import { useSports } from '@/hooks/use-sports'
 import { useStandings } from '@/hooks/use-standings'
+import { getCurrentSeasonYear } from '@/hooks'
 import { LEAGUES } from '@/lib/league-config'
 
 // Season configuration for grouping sports
@@ -77,13 +78,8 @@ export default function StandingsPage() {
     sports.find(s => s.code === effectiveSportCode),
     [sports, effectiveSportCode]
   )
-  // Compute the current school year text (e.g., '2025-2026') for standings query
-  const seasonYearText = useMemo(() => {
-    const now = new Date()
-    const m = parseInt(now.toLocaleDateString('en-CA', { timeZone: 'Pacific/Honolulu', month: 'numeric' }))
-    const y = parseInt(now.toLocaleDateString('en-CA', { timeZone: 'Pacific/Honolulu', year: 'numeric' }))
-    return m >= 8 ? `${y}-${y + 1}` : `${y - 1}-${y}`
-  }, [])
+  // Current school year text (e.g., '2025-2026') for standings query
+  const seasonYearText = getCurrentSeasonYear()
 
   // Fetch standings - pass league filter to API if not 'All'
   const { standings, sport: currentSport, isLoading: standingsLoading, error } = useStandings({

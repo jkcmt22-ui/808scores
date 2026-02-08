@@ -292,7 +292,7 @@ export function useStandings(options: UseStandingsOptions = {}): UseStandingsRet
         id: string
         school_id: string
         sport_id: string
-        season_year: number
+        season_year: string
         league: string
         league_wins: number
         league_losses: number

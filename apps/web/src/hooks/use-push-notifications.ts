@@ -114,7 +114,7 @@ export function usePushNotifications(): UsePushNotificationsReturn {
       const { error: dbError } = await supabase
         .from('push_subscriptions')
         .upsert({
-          user_id: user?.id || null,
+          user_id: user.id,
           endpoint: subscriptionData.endpoint,
           p256dh: subscriptionData.p256dh,
           auth: subscriptionData.auth,
@@ -126,7 +126,8 @@ export function usePushNotifications(): UsePushNotificationsReturn {
 
       if (dbError) {
         console.error('Error saving subscription:', dbError)
-        // Don't fail - subscription still works locally
+        setError('Failed to save subscription to server')
+        return false
       }
 
       setIsSubscribed(true)

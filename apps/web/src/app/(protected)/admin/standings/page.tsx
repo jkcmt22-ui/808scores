@@ -25,11 +25,15 @@ interface TeamWithSchool extends Team {
   sport: Sport
 }
 
-// Season options - dynamically include current season
+// Season options - dynamically include current + previous season
 const currentSeason = getCurrentSeasonYear()
+const previousSeason = (() => {
+  const startYear = parseInt(currentSeason.split('-')[0]) - 1
+  return `${startYear}-${startYear + 1}`
+})()
 const SEASON_OPTIONS = [
   { value: currentSeason, label: currentSeason },
-  { value: '2024-2025', label: '2024-2025' },
+  { value: previousSeason, label: previousSeason },
 ]
 
 // Division options per league
