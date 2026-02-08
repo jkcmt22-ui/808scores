@@ -102,7 +102,7 @@ export default function LeaderboardPage() {
               <span className="score-led text-2xl">{profile.season_points?.toLocaleString() || 0}</span>
             </div>
             <p className="text-xs text-foreground-muted mt-2">
-              Use your points to enter raffles and win prizes!
+              Each point = 1 raffle entry. Keep reporting scores!
             </p>
           </div>
         )}

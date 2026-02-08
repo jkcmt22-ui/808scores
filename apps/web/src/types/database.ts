@@ -571,6 +571,7 @@ export interface Database {
           description: string | null
           raffle_type: RaffleType
           prize_id: string | null
+          top_contributor_prize_id: string | null
           entries_open_at: string
           entries_close_at: string
           drawing_at: string
@@ -1032,6 +1033,7 @@ export interface UserBanWithDetails extends UserBan {
 // Raffle extended types
 export interface RaffleWithPrize extends Raffle {
   prize: Prize | null
+  top_contributor_prize?: Prize | null
 }
 
 export interface RaffleEntryWithUser extends RaffleEntry {
@@ -1039,7 +1041,7 @@ export interface RaffleEntryWithUser extends RaffleEntry {
 }
 
 export interface RaffleWinnerWithDetails extends RaffleWinner {
-  user: Pick<User, 'id' | 'display_name' | 'avatar_url'>
+  user: Pick<User, 'id' | 'display_name' | 'avatar_url'> & { email?: string }
   prize: Prize | null
   raffle?: Raffle
 }
@@ -1050,6 +1052,7 @@ export interface RafflePrizeWithDetails extends RafflePrize {
 
 export interface RaffleWithPrizes extends Raffle {
   prize: Prize | null
+  top_contributor_prize?: Prize | null
   raffle_prizes: RafflePrizeWithDetails[]
 }
 

@@ -122,13 +122,13 @@ export default function ProfilePage() {
     )
   }
 
-  const nextTier = profile.tier === 'verified' ? 'elite' : profile.tier === 'standard' ? 'verified' : 'standard'
+  const nextTier = profile.tier === 'elite' ? null : profile.tier === 'verified' ? 'elite' : profile.tier === 'standard' ? 'verified' : 'standard'
   const tierThresholds: Record<string, number> = {
     standard: 31,
     verified: 61,
     elite: 91,
   }
-  const pointsToNextTier = tierThresholds[nextTier]
+  const pointsToNextTier = nextTier && tierThresholds[nextTier]
     ? tierThresholds[nextTier] - profile.reputation_score
     : 0
 
@@ -221,7 +221,7 @@ export default function ProfilePage() {
             </div>
             <p className="text-xs text-foreground-muted">
               {pointsToNextTier > 0
-                ? `${pointsToNextTier} more reputation points to reach ${getTierLabel(nextTier)}`
+                ? `${pointsToNextTier} more reputation points to reach ${getTierLabel(nextTier!)}`
                 : 'Max tier reached!'}
             </p>
           </div>

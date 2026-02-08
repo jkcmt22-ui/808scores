@@ -105,8 +105,8 @@ export default function TournamentPage() {
   // Get winner if completed
   const finalRound = rounds.find((r) => r.round === 'final')
   const finalGame = finalRound?.games[0]
-  const champion = finalGame?.status === 'final'
-    ? (finalGame.homeScore || 0) > (finalGame.awayScore || 0)
+  const champion = finalGame?.status === 'final' && finalGame.homeScore !== null && finalGame.awayScore !== null
+    ? finalGame.homeScore > finalGame.awayScore
       ? finalGame.homeTeam
       : finalGame.awayTeam
     : null
@@ -387,8 +387,8 @@ function TournamentGameCard({ game }: { game: BracketGame }) {
   const isLive = game.status === 'in_progress'
   const isFinal = game.status === 'final'
 
-  const homeWon = isFinal && (game.homeScore || 0) > (game.awayScore || 0)
-  const awayWon = isFinal && (game.awayScore || 0) > (game.homeScore || 0)
+  const homeWon = isFinal && game.homeScore !== null && game.awayScore !== null && game.homeScore > game.awayScore
+  const awayWon = isFinal && game.homeScore !== null && game.awayScore !== null && game.awayScore > game.homeScore
 
   return (
     <Link

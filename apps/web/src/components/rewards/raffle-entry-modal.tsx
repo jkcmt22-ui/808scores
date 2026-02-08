@@ -39,7 +39,7 @@ export function RaffleEntryModal({
   const pointsCost = entryCount * raffle.points_per_entry
   const maxNewEntries = raffle.max_entries_per_user
     ? raffle.max_entries_per_user - currentEntryCount
-    : Math.floor(user.season_points / raffle.points_per_entry)
+    : raffle.points_per_entry > 0 ? Math.floor(user.season_points / raffle.points_per_entry) : 0
   const canAfford = user.season_points >= pointsCost
   const meetsMinimum = user.season_points >= raffle.min_points_to_enter
 

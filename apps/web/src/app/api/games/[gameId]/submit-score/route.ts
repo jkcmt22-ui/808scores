@@ -149,9 +149,10 @@ export async function POST(
 
     const gameData = game as unknown as GameRow
 
-    // 7. Calculate points (must match lib/points/calculator.ts logic)
-    const MAX_POINTS_PER_GAME = 20
-    const MAX_DAILY_SUBMISSION_POINTS = 100
+    // 7. Calculate points — simplified 1:1 system
+    // 1 point per submission, +1 for first reporter, 3x for golden game
+    const MAX_POINTS_PER_GAME = 3
+    const MAX_DAILY_SUBMISSION_POINTS = 50
 
     // Query points already earned for this game by this user
     const { data: existingPoints } = await supabase
@@ -174,22 +175,15 @@ export async function POST(
     const currentDailyPoints = (dailyPointsData as number) || 0
     const remainingDailyCap = Math.max(0, MAX_DAILY_SUBMISSION_POINTS - currentDailyPoints)
 
-    let basePoints = 0
-    if (submission_type === 'final_score') basePoints = 10
-    else if (submission_type === 'period_score') basePoints = 5
-    else if (submission_type === 'live_update') basePoints = 5
+    // Base: 1 point per submission
+    const basePoints = 1
 
-    const photoBonus = photo_url ? 3 : 0
-    const locationBonus = at_game ? 2 : 0
-    const subtotal = basePoints + photoBonus + locationBonus
-
-    // Apply multipliers
+    // Golden game multiplier (3x)
     const goldenGameMultiplier = gameData.golden_game ? 3 : 1
-    const trustedMultiplier = isTrustedOrHigher ? 2 : 1
 
     const remainingGameCap = Math.max(0, MAX_POINTS_PER_GAME - currentGamePoints)
     const totalPoints = Math.min(
-      Math.round(subtotal * goldenGameMultiplier * trustedMultiplier),
+      Math.round(basePoints * goldenGameMultiplier),
       remainingGameCap,
       remainingDailyCap
     )
@@ -319,10 +313,7 @@ export async function POST(
     if (submissionStatus === 'published') {
       const pointsBreakdown = {
         base: basePoints,
-        photo_bonus: photoBonus,
-        location_bonus: locationBonus,
         golden_game_multiplier: goldenGameMultiplier,
-        trusted_multiplier: trustedMultiplier,
         submission_type,
       }
 

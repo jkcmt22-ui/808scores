@@ -5,7 +5,7 @@ import { Header } from '@/components/layout'
 import { GameCard, SportFilter } from '@/components/game'
 import { GameCardSkeleton } from '@/components/ui'
 import { FavoritesModal } from '@/components/onboarding'
-import { QuickAccess, TournamentBanner, ComingSoon, LiveHero, WelcomeBanner } from '@/components/home'
+import { QuickAccess, TournamentBanner, ComingSoon, LiveHero, WelcomeBanner, RewardsBanner } from '@/components/home'
 import { GlobalSearch } from '@/components/search/global-search'
 import { useGames, useAuth, useFavoriteTeams, useFavoriteSports } from '@/hooks'
 import { formatFullDate, isScoreOverdue } from '@/lib/utils'
@@ -323,6 +323,9 @@ export default function HomePage() {
 
         {/* Coming Soon - Next 24 hours */}
         <ComingSoon maxGames={5} />
+
+        {/* Rewards Banner - Prize callout + recent winner */}
+        <RewardsBanner />
 
         {/* Loading State */}
         {isLoading && (

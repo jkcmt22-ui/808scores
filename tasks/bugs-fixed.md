@@ -61,3 +61,8 @@ Tracking all bugs fixed to prevent circular fixes.
 44. `use-security.ts` bare `createClient()` in both `useSecurity` and `useTrustScore` — useEffect re-runs every render (wrapped both in `useMemo`)
 45. `use-notifications.ts` StrictMode double-fetch guard `hasFetchedRef.current && !userId` allows re-fetch when userId present (removed `&& !userId`)
 46. `raffle-card.tsx` win probability shows `Infinity%`/`NaN%` when `winner_count` is 0 or undefined (added `raffle.winner_count > 0` guard)
+
+## Session 2026-02-08 (batch 17)
+47. Tournament page `|| 0` score comparisons always pick away team when scores are null — champion determination and game card winner highlighting now use `!== null` checks matching `bracket.tsx`
+48. Profile `nextTier` logic falls through to `'standard'` for elite users — shows negative "points to standard" message (now returns `null` for elite, displays "Max tier reached!")
+49. Raffle entry modal `Math.floor(points / points_per_entry)` divides by zero when `points_per_entry` is 0 (added `> 0` guard)

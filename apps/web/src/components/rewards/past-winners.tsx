@@ -10,6 +10,14 @@ interface PastWinnersProps {
   limit?: number
 }
 
+/** Format winner name for privacy: "First L." */
+function formatWinnerName(name: string | null | undefined): string {
+  if (!name) return 'Winner'
+  const parts = name.trim().split(/\s+/)
+  if (parts.length === 1) return parts[0]
+  return `${parts[0]} ${parts[parts.length - 1][0]}.`
+}
+
 export function PastWinners({ limit = 10 }: PastWinnersProps) {
   const { winners, isLoading } = usePastWinners(limit)
   const [currentIndex, setCurrentIndex] = useState(0)
@@ -90,9 +98,9 @@ export function PastWinners({ limit = 10 }: PastWinnersProps) {
                 </div>
               </div>
 
-              {/* Winner Name */}
+              {/* Winner Name (privacy-formatted: "First L.") */}
               <p className="font-display font-bold text-foreground text-sm truncate">
-                {winner.user.display_name || 'Winner'}
+                {formatWinnerName(winner.user.display_name)}
               </p>
 
               {/* Prize */}

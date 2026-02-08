@@ -12,16 +12,28 @@ import {
   Calendar,
   Users,
   AlertCircle,
+  Ticket,
+  Gift,
 } from 'lucide-react'
-import { Button, Card } from '@/components/ui'
+import { Button, Card, Badge } from '@/components/ui'
 import { useAuth } from '@/hooks'
 import { createClient } from '@/lib/supabase/client'
+import { cn } from '@/lib/utils'
+import Link from 'next/link'
 
 interface DashboardCounts {
   pendingApplications: number
   liveGames: number
   gamesToday: number
   totalUsers: number
+}
+
+interface ActiveRaffle {
+  id: string
+  name: string
+  status: string
+  raffle_type: string
+  entries_close_at: string | null
 }
 
 export default function AdminDashboardPage() {
@@ -35,6 +47,7 @@ export default function AdminDashboardPage() {
     gamesToday: 0,
     totalUsers: 0,
   })
+  const [activeRaffle, setActiveRaffle] = useState<ActiveRaffle | null>(null)
   const [isLoading, setIsLoading] = useState(true)
 
   const fetchCounts = useCallback(async () => {
@@ -43,7 +56,7 @@ export default function AdminDashboardPage() {
 
     try {
       // Fetch counts in parallel
-      const [applicationsRes, liveGamesRes, todayGamesRes, usersRes] = await Promise.all([
+      const [applicationsRes, liveGamesRes, todayGamesRes, usersRes, raffleRes] = await Promise.all([
         supabase
           .from('trusted_reporter_applications')
           .select('id', { count: 'exact', head: true })
@@ -60,6 +73,13 @@ export default function AdminDashboardPage() {
         supabase
           .from('users')
           .select('id', { count: 'exact', head: true }),
+        supabase
+          .from('raffles')
+          .select('id, name, status, raffle_type, entries_close_at')
+          .in('status', ['open', 'closed'])
+          .eq('is_active', true)
+          .order('entries_close_at', { ascending: true })
+          .limit(1),
       ])
 
       setCounts({
@@ -68,6 +88,10 @@ export default function AdminDashboardPage() {
         gamesToday: todayGamesRes.count ?? 0,
         totalUsers: usersRes.count ?? 0,
       })
+
+      if (raffleRes.data && raffleRes.data.length > 0) {
+        setActiveRaffle(raffleRes.data[0] as ActiveRaffle)
+      }
     } catch (err) {
       console.error('Error fetching dashboard counts:', err)
     } finally {
@@ -185,6 +209,39 @@ export default function AdminDashboardPage() {
               )
             })}
           </div>
+
+          {/* Active Raffle Widget */}
+          {activeRaffle && (
+            <Link href={`/admin/raffles/${activeRaffle.id}`}>
+              <div className="mb-6 scoreboard-panel p-4 border-neon-yellow/30 hover:border-neon-yellow transition-colors cursor-pointer">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <Ticket className="h-5 w-5 text-neon-yellow" />
+                    <div>
+                      <p className="font-display font-bold text-foreground text-sm">{activeRaffle.name}</p>
+                      <div className="flex items-center gap-2 mt-0.5">
+                        <Badge
+                          variant="secondary"
+                          className={cn(
+                            'text-[10px]',
+                            activeRaffle.status === 'open' ? 'text-neon-green' : 'text-neon-yellow'
+                          )}
+                        >
+                          {activeRaffle.status === 'open' ? 'Open' : 'Ready for Drawing'}
+                        </Badge>
+                        {activeRaffle.entries_close_at && (
+                          <span className="text-xs text-foreground-muted">
+                            Closes: {new Date(activeRaffle.entries_close_at).toLocaleDateString('en-US', { timeZone: 'Pacific/Honolulu', month: 'short', day: 'numeric' })}
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                  <Gift className="h-5 w-5 text-neon-yellow/50" />
+                </div>
+              </div>
+            </Link>
+          )}
 
           {/* Quick Actions */}
           <h2 className="font-display font-bold text-sm text-foreground-muted uppercase tracking-wider mb-3">

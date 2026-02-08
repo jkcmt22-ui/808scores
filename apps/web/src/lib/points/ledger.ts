@@ -96,14 +96,10 @@ export async function awardSubmissionPoints(
   const metadata: PointEventMetadata = {
     breakdown: pointsBreakdown.breakdown,
     multipliers: {
-      streak: pointsBreakdown.streakMultiplier,
-      trusted: pointsBreakdown.trustedMultiplier,
       golden_game: pointsBreakdown.goldenGameMultiplier,
     },
     base_points: pointsBreakdown.base,
     first_to_report: pointsBreakdown.firstToReport,
-    photo_bonus: pointsBreakdown.photoBonus,
-    location_bonus: pointsBreakdown.locationBonus,
   }
 
   return awardPoints(

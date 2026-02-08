@@ -1,10 +1,8 @@
 /**
  * Hawaii Sports Center Points Calculator
  *
- * Calculates points earned for submissions based on:
- * - Submission type (final score, period score, live update)
- * - Bonuses (photo, location, first to report)
- * - Multipliers (trusted reporter, accuracy streak, golden game)
+ * Simplified 1:1 system: 1 verified score = 1 point = 1 raffle entry.
+ * Optional +1 for first reporter. Golden game = 3 points.
  */
 
 import type { Submission, User, Game } from '@/types/database'
@@ -12,85 +10,56 @@ import type { Submission, User, Game } from '@/types/database'
 export interface PointsBreakdown {
   base: number
   firstToReport: number
-  photoBonus: number
-  locationBonus: number
-  streakMultiplier: number
-  trustedMultiplier: number
   goldenGameMultiplier: number
   total: number
   breakdown: string[]
 }
 
 /**
- * Base points by submission type
+ * Base points: 1 per submission, regardless of type
  */
-const BASE_POINTS: Record<string, number> = {
-  final_score: 10,
-  period_score: 5,
-  live_update: 5,
-  event: 2,
-  status_change: 2,
-}
+const BASE_POINTS = 1
 
 /**
- * Maximum points per game (anti-gaming)
+ * First to report bonus
  */
-const MAX_POINTS_PER_GAME = 20
+const FIRST_TO_REPORT_BONUS = 1
+
+/**
+ * Maximum points per game (anti-gaming: base + first + golden = 3 max on golden)
+ */
+const MAX_POINTS_PER_GAME = 3
+
+/**
+ * Maximum submission points per day
+ */
+const MAX_DAILY_SUBMISSION_POINTS = 50
 
 /**
  * Calculate points for a submission
  */
 export function calculatePoints(
   submission: Submission,
-  user: User,
+  _user: User,
   game: Game,
   isFirstToReport: boolean,
-  currentGamePoints: number, // Points already earned for this game
-  accuracyStreak: number // Number of consecutive verified submissions
+  currentGamePoints: number,
 ): PointsBreakdown {
   const breakdown: string[] = []
 
-  // Base points
-  const base = BASE_POINTS[submission.submission_type] || 0
-  breakdown.push(`Base: ${base} pts (${submission.submission_type.replace('_', ' ')})`)
+  // Base: 1 point per submission
+  const base = BASE_POINTS
+  breakdown.push(`Score submitted: +${base} pt`)
 
-  // First to report bonus
+  // First to report bonus (+1)
   let firstToReport = 0
-  if (isFirstToReport && submission.submission_type === 'final_score') {
-    firstToReport = 5
-    breakdown.push(`First to report: +${firstToReport} pts`)
+  if (isFirstToReport) {
+    firstToReport = FIRST_TO_REPORT_BONUS
+    breakdown.push(`First to report: +${firstToReport} pt`)
   }
 
-  // Photo bonus
-  let photoBonus = 0
-  if (submission.photo_url) {
-    photoBonus = 3
-    breakdown.push(`Photo bonus: +${photoBonus} pts`)
-  }
-
-  // Location bonus
-  let locationBonus = 0
-  if (submission.at_game) {
-    locationBonus = 2
-    breakdown.push(`At game bonus: +${locationBonus} pts`)
-  }
-
-  // Subtotal before multipliers
-  const subtotal = base + firstToReport + photoBonus + locationBonus
-
-  // Streak multiplier (5+ streak = 1.5x)
-  let streakMultiplier = 1
-  if (accuracyStreak >= 5) {
-    streakMultiplier = 1.5
-    breakdown.push(`Accuracy streak (${accuracyStreak}): 1.5x`)
-  }
-
-  // Trusted reporter multiplier (2x)
-  let trustedMultiplier = 1
-  if (user.is_trusted_reporter) {
-    trustedMultiplier = 2
-    breakdown.push('Trusted reporter: 2x')
-  }
+  // Subtotal before golden game
+  const subtotal = base + firstToReport
 
   // Golden game multiplier (3x)
   let goldenGameMultiplier = 1
@@ -99,11 +68,7 @@ export function calculatePoints(
     breakdown.push('Golden game: 3x')
   }
 
-  // Calculate total with multipliers
-  // Multipliers stack multiplicatively
-  let total = Math.round(
-    subtotal * streakMultiplier * trustedMultiplier * goldenGameMultiplier
-  )
+  let total = Math.round(subtotal * goldenGameMultiplier)
 
   // Apply per-game cap
   const remainingCap = MAX_POINTS_PER_GAME - currentGamePoints
@@ -115,15 +80,13 @@ export function calculatePoints(
   return {
     base,
     firstToReport,
-    photoBonus,
-    locationBonus,
-    streakMultiplier,
-    trustedMultiplier,
     goldenGameMultiplier,
     total,
     breakdown,
   }
 }
+
+export { MAX_POINTS_PER_GAME, MAX_DAILY_SUBMISSION_POINTS }
 
 /**
  * Calculate reputation change based on submission outcome
@@ -243,15 +206,9 @@ export function checkBadgeEligibility(
 
 /**
  * Check for random rewards (Lucky Reporter, etc.)
+ * Disabled under simplified 1:1 points system.
  */
 export function checkRandomReward(): { triggered: boolean; bonusPoints: number } {
-  // 2% chance of Lucky Reporter bonus
-  const roll = Math.random()
-  if (roll < 0.02) {
-    // Random bonus between 25-100 points
-    const bonusPoints = Math.floor(Math.random() * 76) + 25
-    return { triggered: true, bonusPoints }
-  }
   return { triggered: false, bonusPoints: 0 }
 }
 

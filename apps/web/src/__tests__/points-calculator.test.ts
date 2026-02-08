@@ -27,166 +27,108 @@ const mockGame = (overrides: Record<string, unknown> = {}) => ({
   ...overrides,
 })
 
-describe('calculatePoints', () => {
-  it('awards 10 base points for final score', () => {
+describe('calculatePoints (simplified 1:1 system)', () => {
+  it('awards 1 base point for any submission type', () => {
     const result = calculatePoints(
       mockSubmission() as never, mockUser() as never, mockGame() as never,
-      false, 0, 0
+      false, 0
     )
-    expect(result.base).toBe(10)
-    expect(result.total).toBe(10)
+    expect(result.base).toBe(1)
+    expect(result.total).toBe(1)
   })
 
-  it('awards 5 base points for period score', () => {
+  it('awards 1 base point for period score', () => {
     const result = calculatePoints(
       mockSubmission({ submission_type: 'period_score' }) as never,
       mockUser() as never, mockGame() as never,
-      false, 0, 0
+      false, 0
     )
-    expect(result.base).toBe(5)
-    expect(result.total).toBe(5)
+    expect(result.base).toBe(1)
+    expect(result.total).toBe(1)
   })
 
-  it('awards 5 base points for live update', () => {
+  it('awards 1 base point for live update', () => {
     const result = calculatePoints(
       mockSubmission({ submission_type: 'live_update' }) as never,
       mockUser() as never, mockGame() as never,
-      false, 0, 0
+      false, 0
     )
-    expect(result.base).toBe(5)
+    expect(result.base).toBe(1)
   })
 
-  it('awards first-to-report bonus only for final scores', () => {
+  it('awards +1 first-to-report bonus', () => {
     const result = calculatePoints(
       mockSubmission() as never, mockUser() as never, mockGame() as never,
-      true, 0, 0
+      true, 0
     )
-    expect(result.firstToReport).toBe(5)
-    expect(result.total).toBe(15) // 10 base + 5 first
-  })
-
-  it('does not award first-to-report for period scores', () => {
-    const result = calculatePoints(
-      mockSubmission({ submission_type: 'period_score' }) as never,
-      mockUser() as never, mockGame() as never,
-      true, 0, 0
-    )
-    expect(result.firstToReport).toBe(0)
-  })
-
-  it('awards photo bonus', () => {
-    const result = calculatePoints(
-      mockSubmission({ photo_url: 'https://example.com/photo.jpg' }) as never,
-      mockUser() as never, mockGame() as never,
-      false, 0, 0
-    )
-    expect(result.photoBonus).toBe(3)
-    expect(result.total).toBe(13) // 10 + 3
-  })
-
-  it('awards location bonus', () => {
-    const result = calculatePoints(
-      mockSubmission({ at_game: true }) as never,
-      mockUser() as never, mockGame() as never,
-      false, 0, 0
-    )
-    expect(result.locationBonus).toBe(2)
-    expect(result.total).toBe(12) // 10 + 2
-  })
-
-  it('applies streak multiplier at 5+ streak', () => {
-    const result = calculatePoints(
-      mockSubmission() as never, mockUser() as never, mockGame() as never,
-      false, 0, 5
-    )
-    expect(result.streakMultiplier).toBe(1.5)
-    expect(result.total).toBe(15) // 10 * 1.5
-  })
-
-  it('does not apply streak multiplier below 5', () => {
-    const result = calculatePoints(
-      mockSubmission() as never, mockUser() as never, mockGame() as never,
-      false, 0, 4
-    )
-    expect(result.streakMultiplier).toBe(1)
-    expect(result.total).toBe(10)
-  })
-
-  it('applies trusted reporter 2x multiplier', () => {
-    const result = calculatePoints(
-      mockSubmission() as never,
-      mockUser({ is_trusted_reporter: true }) as never,
-      mockGame() as never,
-      false, 0, 0
-    )
-    expect(result.trustedMultiplier).toBe(2)
-    expect(result.total).toBe(20) // 10 * 2
+    expect(result.firstToReport).toBe(1)
+    expect(result.total).toBe(2) // 1 base + 1 first
   })
 
   it('applies golden game 3x multiplier', () => {
     const result = calculatePoints(
       mockSubmission() as never, mockUser() as never,
       mockGame({ golden_game: true }) as never,
-      false, 0, 0
+      false, 0
     )
     expect(result.goldenGameMultiplier).toBe(3)
-    expect(result.total).toBe(20) // 10 * 3 = 30 but capped at 20
+    expect(result.total).toBe(3) // 1 * 3
   })
 
-  it('stacks multipliers multiplicatively', () => {
+  it('golden game + first reporter = capped at 3', () => {
     const result = calculatePoints(
-      mockSubmission() as never,
-      mockUser({ is_trusted_reporter: true }) as never,
-      mockGame() as never,
-      false, 0, 5
+      mockSubmission() as never, mockUser() as never,
+      mockGame({ golden_game: true }) as never,
+      true, 0
     )
-    // 10 * 1.5 * 2 = 30, capped at 20
-    expect(result.total).toBe(20)
+    // (1 + 1) * 3 = 6, capped at 3
+    expect(result.total).toBe(3)
   })
 
-  it('caps points at 20 per game', () => {
+  it('caps points at 3 per game', () => {
     const result = calculatePoints(
-      mockSubmission() as never, mockUser() as never, mockGame() as never,
-      false, 0, 0
+      mockSubmission() as never, mockUser() as never,
+      mockGame({ golden_game: true }) as never,
+      true, 0
     )
-    expect(result.total).toBeLessThanOrEqual(20)
+    expect(result.total).toBeLessThanOrEqual(3)
   })
 
   it('respects remaining cap from previous submissions', () => {
-    // Already earned 15 points for this game
+    // Already earned 2 points for this game
     const result = calculatePoints(
       mockSubmission() as never, mockUser() as never, mockGame() as never,
-      false, 15, 0
+      true, 2
     )
-    // 10 base, but only 5 remaining cap
-    expect(result.total).toBe(5)
+    // 1 base + 1 first = 2, but only 1 remaining cap
+    expect(result.total).toBe(1)
   })
 
   it('returns 0 when game cap already reached', () => {
     const result = calculatePoints(
       mockSubmission() as never, mockUser() as never, mockGame() as never,
-      false, 20, 0
+      false, 3
     )
     expect(result.total).toBe(0)
   })
 
-  it('combines all bonuses correctly', () => {
+  it('trusted reporters get same points (no multiplier)', () => {
     const result = calculatePoints(
-      mockSubmission({ photo_url: 'photo.jpg', at_game: true }) as never,
-      mockUser() as never, mockGame() as never,
-      true, 0, 0
+      mockSubmission() as never,
+      mockUser({ is_trusted_reporter: true }) as never,
+      mockGame() as never,
+      false, 0
     )
-    // 10 base + 5 first + 3 photo + 2 location = 20
-    expect(result.total).toBe(20)
+    expect(result.total).toBe(1) // Same as non-trusted
   })
 
   it('provides breakdown strings', () => {
     const result = calculatePoints(
       mockSubmission() as never, mockUser() as never, mockGame() as never,
-      false, 0, 0
+      false, 0
     )
     expect(result.breakdown.length).toBeGreaterThan(0)
-    expect(result.breakdown[0]).toContain('Base')
+    expect(result.breakdown[0]).toContain('Score submitted')
   })
 })
 

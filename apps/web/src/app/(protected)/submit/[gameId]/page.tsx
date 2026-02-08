@@ -134,48 +134,25 @@ export default function SubmitPage({ params }: SubmitPageProps) {
 
   const isTrustedOrHigher = profile?.is_trusted_reporter || profile?.is_admin || profile?.is_super_admin
 
+  // Simplified 1:1 points: 1 point per submission, 3x for golden game
   const calculatePoints = () => {
-    let base = 0
-    if (submissionType === 'final_score') base = 10
-    else if (submissionType === 'period_score') base = 5
-    else if (submissionType === 'live_update') base = 5
-
-    const subtotal = base + (hasPhoto ? 3 : 0) + (hasLocation ? 2 : 0)
+    const base = 1
     const goldenGameMultiplier = game.golden_game ? 3 : 1
-    const trustedMultiplier = isTrustedOrHigher ? 2 : 1
-
-    // Match server-side logic (submit-score/route.ts)
-    return Math.min(Math.round(subtotal * goldenGameMultiplier * trustedMultiplier), 20)
+    return Math.min(Math.round(base * goldenGameMultiplier), 3)
   }
 
   // Build a points breakdown for the ledger
   const buildPointsBreakdown = (): PointsBreakdown => {
-    let base = 0
-    if (submissionType === 'final_score') base = 10
-    else if (submissionType === 'period_score') base = 5
-    else if (submissionType === 'live_update') base = 5
-
-    const photoBonus = hasPhoto ? 3 : 0
-    const locationBonus = hasLocation ? 2 : 0
+    const base = 1
     const goldenGameMultiplier = game.golden_game ? 3 : 1
+    const total = Math.min(Math.round(base * goldenGameMultiplier), 3)
 
-    const subtotal = base + photoBonus + locationBonus
-    const trustedMult = isTrustedOrHigher ? 2 : 1
-    const total = Math.min(Math.round(subtotal * goldenGameMultiplier * trustedMult), 20)
-
-    const breakdown: string[] = [`Base: ${base} pts`]
-    if (photoBonus > 0) breakdown.push(`Photo bonus: +${photoBonus} pts`)
-    if (locationBonus > 0) breakdown.push(`At game bonus: +${locationBonus} pts`)
+    const breakdown: string[] = ['Score submitted: +1 pt']
     if (game.golden_game) breakdown.push('Golden game: 3x')
-    if (trustedMult > 1) breakdown.push('Trusted reporter: 2x')
 
     return {
       base,
       firstToReport: 0,
-      photoBonus,
-      locationBonus,
-      streakMultiplier: 1,
-      trustedMultiplier: trustedMult,
       goldenGameMultiplier,
       total,
       breakdown,

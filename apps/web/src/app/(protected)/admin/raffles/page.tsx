@@ -1,19 +1,20 @@
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useMemo } from 'react'
 import { Header } from '@/components/layout'
 import { Button, Input, Badge } from '@/components/ui'
 import {
   Ticket, Plus, Pencil, Trash2, Search, X, Save,
-  Eye, Calendar, Loader2
+  Eye, Calendar, Loader2, Zap, CalendarDays, Trophy
 } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import { useAuth } from '@/hooks'
+import { getCurrentSeasonYear } from '@/hooks/use-team-roster'
 import { cn, utcToHawaiiDatetime, hawaiiDatetimeToUTC } from '@/lib/utils'
 import { useToast } from '@/components/ui/toast'
 import { ConfirmModal } from '@/components/admin/confirm-modal'
 import Link from 'next/link'
-import type { RaffleWithPrize, Prize, RaffleType, RaffleStatus } from '@/types/database'
+import type { RaffleWithPrize, Prize, RaffleType, RaffleStatus, RafflePrize } from '@/types/database'
 
 const RAFFLE_TYPES: { value: RaffleType; label: string }[] = [
   { value: 'monthly', label: 'Monthly' },
@@ -30,11 +31,17 @@ const RAFFLE_STATUSES: { value: RaffleStatus; label: string; color: string }[] =
   { value: 'canceled', label: 'Canceled', color: 'text-destructive' },
 ]
 
+const MONTHS = [
+  'January', 'February', 'March', 'April', 'May', 'June',
+  'July', 'August', 'September', 'October', 'November', 'December',
+]
+
 interface RaffleFormData {
   name: string
   description: string
   raffle_type: RaffleType
   prize_id: string
+  top_contributor_prize_id: string
   entries_open_at: string
   entries_close_at: string
   drawing_at: string
@@ -49,17 +56,23 @@ interface RaffleFormData {
   legal_disclaimer: string
 }
 
+interface RafflePrizeEntry {
+  position: number
+  prize_id: string
+}
+
 const defaultFormData: RaffleFormData = {
   name: '',
   description: '',
   raffle_type: 'monthly',
   prize_id: '',
+  top_contributor_prize_id: '',
   entries_open_at: '',
   entries_close_at: '',
   drawing_at: '',
-  min_points_to_enter: 50,
-  points_per_entry: 25,
-  max_entries_per_user: 10,
+  min_points_to_enter: 0,
+  points_per_entry: 0,
+  max_entries_per_user: null,
   winner_count: 1,
   status: 'upcoming',
   season: '',
@@ -68,15 +81,92 @@ const defaultFormData: RaffleFormData = {
   legal_disclaimer: '',
 }
 
+// Get Hawaii month/year info for smart defaults
+function getHawaiiMonthInfo() {
+  const now = new Date()
+  const hawaiiMonth = parseInt(now.toLocaleDateString('en-CA', { timeZone: 'Pacific/Honolulu', month: 'numeric' }))
+  const hawaiiYear = parseInt(now.toLocaleDateString('en-CA', { timeZone: 'Pacific/Honolulu', year: 'numeric' }))
+  return { month: hawaiiMonth, year: hawaiiYear }
+}
+
+function getMonthlyDefaults(): Partial<RaffleFormData> {
+  const { month, year } = getHawaiiMonthInfo()
+  const monthName = MONTHS[month - 1]
+  const season = getCurrentSeasonYear()
+
+  // Month start/end in Hawaii time
+  const monthStart = `${year}-${String(month).padStart(2, '0')}-01T00:00`
+  const lastDay = new Date(year, month, 0).getDate()
+  const monthEnd = `${year}-${String(month).padStart(2, '0')}-${lastDay}T23:59`
+
+  // Drawing: 1st of next month
+  const nextMonth = month === 12 ? 1 : month + 1
+  const nextYear = month === 12 ? year + 1 : year
+  const drawingDate = `${nextYear}-${String(nextMonth).padStart(2, '0')}-01T12:00`
+
+  return {
+    name: `${monthName} ${year} Monthly Raffle`,
+    description: `Report scores throughout ${monthName} to earn entries. Every point = 1 entry!`,
+    raffle_type: 'monthly',
+    entries_open_at: monthStart,
+    entries_close_at: monthEnd,
+    drawing_at: drawingDate,
+    min_points_to_enter: 0,
+    points_per_entry: 0,
+    max_entries_per_user: null,
+    winner_count: 3,
+    status: 'open',
+    season,
+    month: monthName,
+    is_active: true,
+  }
+}
+
+function getQuickRaffleDefaults(): Partial<RaffleFormData> {
+  const now = new Date()
+  const hawaiiNow = new Date(now.toLocaleString('en-US', { timeZone: 'Pacific/Honolulu' }))
+
+  // Default: this Monday to Sunday
+  const dayOfWeek = hawaiiNow.getDay()
+  const monday = new Date(hawaiiNow)
+  monday.setDate(hawaiiNow.getDate() - (dayOfWeek === 0 ? 6 : dayOfWeek - 1))
+  const sunday = new Date(monday)
+  sunday.setDate(monday.getDate() + 6)
+
+  const weekNum = Math.ceil(hawaiiNow.getDate() / 7)
+
+  const formatDate = (d: Date, time: string) => {
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}T${time}`
+  }
+
+  return {
+    name: `Week ${weekNum} Bonus Raffle`,
+    description: 'Submit scores this week for bonus entries!',
+    raffle_type: 'special',
+    entries_open_at: formatDate(monday, '00:00'),
+    entries_close_at: formatDate(sunday, '23:59'),
+    drawing_at: formatDate(new Date(sunday.getTime() + 86400000), '12:00'),
+    min_points_to_enter: 0,
+    points_per_entry: 0,
+    max_entries_per_user: null,
+    winner_count: 1,
+    status: 'open',
+    is_active: true,
+  }
+}
+
 export default function AdminRafflesPage() {
   const { profile } = useAuth()
   const [raffles, setRaffles] = useState<RaffleWithPrize[]>([])
+  const [rafflePrizesMap, setRafflePrizesMap] = useState<Record<string, RafflePrize[]>>({})
   const [prizes, setPrizes] = useState<Prize[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [searchQuery, setSearchQuery] = useState('')
   const [showForm, setShowForm] = useState(false)
+  const [formMode, setFormMode] = useState<'create' | 'monthly' | 'quick' | 'edit'>('create')
   const [editingRaffle, setEditingRaffle] = useState<RaffleWithPrize | null>(null)
   const [formData, setFormData] = useState<RaffleFormData>(defaultFormData)
+  const [rafflePrizes, setRafflePrizes] = useState<RafflePrizeEntry[]>([])
   const [isSaving, setIsSaving] = useState(false)
   const [confirmAction, setConfirmAction] = useState<{
     action: () => Promise<void>
@@ -85,7 +175,7 @@ export default function AdminRafflesPage() {
     confirmLabel?: string
   } | null>(null)
 
-  const supabase = createClient()
+  const supabase = useMemo(() => createClient(), [])
   const hasAdminAccess = profile?.is_admin === true || profile?.is_super_admin === true
   const { toast } = useToast()
 
@@ -97,7 +187,7 @@ export default function AdminRafflesPage() {
 
     setIsLoading(true)
 
-    const [rafflesResult, prizesResult] = await Promise.all([
+    const [rafflesResult, prizesResult, rafflePrizesResult] = await Promise.all([
       supabase
         .from('raffles')
         .select('*, prize:prizes(*)')
@@ -107,6 +197,11 @@ export default function AdminRafflesPage() {
         .select('*')
         .eq('active', true)
         .order('name'),
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      (supabase as any)
+        .from('raffle_prizes')
+        .select('*')
+        .order('position'),
     ])
 
     if (!rafflesResult.error) {
@@ -114,6 +209,15 @@ export default function AdminRafflesPage() {
     }
     if (!prizesResult.error) {
       setPrizes(prizesResult.data || [])
+    }
+    if (!rafflePrizesResult.error) {
+      // Group raffle_prizes by raffle_id
+      const map: Record<string, RafflePrize[]> = {}
+      for (const rp of (rafflePrizesResult.data || []) as RafflePrize[]) {
+        if (!map[rp.raffle_id]) map[rp.raffle_id] = []
+        map[rp.raffle_id].push(rp)
+      }
+      setRafflePrizesMap(map)
     }
 
     setIsLoading(false)
@@ -134,11 +238,13 @@ export default function AdminRafflesPage() {
 
   const handleEdit = (raffle: RaffleWithPrize) => {
     setEditingRaffle(raffle)
+    setFormMode('edit')
     setFormData({
       name: raffle.name,
       description: raffle.description || '',
       raffle_type: raffle.raffle_type,
       prize_id: raffle.prize_id || '',
+      top_contributor_prize_id: raffle.top_contributor_prize_id || '',
       entries_open_at: formatDateForInput(raffle.entries_open_at),
       entries_close_at: formatDateForInput(raffle.entries_close_at),
       drawing_at: formatDateForInput(raffle.drawing_at),
@@ -152,13 +258,57 @@ export default function AdminRafflesPage() {
       is_active: raffle.is_active,
       legal_disclaimer: raffle.legal_disclaimer || '',
     })
+    // Load existing raffle_prizes
+    const existingPrizes = rafflePrizesMap[raffle.id] || []
+    setRafflePrizes(existingPrizes.map(rp => ({ position: rp.position, prize_id: rp.prize_id || '' })))
+    setShowForm(true)
+  }
+
+  const handleCreateMonthly = () => {
+    setEditingRaffle(null)
+    setFormMode('monthly')
+    const defaults = getMonthlyDefaults()
+    setFormData({ ...defaultFormData, ...defaults })
+    setRafflePrizes([
+      { position: 1, prize_id: '' },
+      { position: 2, prize_id: '' },
+      { position: 3, prize_id: '' },
+    ])
+    setShowForm(true)
+  }
+
+  const handleCreateQuick = () => {
+    setEditingRaffle(null)
+    setFormMode('quick')
+    const defaults = getQuickRaffleDefaults()
+    setFormData({ ...defaultFormData, ...defaults })
+    setRafflePrizes([{ position: 1, prize_id: '' }])
     setShowForm(true)
   }
 
   const handleCreate = () => {
     setEditingRaffle(null)
+    setFormMode('create')
     setFormData(defaultFormData)
+    setRafflePrizes([])
     setShowForm(true)
+  }
+
+  const addRafflePrize = () => {
+    const nextPosition = rafflePrizes.length > 0
+      ? Math.max(...rafflePrizes.map(p => p.position)) + 1
+      : 1
+    setRafflePrizes([...rafflePrizes, { position: nextPosition, prize_id: '' }])
+  }
+
+  const removeRafflePrize = (index: number) => {
+    setRafflePrizes(rafflePrizes.filter((_, i) => i !== index))
+  }
+
+  const updateRafflePrize = (index: number, prizeId: string) => {
+    const updated = [...rafflePrizes]
+    updated[index] = { ...updated[index], prize_id: prizeId }
+    setRafflePrizes(updated)
   }
 
   const handleSave = async () => {
@@ -189,18 +339,24 @@ export default function AdminRafflesPage() {
 
     setIsSaving(true)
 
+    // Set winner_count from raffle prizes if multi-prize
+    const winnerCount = rafflePrizes.length > 0
+      ? rafflePrizes.filter(rp => rp.prize_id).length
+      : formData.winner_count
+
     const dataToSave = {
       name: formData.name,
       description: formData.description || null,
       raffle_type: formData.raffle_type,
-      prize_id: formData.prize_id || null,
+      prize_id: formData.prize_id || (rafflePrizes.length > 0 ? rafflePrizes[0]?.prize_id || null : null),
+      top_contributor_prize_id: formData.top_contributor_prize_id || null,
       entries_open_at: formData.entries_open_at ? hawaiiDatetimeToUTC(formData.entries_open_at) : null,
       entries_close_at: formData.entries_close_at ? hawaiiDatetimeToUTC(formData.entries_close_at) : null,
       drawing_at: formData.drawing_at ? hawaiiDatetimeToUTC(formData.drawing_at) : null,
       min_points_to_enter: formData.min_points_to_enter,
       points_per_entry: formData.points_per_entry,
       max_entries_per_user: formData.max_entries_per_user,
-      winner_count: formData.winner_count,
+      winner_count: winnerCount,
       status: formData.status,
       season: formData.season || null,
       month: formData.month || null,
@@ -209,7 +365,10 @@ export default function AdminRafflesPage() {
     }
 
     try {
+      let raffleId: string
+
       if (editingRaffle) {
+        raffleId = editingRaffle.id
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const { error: updateError } = await (supabase as any)
           .from('raffles')
@@ -219,11 +378,45 @@ export default function AdminRafflesPage() {
         if (updateError) throw updateError
       } else {
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        const { error: insertError } = await (supabase as any)
+        const { data: insertData, error: insertError } = await (supabase as any)
           .from('raffles')
           .insert(dataToSave)
+          .select('id')
+          .single()
 
         if (insertError) throw insertError
+        raffleId = (insertData as { id: string }).id
+      }
+
+      // Save raffle_prizes (junction table)
+      if (rafflePrizes.length > 0) {
+        // Delete existing raffle_prizes for this raffle
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        await (supabase as any)
+          .from('raffle_prizes')
+          .delete()
+          .eq('raffle_id', raffleId)
+
+        // Insert new ones
+        const prizesToInsert = rafflePrizes
+          .filter(rp => rp.prize_id)
+          .map(rp => ({
+            raffle_id: raffleId,
+            prize_id: rp.prize_id,
+            position: rp.position,
+          }))
+
+        if (prizesToInsert.length > 0) {
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          const { error: prizeError } = await (supabase as any)
+            .from('raffle_prizes')
+            .insert(prizesToInsert)
+
+          if (prizeError) {
+            console.error('Error saving raffle prizes:', prizeError)
+            toast({ type: 'error', text: 'Raffle saved but prize assignments failed' })
+          }
+        }
       }
 
       setShowForm(false)
@@ -260,6 +453,8 @@ export default function AdminRafflesPage() {
     })
   }
 
+  const getPrizeById = (id: string) => prizes.find(p => p.id === id)
+
   if (!hasAdminAccess) {
     return (
       <>
@@ -289,9 +484,21 @@ export default function AdminRafflesPage() {
               className="pl-9"
             />
           </div>
-          <Button onClick={handleCreate} className="gap-2">
+        </div>
+
+        {/* Create Buttons */}
+        <div className="mt-3 flex flex-wrap gap-2">
+          <Button onClick={handleCreateMonthly} className="gap-2">
+            <CalendarDays className="h-4 w-4" />
+            New Monthly Raffle
+          </Button>
+          <Button onClick={handleCreateQuick} variant="outline" className="gap-2">
+            <Zap className="h-4 w-4" />
+            Quick Raffle
+          </Button>
+          <Button onClick={handleCreate} variant="outline" className="gap-2">
             <Plus className="h-4 w-4" />
-            New Raffle
+            Custom
           </Button>
         </div>
 
@@ -302,7 +509,9 @@ export default function AdminRafflesPage() {
             <div className="relative w-full max-w-lg mx-4 bg-background border-2 border-border rounded-lg shadow-xl max-h-[90vh] flex flex-col">
               <div className="flex items-center justify-between p-4 border-b-2 border-border">
                 <h2 className="font-display text-lg font-bold uppercase tracking-wider">
-                  {editingRaffle ? 'Edit Raffle' : 'New Raffle'}
+                  {formMode === 'monthly' ? 'New Monthly Raffle' :
+                   formMode === 'quick' ? 'Quick Raffle' :
+                   editingRaffle ? 'Edit Raffle' : 'New Raffle'}
                 </h2>
                 <button onClick={() => setShowForm(false)} className="p-1 hover:text-foreground">
                   <X className="h-5 w-5" />
@@ -315,7 +524,7 @@ export default function AdminRafflesPage() {
                   <Input
                     value={formData.name}
                     onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                    placeholder="e.g. January Monthly Raffle"
+                    placeholder="e.g. February 2026 Monthly Raffle"
                   />
                 </div>
 
@@ -330,70 +539,154 @@ export default function AdminRafflesPage() {
                   />
                 </div>
 
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-sm font-medium mb-1">Type</label>
+                {formMode !== 'quick' && (
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-sm font-medium mb-1">Type</label>
+                      <select
+                        value={formData.raffle_type}
+                        onChange={(e) => setFormData({ ...formData, raffle_type: e.target.value as RaffleType })}
+                        className="w-full px-3 py-2 bg-background-secondary border-2 border-border rounded-md text-sm"
+                      >
+                        {RAFFLE_TYPES.map((t) => (
+                          <option key={t.value} value={t.value}>{t.label}</option>
+                        ))}
+                      </select>
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium mb-1">Status</label>
+                      <select
+                        value={formData.status}
+                        onChange={(e) => setFormData({ ...formData, status: e.target.value as RaffleStatus })}
+                        className="w-full px-3 py-2 bg-background-secondary border-2 border-border rounded-md text-sm"
+                      >
+                        {RAFFLE_STATUSES.map((s) => (
+                          <option key={s.value} value={s.value}>{s.label}</option>
+                        ))}
+                      </select>
+                    </div>
+                  </div>
+                )}
+
+                {/* Multi-Prize Section */}
+                <div className="scoreboard-panel p-3">
+                  <div className="flex items-center justify-between mb-2">
+                    <label className="text-sm font-medium flex items-center gap-2">
+                      <Trophy className="h-4 w-4 text-neon-yellow" />
+                      Raffle Prizes
+                    </label>
+                    <button
+                      onClick={addRafflePrize}
+                      className="text-xs text-neon-blue hover:text-neon-blue/80 font-display uppercase tracking-wider"
+                    >
+                      + Add Prize
+                    </button>
+                  </div>
+                  {rafflePrizes.length === 0 ? (
+                    <p className="text-xs text-foreground-muted">No prizes added yet. Click &quot;+ Add Prize&quot; to assign prizes by position.</p>
+                  ) : (
+                    <div className="space-y-2">
+                      {rafflePrizes.map((rp, index) => (
+                        <div key={index} className="flex items-center gap-2">
+                          <span className={cn(
+                            'font-display font-bold text-sm w-8 text-center',
+                            rp.position === 1 && 'text-neon-yellow',
+                            rp.position === 2 && 'text-foreground-muted',
+                            rp.position === 3 && 'text-neon-pink',
+                          )}>
+                            {rp.position === 1 ? '1st' : rp.position === 2 ? '2nd' : rp.position === 3 ? '3rd' : `${rp.position}th`}
+                          </span>
+                          <select
+                            value={rp.prize_id}
+                            onChange={(e) => updateRafflePrize(index, e.target.value)}
+                            className="flex-1 px-3 py-1.5 bg-background-secondary border-2 border-border rounded-md text-sm"
+                          >
+                            <option value="">Select prize...</option>
+                            {prizes.map((p) => (
+                              <option key={p.id} value={p.id}>
+                                {p.name} (${(p.value_cents / 100).toFixed(0)})
+                              </option>
+                            ))}
+                          </select>
+                          <button
+                            onClick={() => removeRafflePrize(index)}
+                            className="p-1 hover:text-destructive"
+                          >
+                            <X className="h-4 w-4" />
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+
+                {/* Top Contributor Prize */}
+                {(formMode === 'monthly' || formMode === 'edit') && (
+                  <div className="scoreboard-panel p-3">
+                    <label className="block text-sm font-medium mb-2 flex items-center gap-2">
+                      <Trophy className="h-4 w-4 text-neon-green" />
+                      Top Contributor Prize (Guaranteed)
+                    </label>
+                    <p className="text-xs text-foreground-muted mb-2">
+                      Awarded to the #1 contributor — not drawn, earned by contribution count.
+                    </p>
                     <select
-                      value={formData.raffle_type}
-                      onChange={(e) => setFormData({ ...formData, raffle_type: e.target.value as RaffleType })}
+                      value={formData.top_contributor_prize_id}
+                      onChange={(e) => setFormData({ ...formData, top_contributor_prize_id: e.target.value })}
                       className="w-full px-3 py-2 bg-background-secondary border-2 border-border rounded-md text-sm"
                     >
-                      {RAFFLE_TYPES.map((t) => (
-                        <option key={t.value} value={t.value}>{t.label}</option>
+                      <option value="">None</option>
+                      {prizes.map((p) => (
+                        <option key={p.id} value={p.id}>
+                          {p.name} (${(p.value_cents / 100).toFixed(0)})
+                        </option>
                       ))}
                     </select>
                   </div>
+                )}
+
+                {/* Legacy single prize (for custom/backward compat) */}
+                {formMode === 'create' && rafflePrizes.length === 0 && (
                   <div>
-                    <label className="block text-sm font-medium mb-1">Status</label>
+                    <label className="block text-sm font-medium mb-1">Prize (single)</label>
                     <select
-                      value={formData.status}
-                      onChange={(e) => setFormData({ ...formData, status: e.target.value as RaffleStatus })}
+                      value={formData.prize_id}
+                      onChange={(e) => setFormData({ ...formData, prize_id: e.target.value })}
                       className="w-full px-3 py-2 bg-background-secondary border-2 border-border rounded-md text-sm"
                     >
-                      {RAFFLE_STATUSES.map((s) => (
-                        <option key={s.value} value={s.value}>{s.label}</option>
+                      <option value="">Select a prize...</option>
+                      {prizes.map((p) => (
+                        <option key={p.id} value={p.id}>
+                          {p.name} (${(p.value_cents / 100).toFixed(0)})
+                        </option>
                       ))}
                     </select>
                   </div>
-                </div>
+                )}
+
+                {formMode !== 'quick' && (
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-sm font-medium mb-1">Season</label>
+                      <Input
+                        value={formData.season}
+                        onChange={(e) => setFormData({ ...formData, season: e.target.value })}
+                        placeholder="e.g. 2025-26"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium mb-1">Month</label>
+                      <Input
+                        value={formData.month}
+                        onChange={(e) => setFormData({ ...formData, month: e.target.value })}
+                        placeholder="e.g. February"
+                      />
+                    </div>
+                  </div>
+                )}
 
                 <div>
-                  <label className="block text-sm font-medium mb-1">Prize</label>
-                  <select
-                    value={formData.prize_id}
-                    onChange={(e) => setFormData({ ...formData, prize_id: e.target.value })}
-                    className="w-full px-3 py-2 bg-background-secondary border-2 border-border rounded-md text-sm"
-                  >
-                    <option value="">Select a prize...</option>
-                    {prizes.map((p) => (
-                      <option key={p.id} value={p.id}>
-                        {p.name} (${(p.value_cents / 100).toFixed(0)})
-                      </option>
-                    ))}
-                  </select>
-                </div>
-
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-sm font-medium mb-1">Season</label>
-                    <Input
-                      value={formData.season}
-                      onChange={(e) => setFormData({ ...formData, season: e.target.value })}
-                      placeholder="e.g. 2025-26"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium mb-1">Month</label>
-                    <Input
-                      value={formData.month}
-                      onChange={(e) => setFormData({ ...formData, month: e.target.value })}
-                      placeholder="e.g. January"
-                    />
-                  </div>
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium mb-1">Entries Open</label>
+                  <label className="block text-sm font-medium mb-1">Entries Open (Hawaii Time)</label>
                   <Input
                     type="datetime-local"
                     value={formData.entries_open_at}
@@ -402,7 +695,7 @@ export default function AdminRafflesPage() {
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium mb-1">Entries Close</label>
+                  <label className="block text-sm font-medium mb-1">Entries Close (Hawaii Time)</label>
                   <Input
                     type="datetime-local"
                     value={formData.entries_close_at}
@@ -411,7 +704,7 @@ export default function AdminRafflesPage() {
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium mb-1">Drawing Date</label>
+                  <label className="block text-sm font-medium mb-1">Drawing Date (Hawaii Time)</label>
                   <Input
                     type="datetime-local"
                     value={formData.drawing_at}
@@ -419,59 +712,39 @@ export default function AdminRafflesPage() {
                   />
                 </div>
 
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-sm font-medium mb-1">Min Points</label>
-                    <Input
-                      type="number"
-                      value={formData.min_points_to_enter}
-                      onChange={(e) => setFormData({ ...formData, min_points_to_enter: parseInt(e.target.value) || 0 })}
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium mb-1">Points/Entry</label>
-                    <Input
-                      type="number"
-                      value={formData.points_per_entry}
-                      onChange={(e) => setFormData({ ...formData, points_per_entry: parseInt(e.target.value) || 0 })}
-                    />
-                  </div>
-                </div>
+                {formMode !== 'quick' && (
+                  <>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <label className="block text-sm font-medium mb-1">Min Points to Enter</label>
+                        <Input
+                          type="number"
+                          value={formData.min_points_to_enter}
+                          onChange={(e) => setFormData({ ...formData, min_points_to_enter: parseInt(e.target.value) || 0 })}
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium mb-1">Winner Count</label>
+                        <Input
+                          type="number"
+                          value={formData.winner_count}
+                          onChange={(e) => setFormData({ ...formData, winner_count: parseInt(e.target.value) || 1 })}
+                          min={1}
+                        />
+                      </div>
+                    </div>
 
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-sm font-medium mb-1">Max Entries</label>
-                    <Input
-                      type="number"
-                      value={formData.max_entries_per_user || ''}
-                      onChange={(e) => setFormData({
-                        ...formData,
-                        max_entries_per_user: e.target.value ? parseInt(e.target.value) : null
-                      })}
-                      placeholder="Leave empty for unlimited"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium mb-1">Winner Count</label>
-                    <Input
-                      type="number"
-                      value={formData.winner_count}
-                      onChange={(e) => setFormData({ ...formData, winner_count: parseInt(e.target.value) || 1 })}
-                      min={1}
-                    />
-                  </div>
-                </div>
-
-                <label className="flex items-center gap-2 cursor-pointer">
-                  <input
-                    type="checkbox"
-                    checked={formData.is_active}
-                    onChange={(e) => setFormData({ ...formData, is_active: e.target.checked })}
-                    className="h-4 w-4 rounded accent-neon-blue"
-                  />
-                  <span className="text-sm">Active</span>
-                </label>
-
+                    <label className="flex items-center gap-2 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={formData.is_active}
+                        onChange={(e) => setFormData({ ...formData, is_active: e.target.checked })}
+                        className="h-4 w-4 rounded accent-neon-blue"
+                      />
+                      <span className="text-sm">Active</span>
+                    </label>
+                  </>
+                )}
               </div>
 
               <div className="flex gap-3 p-4 border-t-2 border-border">
@@ -480,7 +753,9 @@ export default function AdminRafflesPage() {
                 </Button>
                 <Button onClick={handleSave} disabled={isSaving} loading={isSaving} className="flex-1 gap-2">
                   <Save className="h-4 w-4" />
-                  Save
+                  {formMode === 'monthly' ? 'Publish Monthly Raffle' :
+                   formMode === 'quick' ? 'Publish Quick Raffle' :
+                   'Save'}
                 </Button>
               </div>
             </div>
@@ -502,6 +777,7 @@ export default function AdminRafflesPage() {
             filteredRaffles.map((raffle) => {
               const statusConfig = RAFFLE_STATUSES.find((s) => s.value === raffle.status)
               const typeConfig = RAFFLE_TYPES.find((t) => t.value === raffle.raffle_type)
+              const prizeCount = (rafflePrizesMap[raffle.id] || []).length
 
               return (
                 <div key={raffle.id} className="scoreboard-panel p-4">
@@ -529,7 +805,10 @@ export default function AdminRafflesPage() {
 
                       <div className="flex items-center gap-3 text-xs text-foreground-muted flex-wrap">
                         {raffle.prize && <span>Prize: {raffle.prize.name}</span>}
-                        <span>{raffle.points_per_entry} pts/entry</span>
+                        {prizeCount > 0 && <span>{prizeCount} prize{prizeCount !== 1 ? 's' : ''}</span>}
+                        {raffle.top_contributor_prize_id && (
+                          <span className="text-neon-green">+ Top Contributor</span>
+                        )}
                         {raffle.entries_close_at && (
                           <span className="flex items-center gap-1">
                             <Calendar className="h-3 w-3" />

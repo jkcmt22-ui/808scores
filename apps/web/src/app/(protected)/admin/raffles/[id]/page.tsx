@@ -6,16 +6,16 @@ import { Header } from '@/components/layout'
 import { Button, Badge, Avatar } from '@/components/ui'
 import { PrizeDisplay } from '@/components/rewards'
 import {
-  Ticket, Users, Trophy, Play, Check,
-  Calendar, Clock, Loader2, RefreshCw
+  Ticket, Users, Trophy, Play, Check, Send,
+  Calendar, Clock, Loader2, RefreshCw, Crown, Star
 } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import { useAuth } from '@/hooks'
 import { useToast } from '@/components/ui/toast'
 import { ConfirmModal } from '@/components/admin/confirm-modal'
-import { executeRaffleDrawing, type DrawingResult } from '@/lib/raffle/drawing'
+import { executeRaffleDrawing, getRaffleEntries, type DrawingResult, type DrawingEntry } from '@/lib/raffle/drawing'
 import { cn } from '@/lib/utils'
-import type { RaffleWithPrize, RaffleEntryWithUser, RaffleWinnerWithDetails } from '@/types/database'
+import type { RaffleWithPrize, RaffleEntryWithUser, RaffleWinnerWithDetails, Prize, RafflePrize } from '@/types/database'
 
 export default function AdminRaffleDetailPage() {
   const params = useParams()
@@ -23,7 +23,10 @@ export default function AdminRaffleDetailPage() {
   const { profile } = useAuth()
 
   const [raffle, setRaffle] = useState<RaffleWithPrize | null>(null)
+  const [rafflePrizes, setRafflePrizes] = useState<(RafflePrize & { prize: Prize | null })[]>([])
+  const [topContributorPrize, setTopContributorPrize] = useState<Prize | null>(null)
   const [entries, setEntries] = useState<RaffleEntryWithUser[]>([])
+  const [autoEntries, setAutoEntries] = useState<DrawingEntry[]>([])
   const [winners, setWinners] = useState<RaffleWinnerWithDetails[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [isDrawing, setIsDrawing] = useState(false)
@@ -57,28 +60,62 @@ export default function AdminRaffleDetailPage() {
       .single()
 
     if (!raffleError && raffleData) {
-      setRaffle(raffleData as unknown as RaffleWithPrize)
+      const r = raffleData as unknown as RaffleWithPrize
+      setRaffle(r)
+
+      // Fetch top contributor prize if set
+      if (r.top_contributor_prize_id) {
+        const { data: tcPrize } = await supabase
+          .from('prizes')
+          .select('*')
+          .eq('id', r.top_contributor_prize_id)
+          .single()
+        setTopContributorPrize(tcPrize as Prize | null)
+      }
     }
 
-    // Fetch entries
-    const { data: entriesData, error: entriesError } = await supabase
+    // Fetch raffle_prizes (multi-prize)
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const { data: rpData } = await (supabase as any)
+      .from('raffle_prizes')
+      .select('*, prize:prizes(*)')
+      .eq('raffle_id', raffleId)
+      .order('position')
+
+    if (rpData) {
+      setRafflePrizes(rpData as (RafflePrize & { prize: Prize | null })[])
+    }
+
+    // Fetch legacy entries (from old entry system)
+    const { data: entriesData } = await supabase
       .from('raffle_entries')
       .select('*, user:users(id, display_name, avatar_url)')
       .eq('raffle_id', raffleId)
       .order('entry_count', { ascending: false })
 
-    if (!entriesError) {
+    if (entriesData) {
       setEntries((entriesData || []) as unknown as RaffleEntryWithUser[])
     }
 
+    // Fetch auto entries (from points)
+    if (raffleData) {
+      const r = raffleData as unknown as RaffleWithPrize
+      const autoEntryData = await getRaffleEntries(
+        raffleId,
+        r.raffle_type as 'monthly' | 'season_end' | 'special',
+        r.month || undefined
+      )
+      setAutoEntries(autoEntryData)
+    }
+
     // Fetch winners
-    const { data: winnersData, error: winnersError } = await supabase
+    const { data: winnersData } = await supabase
       .from('raffle_winners')
-      .select('*, user:users(id, display_name, avatar_url), prize:prizes(*)')
+      .select('*, user:users(id, display_name, avatar_url, email), prize:prizes(*)')
       .eq('raffle_id', raffleId)
       .order('position')
 
-    if (!winnersError) {
+    if (winnersData) {
       setWinners((winnersData || []) as unknown as RaffleWinnerWithDetails[])
     }
 
@@ -86,13 +123,13 @@ export default function AdminRaffleDetailPage() {
   }, [supabase, raffleId])
 
   useEffect(() => {
-    // fetchData is a stable useCallback - this pattern is correct
-    // eslint-disable-next-line react-hooks/set-state-in-effect
     fetchData()
   }, [fetchData])
 
-  const totalEntries = entries.reduce((sum, e) => sum + e.entry_count, 0)
-  const totalPointsUsed = entries.reduce((sum, e) => sum + e.points_used, 0)
+  const totalAutoEntries = autoEntries.reduce((sum, e) => sum + e.entryCount, 0)
+
+  // Determine top contributor
+  const topContributor = autoEntries.length > 0 ? autoEntries[0] : null
 
   const handleRunDrawing = () => {
     if (!raffle) return
@@ -102,21 +139,40 @@ export default function AdminRaffleDetailPage() {
         setIsDrawing(true)
         setDrawingResults(null)
 
-        // Get the month from the raffle for monthly raffles
         const raffleMonth = raffle.month || undefined
+
+        // Use raffle_prizes if available, otherwise fall back to single prize
+        const prizeId = rafflePrizes.length > 0
+          ? rafflePrizes[0]?.prize_id || raffle.prize_id || undefined
+          : raffle.prize_id || undefined
 
         const result = await executeRaffleDrawing(
           raffle.id,
           raffle.winner_count,
-          raffle.prize_id || undefined,
+          prizeId,
           raffle.raffle_type as 'monthly' | 'season_end' | 'special',
           raffleMonth
         )
 
         if (result.success && result.winners) {
           setDrawingResults(result.winners)
-          toast({ type: 'success', text: 'Drawing completed successfully!' })
-          fetchData() // Refresh to get updated status and winners
+
+          // Award top contributor if set and there are entries
+          if (raffle.top_contributor_prize_id && topContributor) {
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            await (supabase as any)
+              .from('raffle_winners')
+              .insert({
+                raffle_id: raffle.id,
+                user_id: topContributor.userId,
+                prize_id: raffle.top_contributor_prize_id,
+                position: 0, // Position 0 = top contributor (not drawn)
+                winning_entry_number: null,
+              })
+          }
+
+          toast({ type: 'success', text: 'Drawing completed!' })
+          fetchData()
         } else {
           toast({ type: 'error', text: result.error || 'Drawing failed' })
         }
@@ -124,7 +180,7 @@ export default function AdminRaffleDetailPage() {
         setIsDrawing(false)
       },
       title: 'Run Drawing',
-      description: 'Are you sure you want to run the drawing? This cannot be undone.',
+      description: `Run the drawing for ${raffle.winner_count} winner${raffle.winner_count !== 1 ? 's' : ''}?${raffle.top_contributor_prize_id && topContributor ? `\n\nTop contributor (${topContributor.displayName}) will also be awarded their guaranteed prize.` : ''}`,
       confirmLabel: 'Run Drawing',
       variant: 'destructive',
     })
@@ -250,18 +306,14 @@ export default function AdminRaffleDetailPage() {
           </div>
 
           {/* Entry Stats */}
-          <div className="grid grid-cols-4 gap-4">
+          <div className="grid grid-cols-3 gap-4">
             <div className="text-center p-3 bg-background-tertiary rounded-md">
-              <p className="score-led text-xl">{entries.length}</p>
+              <p className="score-led text-xl">{autoEntries.length}</p>
               <p className="text-[10px] text-foreground-subtle">Participants</p>
             </div>
             <div className="text-center p-3 bg-background-tertiary rounded-md">
-              <p className="score-led text-xl">{totalEntries}</p>
+              <p className="score-led text-xl">{totalAutoEntries.toLocaleString()}</p>
               <p className="text-[10px] text-foreground-subtle">Total Entries</p>
-            </div>
-            <div className="text-center p-3 bg-background-tertiary rounded-md">
-              <p className="score-led text-xl">{totalPointsUsed.toLocaleString()}</p>
-              <p className="text-[10px] text-foreground-subtle">Points Used</p>
             </div>
             <div className="text-center p-3 bg-background-tertiary rounded-md">
               <p className="score-led text-xl">{raffle.winner_count}</p>
@@ -270,14 +322,57 @@ export default function AdminRaffleDetailPage() {
           </div>
         </div>
 
-        {/* Prize */}
-        {raffle.prize && (
+        {/* Prizes */}
+        {(rafflePrizes.length > 0 || raffle.prize) && (
           <div className="mt-4">
             <h2 className="font-display font-bold text-foreground mb-2 flex items-center gap-2">
               <Trophy className="h-4 w-4 text-neon-yellow" />
-              Prize
+              Prizes
             </h2>
-            <PrizeDisplay prize={raffle.prize} size="md" />
+            {rafflePrizes.length > 0 ? (
+              <div className="space-y-2">
+                {rafflePrizes.map((rp) => (
+                  <div key={rp.id} className="flex items-center gap-3">
+                    <span className={cn(
+                      'font-display font-bold text-sm w-8',
+                      rp.position === 1 && 'text-neon-yellow',
+                      rp.position === 2 && 'text-foreground-muted',
+                      rp.position === 3 && 'text-neon-pink',
+                    )}>
+                      {rp.position === 1 ? '1st' : rp.position === 2 ? '2nd' : rp.position === 3 ? '3rd' : `${rp.position}th`}
+                    </span>
+                    {rp.prize && <PrizeDisplay prize={rp.prize} size="sm" />}
+                  </div>
+                ))}
+              </div>
+            ) : raffle.prize ? (
+              <PrizeDisplay prize={raffle.prize} size="md" />
+            ) : null}
+          </div>
+        )}
+
+        {/* Top Contributor */}
+        {topContributorPrize && (
+          <div className="mt-4 scoreboard-panel p-4 border-neon-green/50">
+            <h2 className="font-display font-bold text-foreground mb-2 flex items-center gap-2">
+              <Crown className="h-4 w-4 text-neon-green" />
+              Top Contributor Prize (Guaranteed)
+            </h2>
+            <PrizeDisplay prize={topContributorPrize} size="sm" />
+            {topContributor && (
+              <div className="mt-3 flex items-center gap-3 p-2 bg-background-tertiary rounded-md">
+                <Star className="h-4 w-4 text-neon-green" />
+                <Avatar
+                  src={topContributor.avatarUrl}
+                  fallback={topContributor.displayName}
+                  size="sm"
+                />
+                <div>
+                  <p className="font-display font-bold text-foreground text-sm">{topContributor.displayName}</p>
+                  <p className="text-xs text-foreground-muted">{topContributor.entryCount} contributions (currently #1)</p>
+                </div>
+              </div>
+            )}
           </div>
         )}
 
@@ -287,7 +382,10 @@ export default function AdminRaffleDetailPage() {
             <h2 className="font-display font-bold text-foreground mb-3">Run Drawing</h2>
             <p className="text-sm text-foreground-muted mb-4">
               This raffle is closed and ready for drawing. Running the drawing will randomly select
-              {raffle.winner_count === 1 ? ' a winner' : ` ${raffle.winner_count} winners`} based on entry weights.
+              {raffle.winner_count === 1 ? ' a winner' : ` ${raffle.winner_count} winners`} based on point contributions.
+              {topContributor && topContributorPrize && (
+                <> {topContributor.displayName} will also receive the guaranteed Top Contributor prize.</>
+              )}
             </p>
 
             <Button
@@ -311,25 +409,31 @@ export default function AdminRaffleDetailPage() {
               Drawing Complete!
             </h2>
             <div className="space-y-2">
-              {drawingResults.map((result) => (
-                <div
-                  key={result.userId}
-                  className="flex items-center gap-3 p-3 bg-background-tertiary rounded-md"
-                >
-                  <span className="font-display font-bold text-neon-yellow">
-                    #{result.position}
-                  </span>
-                  <Avatar
-                    src={result.avatarUrl}
-                    fallback={result.displayName}
-                    size="sm"
-                  />
-                  <span className="font-medium text-foreground">{result.displayName}</span>
-                  <span className="text-xs text-foreground-subtle">
-                    (Ticket #{result.winningEntryNumber})
-                  </span>
-                </div>
-              ))}
+              {drawingResults.map((result) => {
+                const prizeName = rafflePrizes.find(rp => rp.position === result.position)?.prize?.name
+                return (
+                  <div
+                    key={result.userId}
+                    className="flex items-center gap-3 p-3 bg-background-tertiary rounded-md"
+                  >
+                    <span className="font-display font-bold text-neon-yellow">
+                      #{result.position}
+                    </span>
+                    <Avatar
+                      src={result.avatarUrl}
+                      fallback={result.displayName}
+                      size="sm"
+                    />
+                    <span className="font-medium text-foreground">{result.displayName}</span>
+                    {prizeName && (
+                      <span className="text-xs text-neon-yellow ml-auto">{prizeName}</span>
+                    )}
+                    <span className="text-xs text-foreground-subtle">
+                      (Ticket #{result.winningEntryNumber})
+                    </span>
+                  </div>
+                )
+              })}
             </div>
           </div>
         )}
@@ -349,11 +453,16 @@ export default function AdminRaffleDetailPage() {
                 >
                   <span className={cn(
                     'font-display font-bold text-lg w-8',
+                    winner.position === 0 && 'text-neon-green',
                     winner.position === 1 && 'text-neon-yellow',
                     winner.position === 2 && 'text-foreground-muted',
                     winner.position === 3 && 'text-neon-pink'
                   )}>
-                    #{winner.position}
+                    {winner.position === 0 ? (
+                      <Crown className="h-5 w-5" />
+                    ) : (
+                      `#${winner.position}`
+                    )}
                   </span>
                   <Avatar
                     src={winner.user?.avatar_url}
@@ -364,18 +473,34 @@ export default function AdminRaffleDetailPage() {
                     <p className="font-display font-bold text-foreground">
                       {winner.user?.display_name || 'Winner'}
                     </p>
-                    {winner.winning_entry_number && (
-                      <p className="text-xs text-foreground-subtle">
-                        Winning ticket: #{winner.winning_entry_number}
-                      </p>
+                    <p className="text-xs text-foreground-subtle">
+                      {winner.position === 0
+                        ? 'Top Contributor (Guaranteed)'
+                        : winner.winning_entry_number
+                          ? `Winning ticket: #${winner.winning_entry_number}`
+                          : ''
+                      }
+                    </p>
+                    {winner.prize && (
+                      <p className="text-xs text-neon-yellow">{winner.prize.name}</p>
+                    )}
+                    {winner.user?.email && (
+                      <p className="text-xs text-foreground-subtle">Contact: {winner.user.email}</p>
                     )}
                   </div>
-                  <div className="flex items-center gap-2">
+                  <div className="flex flex-col items-end gap-1">
                     {winner.claimed ? (
-                      <Badge className="bg-neon-green/20 text-neon-green border-neon-green">
-                        <Check className="h-3 w-3 mr-1" />
-                        Claimed
-                      </Badge>
+                      <>
+                        <Badge className="bg-neon-green/20 text-neon-green border-neon-green">
+                          <Check className="h-3 w-3 mr-1" />
+                          Claimed
+                        </Badge>
+                        {winner.claimed_at && (
+                          <span className="text-[10px] text-foreground-subtle">
+                            {new Date(winner.claimed_at).toLocaleDateString('en-US', { timeZone: 'Pacific/Honolulu', month: 'short', day: 'numeric' })}
+                          </span>
+                        )}
+                      </>
                     ) : (
                       <Button
                         size="sm"
@@ -392,43 +517,46 @@ export default function AdminRaffleDetailPage() {
           </div>
         )}
 
-        {/* Entries List */}
+        {/* Entries List (auto-entries from points) */}
         <div className="mt-4">
           <h2 className="font-display font-bold text-foreground mb-2 flex items-center gap-2">
             <Users className="h-4 w-4 text-neon-blue" />
-            Entries ({entries.length} participants)
+            Entries ({autoEntries.length} participants, {totalAutoEntries.toLocaleString()} total entries)
           </h2>
 
-          {entries.length === 0 ? (
+          {autoEntries.length === 0 ? (
             <div className="scoreboard-panel p-6 text-center">
-              <p className="text-foreground-muted">No entries yet</p>
+              <p className="text-foreground-muted">No entries yet — users earn entries by submitting scores</p>
             </div>
           ) : (
             <div className="space-y-2">
-              {entries.map((entry, index) => (
+              {autoEntries.map((entry, index) => (
                 <div
-                  key={entry.id}
-                  className="scoreboard-panel p-3 flex items-center gap-4"
+                  key={entry.userId}
+                  className={cn(
+                    'scoreboard-panel p-3 flex items-center gap-4',
+                    index === 0 && 'border-neon-green/30'
+                  )}
                 >
                   <span className="font-mono text-foreground-subtle w-6 text-right">
                     {index + 1}.
                   </span>
+                  {index === 0 && topContributorPrize && (
+                    <Crown className="h-4 w-4 text-neon-green flex-shrink-0" />
+                  )}
                   <Avatar
-                    src={entry.user?.avatar_url}
-                    fallback={entry.user?.display_name || 'U'}
+                    src={entry.avatarUrl}
+                    fallback={entry.displayName || 'U'}
                     size="sm"
                   />
                   <div className="flex-1">
                     <p className="font-medium text-foreground">
-                      {entry.user?.display_name || 'User'}
+                      {entry.displayName || 'User'}
                     </p>
                   </div>
                   <div className="text-right">
                     <p className="font-display font-bold text-neon-blue">
-                      {entry.entry_count} {entry.entry_count === 1 ? 'entry' : 'entries'}
-                    </p>
-                    <p className="text-xs text-foreground-subtle">
-                      {entry.points_used} pts used
+                      {entry.entryCount} {entry.entryCount === 1 ? 'entry' : 'entries'}
                     </p>
                   </div>
                 </div>

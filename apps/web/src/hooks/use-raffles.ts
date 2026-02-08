@@ -1,7 +1,8 @@
 'use client'
 
-import { useState, useEffect, useCallback, useMemo } from 'react'
+import { useState, useEffect, useCallback, useMemo, useRef } from 'react'
 import { createClient } from '@/lib/supabase/client'
+import { autoTransitionRaffleStatuses } from '@/lib/raffle/status'
 import type { RaffleWithPrize, RaffleEntry, RaffleWinnerWithDetails } from '@/types/database'
 
 interface UseRafflesOptions {
@@ -21,6 +22,7 @@ export function useRaffles({ status = 'open', limit = 10 }: UseRafflesOptions = 
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const supabase = useMemo(() => createClient(), [])
+  const transitionedRef = useRef(false)
 
   const fetchRaffles = useCallback(async () => {
     if (!supabase) {
@@ -31,6 +33,12 @@ export function useRaffles({ status = 'open', limit = 10 }: UseRafflesOptions = 
 
     setIsLoading(true)
     setError(null)
+
+    // Auto-transition stale statuses once per mount
+    if (!transitionedRef.current) {
+      transitionedRef.current = true
+      await autoTransitionRaffleStatuses()
+    }
 
     let query = supabase
       .from('raffles')
