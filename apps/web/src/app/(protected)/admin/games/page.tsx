@@ -215,11 +215,15 @@ export default function AdminGamesPage() {
 
   // Update game
   const handleUpdateGame = async () => {
-    if (!supabase || !editingGame) return
+    if (!supabase || !editingGame || !user) return
 
     setIsSaving(true)
     try {
-      const updateData = {
+      const scoreChanged =
+        formData.home_score !== editingGame.home_score ||
+        formData.away_score !== editingGame.away_score
+
+      const updateData: Record<string, unknown> = {
         status: formData.status,
         game_type: formData.game_type,
         scheduled_at: formData.scheduled_at,
@@ -238,6 +242,14 @@ export default function AdminGamesPage() {
         away_team_source_type: formData.away_team_source_type || null,
       }
 
+      // Add verification metadata when scores change
+      if (scoreChanged) {
+        updateData.verified_by_user_id = user.id
+        updateData.verified_at = new Date().toISOString()
+        updateData.verification_method = 'manual'
+        updateData.last_score_update_at = new Date().toISOString()
+      }
+
       const { data: updatedGame, error } = await supabase
         .from('games')
         .update(updateData as never)
@@ -251,6 +263,30 @@ export default function AdminGamesPage() {
         .single()
 
       if (error) throw error
+
+      // Log to audit trail when scores change
+      if (scoreChanged) {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const editOfficialSubId = (editingGame as any).official_submission_id as string | null
+        const { error: logError } = await supabase
+          .from('score_promotion_log')
+          .insert({
+            game_id: editingGame.id,
+            submission_id: editOfficialSubId || '00000000-0000-0000-0000-000000000000',
+            promotion_type: 'admin_manual',
+            home_score: formData.home_score,
+            away_score: formData.away_score,
+            promoted_by_user_id: user.id,
+            previous_home_score: editingGame.home_score,
+            previous_away_score: editingGame.away_score,
+            previous_submission_id: editOfficialSubId,
+            metadata: { source: 'admin_game_form' },
+          } as never)
+
+        if (logError) {
+          console.error('Failed to log admin score change:', logError)
+        }
+      }
 
       if (updatedGame) {
         setGames(prev => prev.map(g =>
@@ -298,20 +334,62 @@ export default function AdminGamesPage() {
     gameId: string,
     updates: { home_score?: number; away_score?: number; status?: GameStatus }
   ) => {
-    if (!supabase) return
+    if (!supabase || !user) return
 
     const endTimer = perf.start('Admin Games: Quick Update Score')
     try {
+      // Capture previous state for audit trail
+      const currentGame = games.find((g) => g.id === gameId)
+      const previousHomeScore = currentGame?.home_score ?? null
+      const previousAwayScore = currentGame?.away_score ?? null
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const officialSubId = (currentGame as any)?.official_submission_id as string | null
+      const hasScoreChange = updates.home_score !== undefined || updates.away_score !== undefined
+
+      // Update game with verification metadata when scores change
+      const updatePayload = hasScoreChange
+        ? {
+            ...updates,
+            verified_by_user_id: user.id,
+            verified_at: new Date().toISOString(),
+            verification_method: 'manual',
+            is_verified: true,
+            last_score_update_at: new Date().toISOString(),
+          }
+        : updates
+
       const { error } = await supabase
         .from('games')
-        .update(updates as never)
+        .update(updatePayload as never)
         .eq('id', gameId)
 
       if (error) throw error
 
+      // Log to audit trail when scores change
+      if (hasScoreChange) {
+        const { error: logError } = await supabase
+          .from('score_promotion_log')
+          .insert({
+            game_id: gameId,
+            submission_id: officialSubId || '00000000-0000-0000-0000-000000000000',
+            promotion_type: 'admin_manual',
+            home_score: updates.home_score ?? previousHomeScore ?? 0,
+            away_score: updates.away_score ?? previousAwayScore ?? 0,
+            promoted_by_user_id: user.id,
+            previous_home_score: previousHomeScore,
+            previous_away_score: previousAwayScore,
+            previous_submission_id: officialSubId,
+            metadata: { source: 'admin_quick_update' },
+          } as never)
+
+        if (logError) {
+          console.error('Failed to log admin score change:', logError)
+        }
+      }
+
       setGames((prev) =>
         prev.map((g) =>
-          g.id === gameId ? { ...g, ...updates } : g
+          g.id === gameId ? { ...g, ...updates } as GameWithTeams : g
         )
       )
       toast({ type: 'success', text: 'Score updated' })

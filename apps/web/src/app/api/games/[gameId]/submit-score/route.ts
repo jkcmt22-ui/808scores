@@ -111,6 +111,9 @@ export async function POST(
         rate_limited: 'Too many submissions. Please wait a few minutes.',
         cooldown: 'Please wait 30 seconds between submissions.',
         game_score_locked: 'This game\'s score is locked. Only trusted reporters can update it.',
+        game_not_active: 'Scores can only be submitted for active games.',
+        game_not_found: 'Game not found.',
+        global_rate_limited: 'Too many submissions across games. Please wait a few minutes.',
       }
       return NextResponse.json(
         { error: 'Submission not allowed', message: messages[rateLimit?.reason] || rateLimit?.reason },
@@ -149,6 +152,14 @@ export async function POST(
 
     const gameData = game as unknown as GameRow
 
+    // 6b. Block submissions for non-active games (defense in depth — SQL also checks)
+    if (!['scheduled', 'in_progress'].includes(gameData.status)) {
+      return NextResponse.json(
+        { error: 'Game not active', message: 'Scores can only be submitted for active games' },
+        { status: 400 }
+      )
+    }
+
     // 7. Calculate points — simplified 1:1 system
     // 1 point per submission, +1 for first reporter, 3x for golden game
     const MAX_POINTS_PER_GAME = 3
@@ -178,12 +189,23 @@ export async function POST(
     // Base: 1 point per submission
     const basePoints = 1
 
+    // Check if first to report for this game (any user, any status)
+    const { count: priorSubmissionCount } = await supabase
+      .from('submissions')
+      .select('id', { count: 'exact', head: true })
+      .eq('game_id', gameId)
+      .neq('user_id', user.id)
+
+    const isFirstToReport = (priorSubmissionCount ?? 0) === 0
+    const firstToReportBonus = isFirstToReport ? 1 : 0
+
     // Golden game multiplier (3x)
     const goldenGameMultiplier = gameData.golden_game ? 3 : 1
 
+    const subtotal = basePoints + firstToReportBonus
     const remainingGameCap = Math.max(0, MAX_POINTS_PER_GAME - currentGamePoints)
     const totalPoints = Math.min(
-      Math.round(basePoints * goldenGameMultiplier),
+      Math.round(subtotal * goldenGameMultiplier),
       remainingGameCap,
       remainingDailyCap
     )
@@ -313,6 +335,7 @@ export async function POST(
     if (submissionStatus === 'published') {
       const pointsBreakdown = {
         base: basePoints,
+        first_to_report: firstToReportBonus,
         golden_game_multiplier: goldenGameMultiplier,
         submission_type,
       }

@@ -222,9 +222,16 @@ export const GameCard = React.memo(function GameCard({ game, showSport = false }
             )}
           </div>
           <div className="flex items-center gap-2">
-            {game.is_verified && (
-              <span className="text-[10px] neon-text-green font-display font-bold uppercase tracking-widest">
-                Verified
+            {(game.is_verified || game.verification_method) && (
+              <span className={cn(
+                "text-[10px] font-display font-bold uppercase tracking-widest",
+                game.is_verified ? "neon-text-green" :
+                game.verification_method === 'majority' ? "text-neon-blue" :
+                "text-neon-yellow"
+              )}>
+                {game.is_verified ? 'Verified' :
+                 game.verification_method === 'majority' ? 'Community' :
+                 game.verification_method === 'timer' ? 'Reported' : null}
               </span>
             )}
             <div className="flex items-center gap-1 text-neon-blue">

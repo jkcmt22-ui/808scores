@@ -22,6 +22,7 @@ export interface SubmissionGroup {
   homeScore: number
   awayScore: number
   submissions: Submission[]
+  uniqueUserIds: Set<string>
   hasTrustedReporter: boolean
 }
 
@@ -48,12 +49,14 @@ export function groupSubmissionsByScore(submissions: Submission[]): SubmissionGr
         homeScore: sub.home_score,
         awayScore: sub.away_score,
         submissions: [],
+        uniqueUserIds: new Set<string>(),
         hasTrustedReporter: false,
       })
     }
 
     const group = groups.get(key)!
     group.submissions.push(sub)
+    if (sub.user_id) group.uniqueUserIds.add(sub.user_id)
   }
 
   return Array.from(groups.values())
@@ -76,21 +79,21 @@ export function findMajorityGroup(
     )
   }
 
-  // Sort by: trusted reporter first, then by submission count
+  // Sort by: trusted reporter first, then by unique user count
   const sorted = [...groups].sort((a, b) => {
     if (a.hasTrustedReporter && !b.hasTrustedReporter) return -1
     if (!a.hasTrustedReporter && b.hasTrustedReporter) return 1
-    return b.submissions.length - a.submissions.length
+    return b.uniqueUserIds.size - a.uniqueUserIds.size
   })
 
   const top = sorted[0]
   const second = sorted[1]
 
-  // Check if there's a clear majority (>50% of submissions)
-  const totalSubmissions = groups.reduce((sum, g) => sum + g.submissions.length, 0)
-  const majorityThreshold = totalSubmissions / 2
+  // Check if there's a clear majority (>50% of unique users)
+  const totalUniqueUsers = new Set(groups.flatMap((g) => [...g.uniqueUserIds])).size
+  const majorityThreshold = totalUniqueUsers / 2
 
-  if (top.submissions.length > majorityThreshold) {
+  if (top.uniqueUserIds.size > majorityThreshold) {
     return top
   }
 
@@ -129,8 +132,8 @@ export async function verifySubmission(
   const allSubmissions = [...existingSubmissions, newSubmission]
   const groups = groupSubmissionsByScore(allSubmissions)
 
-  // Rule 2: 2+ matching submissions publish instantly
-  const matchingGroup = groups.find((g) => g.submissions.length >= 2)
+  // Rule 2: 2+ distinct users with matching submissions publish instantly
+  const matchingGroup = groups.find((g) => g.uniqueUserIds.size >= 2)
   if (matchingGroup) {
     // Check if new submission matches
     const newMatches =

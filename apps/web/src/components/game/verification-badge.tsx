@@ -1,13 +1,15 @@
 'use client'
 
-import { CheckCircle, Clock, AlertCircle } from 'lucide-react'
+import { CheckCircle, Clock, AlertCircle, Users } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import type { VerificationMethod } from '@/types/database'
 
-type VerificationStatus = 'verified' | 'unverified' | 'pending' | 'none'
+type VerificationStatus = 'verified' | 'community_verified' | 'reported' | 'unverified' | 'pending' | 'none'
 
 interface VerificationBadgeProps {
   isVerified: boolean
   verifiedAt?: string | null
+  verificationMethod?: VerificationMethod | null
   hasPendingSubmissions?: boolean
   className?: string
   size?: 'sm' | 'md' | 'lg'
@@ -17,17 +19,25 @@ interface VerificationBadgeProps {
 export function VerificationBadge({
   isVerified,
   verifiedAt,
+  verificationMethod,
   hasPendingSubmissions = false,
   className,
   size = 'sm',
   showLabel = true,
 }: VerificationBadgeProps) {
-  // Determine verification status
+  // Determine verification status based on method + verified flag
   let status: VerificationStatus = 'none'
   if (hasPendingSubmissions) {
     status = 'pending'
   } else if (isVerified && verifiedAt) {
+    // Verified by trusted reporter or admin
     status = 'verified'
+  } else if (!isVerified && verificationMethod === 'majority') {
+    // Community confirmed (2+ users agreed)
+    status = 'community_verified'
+  } else if (!isVerified && verificationMethod === 'timer') {
+    // Single submission auto-promoted
+    status = 'reported'
   } else if (!isVerified) {
     status = 'unverified'
   }
@@ -52,6 +62,16 @@ export function VerificationBadge({
       label: 'Verified',
       classes: 'bg-neon-green/20 text-neon-green border-neon-green/30',
     },
+    community_verified: {
+      icon: Users,
+      label: 'Community',
+      classes: 'bg-neon-blue/20 text-neon-blue border-neon-blue/30',
+    },
+    reported: {
+      icon: AlertCircle,
+      label: 'Reported',
+      classes: 'bg-neon-yellow/20 text-neon-yellow border-neon-yellow/30',
+    },
     unverified: {
       icon: AlertCircle,
       label: 'Unverified',
@@ -74,6 +94,15 @@ export function VerificationBadge({
 
   if (!Icon) return null
 
+  const tooltips: Record<VerificationStatus, string> = {
+    verified: `Verified${verifiedAt ? ` at ${new Date(verifiedAt).toLocaleString()}` : ''}`,
+    community_verified: 'Score confirmed by multiple reporters',
+    reported: 'Score reported by a single user',
+    unverified: 'Score not yet verified by trusted reporter',
+    pending: 'Score update pending',
+    none: '',
+  }
+
   return (
     <span
       className={cn(
@@ -82,13 +111,7 @@ export function VerificationBadge({
         config.classes,
         className
       )}
-      title={
-        status === 'verified'
-          ? `Verified${verifiedAt ? ` at ${new Date(verifiedAt).toLocaleString()}` : ''}`
-          : status === 'unverified'
-          ? 'Score not yet verified by trusted reporter'
-          : 'Score update pending'
-      }
+      title={tooltips[status]}
     >
       <Icon className={iconSizes[size]} />
       {showLabel && <span>{config.label}</span>}
@@ -100,16 +123,34 @@ export function VerificationBadge({
 export function VerificationIcon({
   isVerified,
   verifiedAt,
+  verificationMethod,
   className,
 }: {
   isVerified: boolean
   verifiedAt?: string | null
+  verificationMethod?: VerificationMethod | null
   className?: string
 }) {
   if (isVerified && verifiedAt) {
     return (
       <span title="Verified score">
         <CheckCircle className={cn('h-4 w-4 text-neon-green', className)} />
+      </span>
+    )
+  }
+
+  if (verificationMethod === 'majority') {
+    return (
+      <span title="Community confirmed score">
+        <Users className={cn('h-4 w-4 text-neon-blue', className)} />
+      </span>
+    )
+  }
+
+  if (verificationMethod === 'timer') {
+    return (
+      <span title="Reported score">
+        <AlertCircle className={cn('h-4 w-4 text-neon-yellow', className)} />
       </span>
     )
   }

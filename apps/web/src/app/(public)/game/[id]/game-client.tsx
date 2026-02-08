@@ -392,6 +392,7 @@ export function GameClient({ params }: GamePageProps) {
               <VerificationBadge
                 isVerified={game.is_verified}
                 verifiedAt={(game as { verified_at?: string | null }).verified_at}
+                verificationMethod={game.verification_method}
                 size="md"
               />
             </div>
