@@ -70,6 +70,7 @@ export default function ProfileSettingsPage() {
   const [marketingOptIn, setMarketingOptIn] = useState(false)
   const [isSavingNotifications, setIsSavingNotifications] = useState(false)
   const [notificationsSaved, setNotificationsSaved] = useState(false)
+  const [notificationsError, setNotificationsError] = useState(false)
 
   // Push notification browser state
   const [pushSupported, setPushSupported] = useState(false)
@@ -156,6 +157,7 @@ export default function ProfileSettingsPage() {
     if (!user) return
 
     setIsSavingNotifications(true)
+    setNotificationsError(false)
     try {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const { error } = await (supabase as any)
@@ -173,6 +175,8 @@ export default function ProfileSettingsPage() {
       setTimeout(() => setNotificationsSaved(false), 2000)
     } catch (err) {
       console.error('Failed to save notification preferences:', err)
+      setNotificationsError(true)
+      setTimeout(() => setNotificationsError(false), 3000)
     } finally {
       setIsSavingNotifications(false)
     }
@@ -643,6 +647,11 @@ export default function ProfileSettingsPage() {
                   <>
                     <Check className="h-4 w-4 mr-2" />
                     Saved
+                  </>
+                ) : notificationsError ? (
+                  <>
+                    <X className="h-4 w-4 mr-2" />
+                    Failed to save — try again
                   </>
                 ) : (
                   'Save Preferences'

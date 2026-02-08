@@ -593,7 +593,7 @@ export default function ScheduleAdminPage() {
   }
 
   // Duplicate game (for recurring schedule)
-  const handleDuplicateGame = async (game: GameWithTeams, daysToAdd: number) => {
+  const handleDuplicateGame = async (game: GameWithTeams & { season_year?: string; tournament_id?: string | null; tournament_round?: string | null; predictions_enabled?: boolean }, daysToAdd: number) => {
     if (!supabase) {
       toast({ type: 'error', text: 'Database connection not available' })
       return
@@ -617,6 +617,10 @@ export default function ScheduleAdminPage() {
           game_type: game.game_type,
           home_score: 0,
           away_score: 0,
+          season_year: game.season_year,
+          tournament_id: game.tournament_id || null,
+          tournament_round: game.tournament_round || null,
+          predictions_enabled: game.predictions_enabled ?? false,
         } as never)
 
       if (error) throw error

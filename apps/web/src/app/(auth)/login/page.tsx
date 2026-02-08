@@ -179,7 +179,10 @@ function LoginForm() {
     setError(null)
     setMessage(null)
 
-    if (!email || !password) {
+    const trimmedEmail = email.trim()
+    const trimmedPassword = password.trim()
+
+    if (!trimmedEmail || !trimmedPassword) {
       setError('Please enter email and password')
       return
     }
@@ -195,8 +198,8 @@ function LoginForm() {
       if (isSignUp) {
         // Sign up with terms acceptance and marketing preferences
         const { error: signUpError } = await supabase.auth.signUp({
-          email,
-          password,
+          email: trimmedEmail,
+          password: trimmedPassword,
           options: {
             emailRedirectTo: `${window.location.origin}/api/auth/callback?redirect=${encodeURIComponent(redirect)}`,
             data: {
@@ -214,8 +217,8 @@ function LoginForm() {
       } else {
         // Sign in
         const { error: signInError } = await supabase.auth.signInWithPassword({
-          email,
-          password,
+          email: trimmedEmail,
+          password: trimmedPassword,
         })
 
         if (signInError) throw signInError
