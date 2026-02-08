@@ -57,7 +57,7 @@ export function RaffleCard({
                     raffle.raffle_type === 'season_end' ? 'Season End' : 'Special'
 
   // Calculate win probability (approximate)
-  const winProbability = totalEntries > 0 && userPoints > 0
+  const winProbability = totalEntries > 0 && userPoints > 0 && raffle.winner_count > 0
     ? Math.min(100, (userPoints / totalEntries) * 100 * raffle.winner_count)
     : 0
 

@@ -60,7 +60,7 @@ export function useNotifications(userId: string | undefined) {
 
   useEffect(() => {
     // Prevent double-fetch on mount (React StrictMode)
-    if (hasFetchedRef.current && !userId) return
+    if (hasFetchedRef.current) return
     hasFetchedRef.current = true
     fetchNotifications()
   }, [fetchNotifications, userId])

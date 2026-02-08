@@ -56,3 +56,8 @@ Tracking all bugs fixed to prevent circular fixes.
 41. `sameLeague()` returns true when both schools have null league (`null === null`) — corrupts league standings for unaffiliated schools (added null guard)
 42. Profile `useEffect` depends on `profile` object reference — triggers repeated fetches every render (changed to `profile?.id`)
 43. Settings page bare `createClient()` creates new Supabase client on every render — wrapped in `useMemo`
+
+## Session 2026-02-08 (batch 16)
+44. `use-security.ts` bare `createClient()` in both `useSecurity` and `useTrustScore` — useEffect re-runs every render (wrapped both in `useMemo`)
+45. `use-notifications.ts` StrictMode double-fetch guard `hasFetchedRef.current && !userId` allows re-fetch when userId present (removed `&& !userId`)
+46. `raffle-card.tsx` win probability shows `Infinity%`/`NaN%` when `winner_count` is 0 or undefined (added `raffle.winner_count > 0` guard)
