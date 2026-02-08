@@ -22,11 +22,16 @@ import { cn } from '@/lib/utils'
 import { ConfirmModal } from '@/components/admin/confirm-modal'
 import type { ChatMessage, User, Game, School, Sport } from '@/types/database'
 
+interface TeamWithSchool {
+  id: string
+  school: Pick<School, 'id' | 'name' | 'short_name'>
+}
+
 interface MessageWithDetails extends ChatMessage {
   user: Pick<User, 'id' | 'display_name' | 'email' | 'phone'>
   game: Game & {
-    home_team: School
-    away_team: School
+    home_team: TeamWithSchool
+    away_team: TeamWithSchool
     sport: Sport
   }
 }
@@ -119,8 +124,8 @@ export default function ModerationPage() {
         const matchesContent = msg.content.toLowerCase().includes(term)
         const matchesUser = msg.user?.display_name?.toLowerCase().includes(term) ||
           msg.user?.email?.toLowerCase().includes(term)
-        const matchesGame = msg.game?.home_team?.name.toLowerCase().includes(term) ||
-          msg.game?.away_team?.name.toLowerCase().includes(term)
+        const matchesGame = msg.game?.home_team?.school?.name.toLowerCase().includes(term) ||
+          msg.game?.away_team?.school?.name.toLowerCase().includes(term)
         if (!matchesContent && !matchesUser && !matchesGame) return false
       }
 
@@ -384,7 +389,7 @@ function MessageCard({
             </span>
             {message.game && (
               <span>
-                Game: {message.game.away_team?.short_name} @ {message.game.home_team?.short_name}
+                Game: {message.game.away_team?.school?.short_name} @ {message.game.home_team?.school?.short_name}
               </span>
             )}
             <span>

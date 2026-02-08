@@ -222,6 +222,7 @@ export default function AdminGamesPage() {
       const updateData = {
         status: formData.status,
         game_type: formData.game_type,
+        scheduled_at: formData.scheduled_at,
         home_score: formData.home_score,
         away_score: formData.away_score,
         current_period: formData.current_period || null,

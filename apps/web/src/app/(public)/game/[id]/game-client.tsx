@@ -107,6 +107,7 @@ export function GameClient({ params }: GamePageProps) {
       try {
         await navigator.share(shareData)
         setShareStatus('shared')
+        return
       } catch (err) {
         // User cancelled or error - fall through to clipboard
         if ((err as Error).name === 'AbortError') return
