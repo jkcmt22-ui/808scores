@@ -108,6 +108,8 @@ export function useGameStats(options: UseGameStatsOptions): UseGameStatsReturn {
       const month = parseInt(gameDate.toLocaleDateString('en-CA', { timeZone: 'Pacific/Honolulu', month: 'numeric' }))
       const year = parseInt(gameDate.toLocaleDateString('en-CA', { timeZone: 'Pacific/Honolulu', year: 'numeric' }))
       const seasonYear = month >= 8 ? `${year}-${year + 1}` : `${year - 1}-${year}`
+      // player_seasons.season_year is a number (just start year), team_rosters uses string
+      const seasonYearNum = month >= 8 ? year : year - 1
 
       // After migration 072, games.home_team_id references teams table directly
       // home_team and away_team objects include school data
@@ -163,7 +165,7 @@ export function useGameStats(options: UseGameStatsOptions): UseGameStatsReturn {
           .eq('school_id', schoolId)
           .eq('is_active', true)
           .eq('player_seasons.sport_id', gameWithDetails.sport_id)
-          .eq('player_seasons.season_year', seasonYear)
+          .eq('player_seasons.season_year', seasonYearNum)
 
         if (!fallbackError && fallbackPlayers) {
           return fallbackPlayers.map((row: any) => ({

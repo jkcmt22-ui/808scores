@@ -4,7 +4,7 @@
  * Hook for fetching and managing point event history.
  */
 
-import { useState, useEffect, useCallback, useMemo } from 'react'
+import { useState, useEffect, useCallback, useMemo, useRef } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import type { PointEvent } from '@/types/database'
 
@@ -19,6 +19,7 @@ export function usePointEvents(userId: string | undefined) {
   const [error, setError] = useState<string | null>(null)
   const [hasMore, setHasMore] = useState(true)
   const [page, setPage] = useState(0)
+  const pageRef = useRef(0)
 
   const supabase = useMemo(() => createClient(), [])
 
@@ -71,19 +72,22 @@ export function usePointEvents(userId: string | undefined) {
 
   // Initial fetch
   useEffect(() => {
+    pageRef.current = 0
     setPage(0)
     fetchEvents(0, false)
   }, [fetchEvents])
 
-  // Load more function
+  // Load more function (uses ref for synchronous page tracking)
   const loadMore = useCallback(() => {
-    const nextPage = page + 1
+    const nextPage = pageRef.current + 1
+    pageRef.current = nextPage
     setPage(nextPage)
     fetchEvents(nextPage, true)
-  }, [page, fetchEvents])
+  }, [fetchEvents])
 
   // Refresh function
   const refresh = useCallback(() => {
+    pageRef.current = 0
     setPage(0)
     fetchEvents(0, false)
   }, [fetchEvents])

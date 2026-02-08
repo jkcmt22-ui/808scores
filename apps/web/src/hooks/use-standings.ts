@@ -413,13 +413,11 @@ export function useStandingsSports() {
         setIsLoading(true)
         setError(null)
 
-        // Get current year
-        const currentYear = new Date().toLocaleDateString('en-CA', {
-          timeZone: 'Pacific/Honolulu',
-          year: 'numeric'
-        })
-        const seasonStart = `${currentYear}-01-01`
-        const seasonEnd = `${parseInt(currentYear) + 1}-01-01`
+        // Get school season date range (Aug 1 of start year to Aug 1 of end year)
+        const schoolYear = getCurrentSchoolYear() // e.g., "2025-2026"
+        const startYear = parseInt(schoolYear.split('-')[0])
+        const seasonStart = `${startYear}-08-01`
+        const seasonEnd = `${startYear + 1}-08-01`
 
         // Get sports that have final regular season games
         const { data: gamesData, error: gamesError } = await supabase
