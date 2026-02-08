@@ -337,6 +337,10 @@ export function useLiveGames(supabase: TypedSupabaseClient | null) {
     if (!supabase) return
 
     // Subscribe to live game updates
+    // No filter: we need to receive events when games transition OUT of
+    // 'in_progress' (e.g. to 'final') so the list updates. The old filter
+    // status=eq.in_progress only matched the NEW row value, so game-end
+    // events were silently dropped and ended games lingered on the live page.
     const channel = supabase
       .channel('live-games')
       .on(
@@ -345,7 +349,6 @@ export function useLiveGames(supabase: TypedSupabaseClient | null) {
           event: '*',
           schema: 'public',
           table: 'games',
-          filter: 'status=eq.in_progress',
         },
         () => {
           fetchLiveGames()
