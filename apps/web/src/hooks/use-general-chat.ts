@@ -185,9 +185,15 @@ export function useGeneralChat(
           table: 'general_chat_messages',
         },
         (payload) => {
+          const updated = payload.new as { id: string; is_hidden?: boolean }
+          if (updated.is_hidden) {
+            // Remove hidden messages (moderation)
+            setMessages(prev => prev.filter(m => m.id !== updated.id))
+            return
+          }
           setMessages(prev =>
             prev.map(m =>
-              m.id === payload.new.id
+              m.id === updated.id
                 ? { ...m, ...payload.new, user: m.user }
                 : m
             )

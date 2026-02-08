@@ -183,12 +183,23 @@ export function GameChat({ gameId }: GameChatProps) {
             }
           }
 
+          // Fetch reply_to data if this message is a reply
+          let replyData: any = null
+          if (newMessage.reply_to_id) {
+            const { data: replyResult } = await supabase
+              .from('chat_messages')
+              .select('id, content, user:users(display_name)')
+              .eq('id', newMessage.reply_to_id)
+              .single()
+            replyData = replyResult
+          }
+
           // Construct message with cached/fetched user data
           const msg: ChatMessageWithUser = {
             ...newMessage,
             user: userData,
             user_has_liked: false,
-            reply_to: null, // Reply data would need separate fetch if present
+            reply_to: replyData,
           }
 
           setMessages((prev) => [...prev, msg])
