@@ -18,6 +18,8 @@ export interface PendingSubmission {
   homeScore: number
   awayScore: number
   timeRemaining: string | null
+  isOvertime: boolean
+  overtimeCount: number
   hasPhoto: boolean
   hasLocation: boolean
   pointsEarned: number
@@ -209,6 +211,8 @@ export async function syncSubmission(
         away_score: submission.awayScore,
         period: submission.period,
         time_remaining: submission.timeRemaining,
+        is_overtime: submission.isOvertime,
+        overtime_count: submission.overtimeCount,
         photo_url: submission.hasPhoto ? 'pending_upload' : null,
         at_game: submission.hasLocation,
       }),

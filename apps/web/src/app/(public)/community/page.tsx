@@ -39,6 +39,7 @@ function MessageItem({
       await onDelete(message.id)
     } catch (err) {
       console.error('Failed to delete message:', err)
+    } finally {
       setIsDeleting(false)
     }
   }

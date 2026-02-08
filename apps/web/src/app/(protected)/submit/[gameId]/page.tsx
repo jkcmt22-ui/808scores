@@ -196,6 +196,8 @@ export default function SubmitPage({ params }: SubmitPageProps) {
     // If offline, queue the submission for later
     if (!online) {
       try {
+        const isOT = overtimePeriods.includes(period)
+        const otCount = isOT ? overtimePeriods.indexOf(period) + 1 : 0
         await addToQueue({
           gameId,
           gameName: `${awaySchool.short_name} @ ${homeSchool.short_name}`,
@@ -204,6 +206,8 @@ export default function SubmitPage({ params }: SubmitPageProps) {
           homeScore: parseInt(homeScore),
           awayScore: parseInt(awayScore),
           timeRemaining: timeRemaining || null,
+          isOvertime: isOT,
+          overtimeCount: otCount,
           hasPhoto,
           hasLocation,
           pointsEarned: calculatePoints(),

@@ -87,7 +87,7 @@ export async function updateSession(request: NextRequest) {
   // Single database query for user permissions (consolidates 2 queries into 1)
   let userData: { has_beta_access: boolean; is_admin: boolean; is_super_admin: boolean } | null = null
 
-  if (user && (!isPublicPath || isAdminPath)) {
+  if (user && (!isPublicPath || isAdminPath || path === '/beta-landing')) {
     const { data, error } = await supabase
       .rpc('get_user_permissions', { p_user_id: user.id })
 
