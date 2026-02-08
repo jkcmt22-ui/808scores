@@ -142,6 +142,7 @@ export async function POST(
 
     // 7. Calculate points (must match lib/points/calculator.ts logic)
     const MAX_POINTS_PER_GAME = 20
+    const MAX_DAILY_SUBMISSION_POINTS = 100
 
     // Query points already earned for this game by this user
     const { data: existingPoints } = await supabase
@@ -156,6 +157,14 @@ export async function POST(
       0
     )
 
+    // Query daily submission points (Hawaii day boundaries: midnight HST = 10:00 UTC)
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const { data: dailyPointsData } = await (supabase.rpc as any)('get_daily_submission_points', {
+      p_user_id: user.id,
+    })
+    const currentDailyPoints = (dailyPointsData as number) || 0
+    const remainingDailyCap = Math.max(0, MAX_DAILY_SUBMISSION_POINTS - currentDailyPoints)
+
     let basePoints = 0
     if (submission_type === 'final_score') basePoints = 10
     else if (submission_type === 'period_score') basePoints = 5
@@ -169,10 +178,11 @@ export async function POST(
     const goldenGameMultiplier = gameData.golden_game ? 3 : 1
     const trustedMultiplier = isTrustedOrHigher ? 2 : 1
 
-    const remainingCap = Math.max(0, MAX_POINTS_PER_GAME - currentGamePoints)
+    const remainingGameCap = Math.max(0, MAX_POINTS_PER_GAME - currentGamePoints)
     const totalPoints = Math.min(
       Math.round(subtotal * goldenGameMultiplier * trustedMultiplier),
-      remainingCap
+      remainingGameCap,
+      remainingDailyCap
     )
 
     // 8. Create submission record
