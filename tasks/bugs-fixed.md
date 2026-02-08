@@ -46,3 +46,8 @@ Tracking all bugs fixed to prevent circular fixes.
 35. Games edit `handleUpdateGame` silently drops `scheduled_at` from update payload (rescheduling broken)
 36. Moderation page type mismatch: query returns `home_team.school.name` but code accesses `home_team.name` (search crashes, display blank)
 37. Game share `handleShare` missing `return` after native share success (falls through to clipboard, overwrites status)
+
+## Session 2026-02-08 (batch 14)
+38. Submit success `pointsEarned || calculatePoints()` treats 0 as falsy — shows client estimate when server awards 0 points (changed to `??`)
+39. Game chat hooks called after conditional early return (Rules of Hooks violation) — moved `useChatLikes` above return, replaced bare `createClient()` with `useMemo`, added null guards
+40. Rejected trusted reporter application permanently blocks reapplication — now allows rejected users to see the form again

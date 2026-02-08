@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useRef, useCallback } from 'react'
+import { useState, useEffect, useRef, useCallback, useMemo } from 'react'
 import { Send, X, AlertCircle } from 'lucide-react'
 import { Button, Badge } from '@/components/ui'
 import { ChatMessageSkeleton } from '@/components/ui/skeleton'
@@ -45,17 +45,8 @@ export function GameChat({ gameId }: GameChatProps) {
   const [highlightedMessageId, setHighlightedMessageId] = useState<string | null>(null)
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const messagesContainerRef = useRef<HTMLDivElement>(null)
-  const supabase = createClient()
+  const supabase = useMemo(() => createClient(), [])
 
-  if (!supabase) {
-    return (
-      <div className="flex h-96 items-center justify-center">
-        <p className="text-foreground-muted text-sm">Unable to connect to chat</p>
-      </div>
-    )
-  }
-
-  // Chat likes hook
   const { likedMessageIds, toggleLike } = useChatLikes({
     gameId,
     userId: user?.id,
@@ -85,6 +76,7 @@ export function GameChat({ gameId }: GameChatProps) {
   }, [highlightedMessageId])
 
   const fetchMessages = useCallback(async () => {
+    if (!supabase) return
     const { data, error: fetchError } = await supabase
       .from('chat_messages')
       .select(`
@@ -135,6 +127,7 @@ export function GameChat({ gameId }: GameChatProps) {
   }, [supabase, gameId])
 
   useEffect(() => {
+    if (!supabase) return
     fetchMessages()
 
     // Subscribe to new messages
@@ -231,7 +224,7 @@ export function GameChat({ gameId }: GameChatProps) {
       .subscribe()
 
     return () => {
-      supabase.removeChannel(channel)
+      supabase!.removeChannel(channel)
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [supabase, gameId]) // fetchMessages removed to prevent subscription recreation

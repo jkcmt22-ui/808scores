@@ -211,8 +211,8 @@ export default function ApplyTrustedReporterPage() {
     )
   }
 
-  // Has pending or rejected application
-  if (existingApplication) {
+  // Has pending or approved application (rejected users can reapply)
+  if (existingApplication && existingApplication.status !== 'rejected') {
     return (
       <div className="min-h-screen bg-background">
         <header className="sticky top-0 z-40 border-b-2 border-border bg-background">
@@ -238,24 +238,6 @@ export default function ApplyTrustedReporterPage() {
               </p>
               <p className="text-xs text-foreground-subtle mb-4">
                 Submitted on {new Date(existingApplication.created_at).toLocaleDateString('en-US', { timeZone: 'Pacific/Honolulu' })}
-              </p>
-              <Button variant="outline" onClick={() => router.push('/profile')}>
-                Back to Profile
-              </Button>
-            </Card>
-          )}
-
-          {existingApplication.status === 'rejected' && (
-            <Card className="border-2 border-neon-pink/30 bg-neon-pink/5 p-6 text-center">
-              <AlertCircle className="mx-auto mb-4 h-12 w-12 text-neon-pink" />
-              <h2 className="font-display text-xl font-bold text-neon-pink mb-2">
-                Application Not Approved
-              </h2>
-              <p className="text-foreground-muted mb-2">
-                Unfortunately, your application was not approved at this time.
-              </p>
-              <p className="text-xs text-foreground-subtle mb-4">
-                You may reapply after building more reputation through verified score submissions.
               </p>
               <Button variant="outline" onClick={() => router.push('/profile')}>
                 Back to Profile

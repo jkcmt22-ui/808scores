@@ -277,7 +277,7 @@ export default function SubmitPage({ params }: SubmitPageProps) {
         isVerified: result.is_verified,
         gameUpdated: result.game_updated,
         message: result.message,
-        pointsEarned: result.submission?.points_earned || calculatePoints(),
+        pointsEarned: result.submission?.points_earned ?? calculatePoints(),
       })
 
       setStep('success')
