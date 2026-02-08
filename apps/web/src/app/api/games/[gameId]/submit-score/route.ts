@@ -234,6 +234,7 @@ export async function POST(
           official_submission_id: submissionData.id,
           last_score_update_at: new Date().toISOString(),
           verification_method: 'trusted',
+          score_locked: submission_type === 'final_score',
         } as never)
         .eq('id', gameId)
 

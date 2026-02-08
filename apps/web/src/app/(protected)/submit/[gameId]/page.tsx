@@ -99,6 +99,21 @@ export default function SubmitPage({ params }: SubmitPageProps) {
     )
   }
 
+  // Block submissions to finalized/verified games (general users only)
+  const isUserTrustedOrHigher = profile?.is_trusted_reporter || profile?.is_admin || profile?.is_super_admin
+  if (game.status === 'final' && game.is_verified && !isUserTrustedOrHigher) {
+    return (
+      <div className="flex min-h-screen flex-col items-center justify-center p-4 bg-background">
+        <CheckCircle className="mb-4 h-12 w-12 text-neon-green" />
+        <h1 className="mb-2 text-xl font-semibold text-foreground">Score Already Verified</h1>
+        <p className="mb-4 text-sm text-foreground-muted text-center">
+          This game&apos;s final score has been verified. Only trusted reporters can update it.
+        </p>
+        <Button onClick={() => router.push(`/game/${gameId}`)}>View Game</Button>
+      </div>
+    )
+  }
+
   // After migration 072: Get school data from team or directly
   const homeSchool = getHomeSchool(game)
   const awaySchool = getAwaySchool(game)
