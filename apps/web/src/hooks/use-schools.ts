@@ -55,8 +55,9 @@ export function useSchools(options: UseSchoolsOptions = {}): UseSchoolsReturn {
       }
 
       if (search) {
-        // Search by name, short_name, or mascot
-        query = query.or(`name.ilike.%${search}%,short_name.ilike.%${search}%,mascot.ilike.%${search}%`)
+        // Search by name, short_name, or mascot — sanitize PostgREST filter chars
+        const sanitized = search.replace(/[,()]/g, '')
+        query = query.or(`name.ilike.%${sanitized}%,short_name.ilike.%${sanitized}%,mascot.ilike.%${sanitized}%`)
       }
 
       const { data, error: fetchError } = await query

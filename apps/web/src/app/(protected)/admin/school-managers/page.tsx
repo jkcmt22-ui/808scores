@@ -160,7 +160,7 @@ export default function SchoolManagersAdminPage() {
     const { data, error } = await supabase
       .from('users')
       .select('id, display_name, email, avatar_url')
-      .or(`display_name.ilike.%${term}%,email.ilike.%${term}%`)
+      .or(`display_name.ilike.%${term.replace(/[,()]/g, '')}%,email.ilike.%${term.replace(/[,()]/g, '')}%`)
       .limit(10)
 
     if (error) {

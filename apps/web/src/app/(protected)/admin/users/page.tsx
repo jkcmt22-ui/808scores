@@ -96,7 +96,8 @@ export default function AdminUsersPage() {
 
       // Apply search filter
       if (debouncedSearch) {
-        query = query.or(`display_name.ilike.%${debouncedSearch}%,email.ilike.%${debouncedSearch}%,phone.ilike.%${debouncedSearch}%`)
+        const sanitized = debouncedSearch.replace(/[,()]/g, '')
+        query = query.or(`display_name.ilike.%${sanitized}%,email.ilike.%${sanitized}%,phone.ilike.%${sanitized}%`)
       }
 
       // Apply pagination and ordering

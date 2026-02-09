@@ -10,8 +10,7 @@ import { cn } from '@/lib/utils'
 import type { TrustedReporterCode } from '@/types/database'
 
 export default function AdminCodesPage() {
-  const { profile } = useAuth()
-  const { user } = useAuth()
+  const { profile, user } = useAuth()
   const supabase = useMemo(() => createClient(), [])
   const { toast } = useToast()
 
@@ -50,9 +49,11 @@ export default function AdminCodesPage() {
 
   const generateRandomCode = () => {
     const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'
+    const randomValues = new Uint32Array(8)
+    crypto.getRandomValues(randomValues)
     let code = ''
     for (let i = 0; i < 8; i++) {
-      code += chars.charAt(Math.floor(Math.random() * chars.length))
+      code += chars.charAt(randomValues[i] % chars.length)
     }
     return code
   }

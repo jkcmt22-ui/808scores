@@ -218,6 +218,13 @@ export function checkRandomReward(): { triggered: boolean; bonusPoints: number }
  */
 export function selectGoldenGames(gameIds: string[], percentage: number = 0.05): string[] {
   const count = Math.max(1, Math.floor(gameIds.length * percentage))
-  const shuffled = [...gameIds].sort(() => Math.random() - 0.5)
+  // Fisher-Yates shuffle with crypto-secure randomness
+  const shuffled = [...gameIds]
+  for (let i = shuffled.length - 1; i > 0; i--) {
+    const randomBuffer = new Uint32Array(1)
+    crypto.getRandomValues(randomBuffer)
+    const j = randomBuffer[0] % (i + 1);
+    [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]]
+  }
   return shuffled.slice(0, count)
 }

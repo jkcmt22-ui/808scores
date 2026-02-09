@@ -104,9 +104,11 @@ export default function BetaCodesPage() {
 
   const generateCode = () => {
     const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'
+    const randomValues = new Uint32Array(8)
+    crypto.getRandomValues(randomValues)
     let code = ''
     for (let i = 0; i < 8; i++) {
-      code += chars.charAt(Math.floor(Math.random() * chars.length))
+      code += chars.charAt(randomValues[i] % chars.length)
     }
     return code
   }

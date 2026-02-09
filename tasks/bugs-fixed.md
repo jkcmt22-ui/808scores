@@ -71,3 +71,8 @@ Tracking all bugs fixed to prevent circular fixes.
 50. Multi-prize drawing assigns same `prize_id` to all winners — `executeRaffleDrawing` only received first prize; added `prizeMap` param to map position→prize_id
 51. Submit page shows old 10/5/5 point badges and phantom +3/+2 photo/location bonuses — updated type badges to use `calculatePoints()`, changed photo/location to "Boosts trust"
 52. First-to-report bonus never calculated in API route — added `priorSubmissionCount` query and `firstToReportBonus` (+1) to `submit-score/route.ts`
+
+## Session 2026-02-08 (security & fairness)
+53. Trusted reporter / beta code generation uses `Math.random()` (predictable) — replaced with `crypto.getRandomValues()` in `admin/codes/page.tsx` and `admin/beta-codes/page.tsx`; also fixed duplicate `useAuth()` call in codes page
+54. PostgREST filter injection unfixed in 3 files — bug #1 sanitization (`.replace(/[,()]/g, '')`) was only applied to `use-search.ts`; now patched in `admin/users/page.tsx`, `admin/school-managers/page.tsx`, `use-schools.ts`
+55. Biased golden game selection using `.sort(() => Math.random() - 0.5)` — replaced with Fisher-Yates shuffle + `crypto.getRandomValues()` in `lib/points/calculator.ts`
