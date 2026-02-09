@@ -141,17 +141,20 @@ export default function AdminRaffleDetailPage() {
 
         const raffleMonth = raffle.month || undefined
 
-        // Use raffle_prizes if available, otherwise fall back to single prize
-        const prizeId = rafflePrizes.length > 0
-          ? rafflePrizes[0]?.prize_id || raffle.prize_id || undefined
-          : raffle.prize_id || undefined
+        // Build position→prize map for multi-prize raffles
+        const prizeMap = rafflePrizes.length > 0
+          ? Object.fromEntries(rafflePrizes.map(rp => [rp.position, rp.prize_id]))
+          : undefined
+
+        const fallbackPrizeId = raffle.prize_id || undefined
 
         const result = await executeRaffleDrawing(
           raffle.id,
           raffle.winner_count,
-          prizeId,
+          fallbackPrizeId,
           raffle.raffle_type as 'monthly' | 'season_end' | 'special',
-          raffleMonth
+          raffleMonth,
+          prizeMap
         )
 
         if (result.success && result.winners) {

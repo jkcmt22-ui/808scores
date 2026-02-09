@@ -66,3 +66,8 @@ Tracking all bugs fixed to prevent circular fixes.
 47. Tournament page `|| 0` score comparisons always pick away team when scores are null — champion determination and game card winner highlighting now use `!== null` checks matching `bracket.tsx`
 48. Profile `nextTier` logic falls through to `'standard'` for elite users — shows negative "points to standard" message (now returns `null` for elite, displays "Max tier reached!")
 49. Raffle entry modal `Math.floor(points / points_per_entry)` divides by zero when `points_per_entry` is 0 (added `> 0` guard)
+
+## Session 2026-02-08 (raffle system bugs)
+50. Multi-prize drawing assigns same `prize_id` to all winners — `executeRaffleDrawing` only received first prize; added `prizeMap` param to map position→prize_id
+51. Submit page shows old 10/5/5 point badges and phantom +3/+2 photo/location bonuses — updated type badges to use `calculatePoints()`, changed photo/location to "Boosts trust"
+52. First-to-report bonus never calculated in API route — added `priorSubmissionCount` query and `firstToReportBonus` (+1) to `submit-score/route.ts`

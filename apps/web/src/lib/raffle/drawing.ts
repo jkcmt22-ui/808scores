@@ -271,7 +271,8 @@ export async function executeRaffleDrawing(
   winnerCount: number,
   prizeId?: string,
   raffleType: RaffleType = 'monthly',
-  month?: string
+  month?: string,
+  prizeMap?: Record<number, string | null>
 ): Promise<{ success: boolean; winners?: DrawingResult[]; error?: string }> {
   const supabase = createClient()
   if (!supabase) {
@@ -294,7 +295,9 @@ export async function executeRaffleDrawing(
   const winnersToInsert = winners.map((winner) => ({
     raffle_id: raffleId,
     user_id: winner.userId,
-    prize_id: prizeId || null,
+    prize_id: (prizeMap && prizeMap[winner.position] !== undefined)
+      ? prizeMap[winner.position]
+      : prizeId || null,
     position: winner.position,
     winning_entry_number: winner.winningEntryNumber,
   }))

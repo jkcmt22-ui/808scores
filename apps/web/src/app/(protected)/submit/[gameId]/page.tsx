@@ -282,7 +282,7 @@ export default function SubmitPage({ params }: SubmitPageProps) {
               >
                 <p className="font-semibold font-display text-foreground">Final Score</p>
                 <p className="text-sm text-foreground-muted">The game has ended</p>
-                <Badge className="mt-2">+10 pts</Badge>
+                <Badge className="mt-2">+{calculatePoints()} pt{calculatePoints() !== 1 ? 's' : ''}</Badge>
               </button>
               <button
                 onClick={() => {
@@ -293,7 +293,7 @@ export default function SubmitPage({ params }: SubmitPageProps) {
               >
                 <p className="font-semibold font-display text-foreground">Period Score</p>
                 <p className="text-sm text-foreground-muted">End of quarter/half/set</p>
-                <Badge className="mt-2">+5 pts</Badge>
+                <Badge className="mt-2">+{calculatePoints()} pt{calculatePoints() !== 1 ? 's' : ''}</Badge>
               </button>
               <button
                 onClick={() => {
@@ -304,7 +304,7 @@ export default function SubmitPage({ params }: SubmitPageProps) {
               >
                 <p className="font-semibold font-display text-foreground">Live Update</p>
                 <p className="text-sm text-foreground-muted">Current score during play</p>
-                <Badge className="mt-2">+5 pts</Badge>
+                <Badge className="mt-2">+{calculatePoints()} pt{calculatePoints() !== 1 ? 's' : ''}</Badge>
               </button>
             </div>
           </div>
@@ -479,7 +479,7 @@ export default function SubmitPage({ params }: SubmitPageProps) {
                     <p className="text-sm text-foreground-muted">Photo of scoreboard</p>
                   </div>
                 </div>
-                <Badge variant={hasPhoto ? 'success' : 'secondary'}>+3 pts</Badge>
+                <Badge variant={hasPhoto ? 'success' : 'secondary'}>Boosts trust</Badge>
               </button>
 
               {/* Location */}
@@ -499,7 +499,7 @@ export default function SubmitPage({ params }: SubmitPageProps) {
                     <p className="text-sm text-foreground-muted">Verify you&apos;re at the game</p>
                   </div>
                 </div>
-                <Badge variant={hasLocation ? 'success' : 'secondary'}>+2 pts</Badge>
+                <Badge variant={hasLocation ? 'success' : 'secondary'}>Boosts trust</Badge>
               </button>
             </div>
 
