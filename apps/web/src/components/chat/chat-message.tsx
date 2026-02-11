@@ -149,7 +149,7 @@ export function ChatMessageComponent({
             </span>
           </div>
           <span className="text-foreground-subtle mt-0.5 block truncate">
-            {message.reply_to.content.substring(0, 80)}{message.reply_to.content.length > 80 ? '...' : ''}
+            {(message.reply_to.content || '').substring(0, 80)}{(message.reply_to.content || '').length > 80 ? '...' : ''}
           </span>
         </div>
       )}

@@ -110,7 +110,7 @@ export default function SchoolManagersAdminPage() {
       .from('school_managers')
       .select(`
         *,
-        user:users(id, display_name, email, avatar_url),
+        user:users!school_managers_user_id_fkey(id, display_name, email, avatar_url),
         school:schools(id, name, short_name)
       `)
       .eq('is_active', true)

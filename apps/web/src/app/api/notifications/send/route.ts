@@ -255,6 +255,10 @@ export async function POST(request: NextRequest) {
 
       if (followError) {
         console.error('Error fetching team followers:', followError)
+        return NextResponse.json(
+          { error: 'Failed to fetch team followers', message: followError.message },
+          { status: 500 }
+        )
       }
 
       if (teamFollowers && teamFollowers.length > 0) {

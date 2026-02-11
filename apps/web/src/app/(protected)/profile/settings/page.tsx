@@ -91,7 +91,7 @@ export default function ProfileSettingsPage() {
       setRegularSeasonNotifications((profile as { regular_season_notifications?: boolean }).regular_season_notifications ?? false)
       setMarketingOptIn((profile as { marketing_opt_in?: boolean }).marketing_opt_in ?? false)
     }
-  }, [profile])
+  }, [profile?.id])
 
   // Check push notification status on mount
   useEffect(() => {

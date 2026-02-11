@@ -76,3 +76,16 @@ Tracking all bugs fixed to prevent circular fixes.
 53. Trusted reporter / beta code generation uses `Math.random()` (predictable) — replaced with `crypto.getRandomValues()` in `admin/codes/page.tsx` and `admin/beta-codes/page.tsx`; also fixed duplicate `useAuth()` call in codes page
 54. PostgREST filter injection unfixed in 3 files — bug #1 sanitization (`.replace(/[,()]/g, '')`) was only applied to `use-search.ts`; now patched in `admin/users/page.tsx`, `admin/school-managers/page.tsx`, `use-schools.ts`
 55. Biased golden game selection using `.sort(() => Math.random() - 0.5)` — replaced with Fisher-Yates shuffle + `crypto.getRandomValues()` in `lib/points/calculator.ts`
+
+## Session 2026-02-08 (batch 18)
+56. Settings page `useEffect([profile])` resets unsaved form state on every profile object reference change — changed dependency to `[profile?.id]` (same pattern as bug #42, different file)
+57. Notification send route silently swallows `followError` — logs error but returns `{success: true, sent: 0}` indistinguishable from "no subscribers"; now returns 500 with error message
+58. `use-realtime.ts` three bare `createClient()` calls (lines 15, 90, 162) cause realtime subscriptions to be torn down and recreated every render — wrapped all three in `useMemo`
+
+## Session 2026-02-10 (admin console errors + new bugs)
+59. `use-chat-likes.ts` bare `createClient()` (line 21) causes `fetchLikes` callback to change every render → infinite re-fetch + realtime subscription torn down and recreated every render — wrapped in `useMemo`
+60. `use-push-notifications.ts` bare `createClient()` (line 34) causes `subscribe`/`unsubscribe` callbacks to be recreated every render — wrapped in `useMemo`
+61. `chat-message.tsx` `message.reply_to.content.substring()` (line 152) crashes with TypeError when reply parent content is null/undefined — added `|| ''` fallback
+62. Middleware matcher catches `/manifest.json` requests, runs auth/beta checks, returns HTML redirect → browser shows "Manifest: Line 1, column 1, Syntax error" — added `manifest\\.json` to exclusion pattern
+63. Admin users page queries `is_banned` column that was never migrated — created migration 093 to add `is_banned`, `ban_expires_at`, `ban_reason` columns
+64. School managers page `user:users(...)` join fails with "Could not embed because more than one relationship was found" (two FKs: `user_id` and `granted_by`) — specified FK explicitly: `user:users!school_managers_user_id_fkey(...)`

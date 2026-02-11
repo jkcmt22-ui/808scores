@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useCallback, useRef } from 'react'
+import { useState, useEffect, useCallback, useRef, useMemo } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import type { ChatLike } from '@/types/database'
 
@@ -18,7 +18,7 @@ interface UseChatLikesReturn {
 export function useChatLikes({ gameId, userId }: UseChatLikesOptions): UseChatLikesReturn {
   const [likedMessageIds, setLikedMessageIds] = useState<Set<string>>(new Set())
   const [isLoading, setIsLoading] = useState(true)
-  const supabase = createClient()
+  const supabase = useMemo(() => createClient(), [])
 
   // Fetch user's likes for this game's messages
   const fetchLikes = useCallback(async () => {
