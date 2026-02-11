@@ -104,3 +104,8 @@ Tracking all bugs fixed to prevent circular fixes.
 71. `verification-badge.tsx` `toLocaleString()` (line 98) displays verification time in user's browser timezone instead of Hawaii time — added `{ timeZone: 'Pacific/Honolulu' }`
 72. `admin/schedule/page.tsx` `toLocaleTimeString()` (line 1123) displays game times in admin schedule in user's browser timezone instead of Hawaii time — added `timeZone: 'Pacific/Honolulu'`
 73. `use-leaderboard.ts` `createClient()` (line 48) called inside useEffect creates a new Supabase client on every re-fetch — hoisted to `useMemo` at hook level
+
+## Session 2026-02-10 (batch 22)
+74. `use-predictions.ts` `submit`/`remove` callbacks set `setIsSubmitting(true)` with no try-catch-finally — if API throws, submit button stuck in loading forever — wrapped both in try-catch-finally (same pattern as bug #70, different functions)
+75. `application-card.tsx` `toLocaleDateString()` (lines 119, 121) with no locale or timezone — application dates display in browser's locale/timezone instead of Hawaii — added `'en-US', { timeZone: 'Pacific/Honolulu' }`
+76. `use-point-events.ts` `toLocaleDateString()` (line 156) missing `timeZone: 'Pacific/Honolulu'` — point event dates show wrong date near midnight for non-Hawaii users

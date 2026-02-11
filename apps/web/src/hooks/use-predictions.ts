@@ -107,20 +107,27 @@ export function useSubmitPrediction() {
       setIsSubmitting(true)
       setError(null)
 
-      const { prediction, error: err } = await apiSubmitPrediction(
-        gameId,
-        userId,
-        homeScore,
-        awayScore
-      )
+      try {
+        const { prediction, error: err } = await apiSubmitPrediction(
+          gameId,
+          userId,
+          homeScore,
+          awayScore
+        )
 
-      setIsSubmitting(false)
-      if (err) {
-        setError(err)
+        if (err) {
+          setError(err)
+          return null
+        }
+
+        return prediction
+      } catch (err) {
+        console.error('Error submitting prediction:', err)
+        setError(err instanceof Error ? err.message : 'Failed to submit prediction')
         return null
+      } finally {
+        setIsSubmitting(false)
       }
-
-      return prediction
     },
     []
   )
@@ -130,15 +137,22 @@ export function useSubmitPrediction() {
       setIsSubmitting(true)
       setError(null)
 
-      const { success, error: err } = await apiDeletePrediction(gameId, userId)
+      try {
+        const { success, error: err } = await apiDeletePrediction(gameId, userId)
 
-      setIsSubmitting(false)
-      if (err) {
-        setError(err)
+        if (err) {
+          setError(err)
+          return false
+        }
+
+        return success
+      } catch (err) {
+        console.error('Error deleting prediction:', err)
+        setError(err instanceof Error ? err.message : 'Failed to delete prediction')
         return false
+      } finally {
+        setIsSubmitting(false)
       }
-
-      return success
     },
     []
   )

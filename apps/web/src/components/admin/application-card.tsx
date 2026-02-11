@@ -116,9 +116,9 @@ export function ApplicationCard({
           )}
 
           <p className="text-xs text-foreground-subtle mt-2">
-            Applied: {new Date(application.created_at).toLocaleDateString()}
+            Applied: {new Date(application.created_at).toLocaleDateString('en-US', { timeZone: 'Pacific/Honolulu' })}
             {application.reviewed_at && (
-              <> &middot; Reviewed: {new Date(application.reviewed_at).toLocaleDateString()}</>
+              <> &middot; Reviewed: {new Date(application.reviewed_at).toLocaleDateString('en-US', { timeZone: 'Pacific/Honolulu' })}</>
             )}
           </p>
         </div>
