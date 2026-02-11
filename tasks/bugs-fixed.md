@@ -89,3 +89,8 @@ Tracking all bugs fixed to prevent circular fixes.
 62. Middleware matcher catches `/manifest.json` requests, runs auth/beta checks, returns HTML redirect → browser shows "Manifest: Line 1, column 1, Syntax error" — added `manifest\\.json` to exclusion pattern
 63. Admin users page queries `is_banned` column that was never migrated — created migration 093 to add `is_banned`, `ban_expires_at`, `ban_reason` columns
 64. School managers page `user:users(...)` join fails with "Could not embed because more than one relationship was found" (two FKs: `user_id` and `granted_by`) — specified FK explicitly: `user:users!school_managers_user_id_fkey(...)`
+
+## Session 2026-02-10 (batch 19)
+65. `admin/prizes/page.tsx` bare `createClient()` (line 63) causes `fetchPrizes` callback to change every render → useEffect triggers infinite re-fetch of prizes — wrapped in `useMemo`
+66. `admin/raffles/page.tsx` raffle_prizes delete (lines 394-398) has no error check — if delete fails, insert proceeds creating duplicate prize assignments — added error check + early return
+67. `submit/[gameId]/page.tsx` bare `createClient()` (line 39) creates new Supabase client on every render of high-traffic submit page — wrapped in `useMemo`

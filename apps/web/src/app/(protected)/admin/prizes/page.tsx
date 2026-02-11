@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useMemo } from 'react'
 import Image from 'next/image'
 import { Header } from '@/components/layout'
 import { Button, Input, Badge } from '@/components/ui'
@@ -60,7 +60,7 @@ export default function AdminPrizesPage() {
     confirmLabel?: string
   } | null>(null)
 
-  const supabase = createClient()
+  const supabase = useMemo(() => createClient(), [])
   const hasAdminAccess = profile?.is_admin === true || profile?.is_super_admin === true
   const { toast } = useToast()
 

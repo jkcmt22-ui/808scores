@@ -392,10 +392,16 @@ export default function AdminRafflesPage() {
       if (rafflePrizes.length > 0) {
         // Delete existing raffle_prizes for this raffle
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        await (supabase as any)
+        const { error: deleteError } = await (supabase as any)
           .from('raffle_prizes')
           .delete()
           .eq('raffle_id', raffleId)
+
+        if (deleteError) {
+          console.error('Error deleting old raffle prizes:', deleteError)
+          toast({ type: 'error', text: 'Failed to update prize assignments' })
+          return
+        }
 
         // Insert new ones
         const prizesToInsert = rafflePrizes
