@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import type { UserTier } from '@/types/database'
 
@@ -38,6 +38,7 @@ export function useLeaderboard(options: UseLeaderboardOptions = {}): UseLeaderbo
   const [userPoints, setUserPoints] = useState<number | null>(null)
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<Error | null>(null)
+  const supabase = useMemo(() => createClient(), [])
 
   useEffect(() => {
     const fetchLeaderboard = async () => {
@@ -45,8 +46,6 @@ export function useLeaderboard(options: UseLeaderboardOptions = {}): UseLeaderbo
       setError(null)
 
       try {
-        const supabase = createClient()
-
         if (!supabase) {
           setError(new Error('Database connection not available'))
           setIsLoading(false)

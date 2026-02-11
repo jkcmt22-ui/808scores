@@ -99,3 +99,8 @@ Tracking all bugs fixed to prevent circular fixes.
 68. `community/page.tsx` `message.reply_to.content.substring()` (line 79) crashes with TypeError when reply parent content is null — added `|| ''` fallback (same pattern as bug #61, different file)
 69. `game-chat.tsx` `replyingTo.content.substring()` (line 500) crashes with TypeError when reply content is null — added `|| ''` fallback (same pattern as bug #61, different file)
 70. `use-predictions.ts` four fetch functions (`fetchPrediction`, `fetchExpectation`, `fetchResults`, `checkOpen`) all call `setIsLoading(true)` with no try-catch-finally — if API throws, UI stuck in loading state forever — wrapped all four in try-catch-finally
+
+## Session 2026-02-10 (batch 21)
+71. `verification-badge.tsx` `toLocaleString()` (line 98) displays verification time in user's browser timezone instead of Hawaii time — added `{ timeZone: 'Pacific/Honolulu' }`
+72. `admin/schedule/page.tsx` `toLocaleTimeString()` (line 1123) displays game times in admin schedule in user's browser timezone instead of Hawaii time — added `timeZone: 'Pacific/Honolulu'`
+73. `use-leaderboard.ts` `createClient()` (line 48) called inside useEffect creates a new Supabase client on every re-fetch — hoisted to `useMemo` at hook level

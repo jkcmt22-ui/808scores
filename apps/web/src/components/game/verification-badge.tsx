@@ -95,7 +95,7 @@ export function VerificationBadge({
   if (!Icon) return null
 
   const tooltips: Record<VerificationStatus, string> = {
-    verified: `Verified${verifiedAt ? ` at ${new Date(verifiedAt).toLocaleString()}` : ''}`,
+    verified: `Verified${verifiedAt ? ` at ${new Date(verifiedAt).toLocaleString('en-US', { timeZone: 'Pacific/Honolulu' })}` : ''}`,
     community_verified: 'Score confirmed by multiple reporters',
     reported: 'Score reported by a single user',
     unverified: 'Score not yet verified by trusted reporter',

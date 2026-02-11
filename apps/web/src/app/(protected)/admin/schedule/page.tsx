@@ -1123,6 +1123,7 @@ function ScheduleGameRow({
   const gameTime = new Date(game.scheduled_at).toLocaleTimeString('en-US', {
     hour: 'numeric',
     minute: '2-digit',
+    timeZone: 'Pacific/Honolulu',
   })
 
   const getStatusColor = () => {
