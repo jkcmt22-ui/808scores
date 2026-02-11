@@ -497,7 +497,7 @@ export function GameChat({ gameId }: GameChatProps) {
         <div className="px-4 py-2 bg-background-tertiary border-t-2 border-border flex items-center gap-2">
           <span className="text-xs text-foreground-muted flex-1 truncate">
             Replying to <span className="text-neon-blue">@{replyingTo.user?.display_name || 'User'}</span>
-            : {replyingTo.message_type === 'gif' ? '[GIF]' : replyingTo.content.substring(0, 40)}...
+            : {replyingTo.message_type === 'gif' ? '[GIF]' : (replyingTo.content || '').substring(0, 40)}...
           </span>
           <button
             onClick={cancelReply}

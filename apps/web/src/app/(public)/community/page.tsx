@@ -76,7 +76,7 @@ function MessageItem({
           <span className="text-foreground-muted">Replying to </span>
           <span className="text-neon-blue">@{message.reply_to.user?.display_name || 'User'}</span>
           <span className="text-foreground-subtle">: </span>
-          <span className="truncate">{message.reply_to.content.substring(0, 50)}{message.reply_to.content.length > 50 ? '...' : ''}</span>
+          <span className="truncate">{(message.reply_to.content || '').substring(0, 50)}{(message.reply_to.content || '').length > 50 ? '...' : ''}</span>
         </div>
       )}
 

@@ -94,3 +94,8 @@ Tracking all bugs fixed to prevent circular fixes.
 65. `admin/prizes/page.tsx` bare `createClient()` (line 63) causes `fetchPrizes` callback to change every render → useEffect triggers infinite re-fetch of prizes — wrapped in `useMemo`
 66. `admin/raffles/page.tsx` raffle_prizes delete (lines 394-398) has no error check — if delete fails, insert proceeds creating duplicate prize assignments — added error check + early return
 67. `submit/[gameId]/page.tsx` bare `createClient()` (line 39) creates new Supabase client on every render of high-traffic submit page — wrapped in `useMemo`
+
+## Session 2026-02-10 (batch 20)
+68. `community/page.tsx` `message.reply_to.content.substring()` (line 79) crashes with TypeError when reply parent content is null — added `|| ''` fallback (same pattern as bug #61, different file)
+69. `game-chat.tsx` `replyingTo.content.substring()` (line 500) crashes with TypeError when reply content is null — added `|| ''` fallback (same pattern as bug #61, different file)
+70. `use-predictions.ts` four fetch functions (`fetchPrediction`, `fetchExpectation`, `fetchResults`, `checkOpen`) all call `setIsLoading(true)` with no try-catch-finally — if API throws, UI stuck in loading state forever — wrapped all four in try-catch-finally

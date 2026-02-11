@@ -39,10 +39,16 @@ export function usePrediction(gameId: string, userId: string | undefined) {
     }
 
     setIsLoading(true)
-    const { prediction: data, error: err } = await getUserPrediction(gameId, userId)
-    setPrediction(data)
-    setError(err || null)
-    setIsLoading(false)
+    try {
+      const { prediction: data, error: err } = await getUserPrediction(gameId, userId)
+      setPrediction(data)
+      setError(err || null)
+    } catch (err) {
+      console.error('Error fetching prediction:', err)
+      setError(err instanceof Error ? err.message : 'Failed to load prediction')
+    } finally {
+      setIsLoading(false)
+    }
   }, [gameId, userId])
 
   // Initial fetch
@@ -153,10 +159,16 @@ export function useAudienceExpectation(gameId: string) {
   // Fetch expectation
   const fetchExpectation = useCallback(async () => {
     setIsLoading(true)
-    const { expectation: data, error: err } = await getAudienceExpectation(gameId)
-    setExpectation(data)
-    setError(err || null)
-    setIsLoading(false)
+    try {
+      const { expectation: data, error: err } = await getAudienceExpectation(gameId)
+      setExpectation(data)
+      setError(err || null)
+    } catch (err) {
+      console.error('Error fetching audience expectation:', err)
+      setError(err instanceof Error ? err.message : 'Failed to load expectation')
+    } finally {
+      setIsLoading(false)
+    }
   }, [gameId])
 
   // Initial fetch
@@ -207,11 +219,17 @@ export function usePredictionResults(gameId: string) {
   // Fetch results
   const fetchResults = useCallback(async () => {
     setIsLoading(true)
-    const { results: data, entries: entriesData, error: err } = await getPredictionResults(gameId)
-    setResults(data)
-    setEntries(entriesData)
-    setError(err || null)
-    setIsLoading(false)
+    try {
+      const { results: data, entries: entriesData, error: err } = await getPredictionResults(gameId)
+      setResults(data)
+      setEntries(entriesData)
+      setError(err || null)
+    } catch (err) {
+      console.error('Error fetching prediction results:', err)
+      setError(err instanceof Error ? err.message : 'Failed to load results')
+    } finally {
+      setIsLoading(false)
+    }
   }, [gameId])
 
   // Initial fetch
@@ -259,10 +277,15 @@ export function usePredictionsOpen(gameId: string) {
 
   const checkOpen = useCallback(async () => {
     setIsLoading(true)
-    const { open: isOpen, reason: closeReason } = await arePredictionsOpen(gameId)
-    setOpen(isOpen)
-    setReason(closeReason)
-    setIsLoading(false)
+    try {
+      const { open: isOpen, reason: closeReason } = await arePredictionsOpen(gameId)
+      setOpen(isOpen)
+      setReason(closeReason)
+    } catch (err) {
+      console.error('Error checking predictions open:', err)
+    } finally {
+      setIsLoading(false)
+    }
   }, [gameId])
 
   // Initial check
