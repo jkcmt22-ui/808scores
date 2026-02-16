@@ -121,3 +121,8 @@ Tracking all bugs fixed to prevent circular fixes.
 84. `school-client.tsx` `handleFollow` and `handleToggleNotify` (lines 157-177) missing try-catch-finally — if `addFavorite`/`removeFavorite`/`toggleNotify` throws, `setFollowLoading(false)` never executes, follow button stuck in loading state forever (same pattern as bugs #70/#74/#78)
 85. `admin/beta-codes/page.tsx` bare `createClient()` (line 32) creates new Supabase client on every render — wrapped in `useMemo(() => createClient(), [])` (same pattern as bugs #43, #59, #60, #65, #67, #81)
 86. `auth-provider.tsx` bare `createClient()` (line 66) in root AuthProvider wrapping entire app — every re-render creates new variable reference, stale closure risk for auth subscriptions — wrapped in `useMemo(() => createClient(), [])`
+
+## Session 2026-02-16 (batch 24)
+87. `admin/analytics/page.tsx` `toLocaleDateString()` (line 129) missing `timeZone: 'Pacific/Honolulu'` — daily stats chart dates display in browser timezone, off by 1 day near midnight for non-Hawaii users (same pattern as bugs #71-76, #83)
+88. `use-game-stats.ts` `gameWithDetails.home_team.school_id` (lines 118-119) accessed without null guard — if team join returns null (deleted team, broken FK), crashes with TypeError on stat entry page — added null check with descriptive error
+89. `admin/raffles/page.tsx` ConfirmModal `onConfirm` callback (line 861) missing try-catch-finally — if delete action throws, `setConfirmAction(null)` never runs, modal stays open until user clicks Cancel — wrapped in try-catch-finally so modal always closes

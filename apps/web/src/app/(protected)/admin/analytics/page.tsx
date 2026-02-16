@@ -126,7 +126,7 @@ export default function AnalyticsPage() {
 
       // Format daily stats with proper date formatting
       const formattedDailyStats = (analytics.daily_stats || []).map((day: any) => ({
-        date: new Date(day.date).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' }),
+        date: new Date(day.date).toLocaleDateString('en-US', { timeZone: 'Pacific/Honolulu', weekday: 'short', month: 'short', day: 'numeric' }),
         users: day.new_users || 0,
         submissions: day.new_submissions || 0,
         games: day.new_games || 0,

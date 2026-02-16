@@ -115,6 +115,9 @@ export function useGameStats(options: UseGameStatsOptions): UseGameStatsReturn {
       // home_team and away_team objects include school data
       const homeTeamIds = [gameWithDetails.home_team_id]
       const awayTeamIds = [gameWithDetails.away_team_id]
+      if (!gameWithDetails.home_team || !gameWithDetails.away_team) {
+        throw new Error('Game team data not found')
+      }
       const homeSchoolId = gameWithDetails.home_team.school_id
       const awaySchoolId = gameWithDetails.away_team.school_id
 

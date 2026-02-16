@@ -858,7 +858,7 @@ export default function AdminRafflesPage() {
 
       <ConfirmModal
         isOpen={!!confirmAction}
-        onConfirm={async () => { await confirmAction?.action(); setConfirmAction(null) }}
+        onConfirm={async () => { try { await confirmAction?.action() } catch (err) { console.error('Confirm action failed:', err) } finally { setConfirmAction(null) } }}
         onCancel={() => setConfirmAction(null)}
         title={confirmAction?.title || ''}
         description={confirmAction?.description || ''}
