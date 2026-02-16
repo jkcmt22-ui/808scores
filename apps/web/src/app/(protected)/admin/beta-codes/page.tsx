@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { useRouter } from 'next/navigation'
 import { Plus, Copy, Check, Trash2, Loader2, Key, Users, Clock, AlertCircle } from 'lucide-react'
 import { Button } from '@/components/ui/button'
@@ -29,7 +29,7 @@ interface BetaCode {
 export default function BetaCodesPage() {
   const router = useRouter()
   const { user, profile } = useAuth()
-  const supabase = createClient()
+  const supabase = useMemo(() => createClient(), [])
   const hasAdminAccess = profile?.is_admin === true || profile?.is_super_admin === true
   const { toast } = useToast()
 

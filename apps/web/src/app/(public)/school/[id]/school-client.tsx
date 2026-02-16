@@ -161,19 +161,29 @@ export function SchoolClient({ params }: SchoolPageProps) {
     }
 
     setFollowLoading(true)
-    if (isFollowing) {
-      await removeFavorite(id)
-    } else {
-      await addFavorite(id, true)
+    try {
+      if (isFollowing) {
+        await removeFavorite(id)
+      } else {
+        await addFavorite(id, true)
+      }
+    } catch (err) {
+      console.error('Error toggling follow:', err)
+    } finally {
+      setFollowLoading(false)
     }
-    setFollowLoading(false)
   }
 
   const handleToggleNotify = async () => {
     if (!user || !isFollowing) return
     setFollowLoading(true)
-    await toggleNotify(id, !notificationsEnabled)
-    setFollowLoading(false)
+    try {
+      await toggleNotify(id, !notificationsEnabled)
+    } catch (err) {
+      console.error('Error toggling notifications:', err)
+    } finally {
+      setFollowLoading(false)
+    }
   }
 
   // Helper to determine game result for the school

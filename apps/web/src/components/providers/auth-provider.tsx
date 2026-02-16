@@ -1,6 +1,6 @@
 'use client'
 
-import { createContext, useContext, useEffect, useState, useRef, type ReactNode } from 'react'
+import { createContext, useContext, useEffect, useState, useRef, useMemo, type ReactNode } from 'react'
 import type { User as SupabaseUser } from '@supabase/supabase-js'
 import { createClient } from '@/lib/supabase/client'
 import type { User } from '@/types/database'
@@ -63,7 +63,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const subscriptionIdRef = useRef<string>('')
   const hasInitializedRef = useRef(false)
 
-  const supabase = createClient()
+  const supabase = useMemo(() => createClient(), [])
 
   // Fetch user profile with instrumentation
   const fetchProfile = async (userId: string, source: string) => {
