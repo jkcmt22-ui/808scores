@@ -39,26 +39,31 @@ export function useOfflineQueue() {
 
     isSyncingRef.current = true
     setIsSyncing(true)
-    const submissions = await getPendingSubmissions()
-    const pendingToSync = submissions.filter(s => s.status === 'pending' || s.status === 'failed')
+    try {
+      const submissions = await getPendingSubmissions()
+      const pendingToSync = submissions.filter(s => s.status === 'pending' || s.status === 'failed')
 
-    for (const submission of pendingToSync) {
-      if (submission.retryCount >= 3) {
-        console.warn('[OfflineQueue] Max retries reached for:', submission.id)
-        continue
+      for (const submission of pendingToSync) {
+        if (submission.retryCount >= 3) {
+          console.warn('[OfflineQueue] Max retries reached for:', submission.id)
+          continue
+        }
+
+        const result = await syncSubmission(submission)
+        if (result.success) {
+          console.log('[OfflineQueue] Synced submission:', submission.id)
+        } else {
+          console.error('[OfflineQueue] Failed to sync:', submission.id, result.error)
+        }
       }
 
-      const result = await syncSubmission(submission)
-      if (result.success) {
-        console.log('[OfflineQueue] Synced submission:', submission.id)
-      } else {
-        console.error('[OfflineQueue] Failed to sync:', submission.id, result.error)
-      }
+      await loadPendingSubmissions()
+    } catch (err) {
+      console.error('[OfflineQueue] Sync failed:', err)
+    } finally {
+      isSyncingRef.current = false
+      setIsSyncing(false)
     }
-
-    await loadPendingSubmissions()
-    isSyncingRef.current = false
-    setIsSyncing(false)
   }, [user, loadPendingSubmissions])
 
   // Remove a submission

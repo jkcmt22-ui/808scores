@@ -336,17 +336,24 @@ export default function TournamentsAdminPage() {
   const openTeamsModal = async (tournament: TournamentWithSport) => {
     setSelectedTournament(tournament)
     setShowTeamsModal(true)
+    setTournamentTeams([])
 
     if (!supabase) return
 
-    // Fetch tournament teams
-    const { data } = await supabase
-      .from('tournament_teams')
-      .select(`*, school:schools(*)`)
-      .eq('tournament_id', tournament.id)
-      .order('seed', { ascending: true, nullsFirst: false })
+    try {
+      // Fetch tournament teams
+      const { data, error } = await supabase
+        .from('tournament_teams')
+        .select(`*, school:schools(*)`)
+        .eq('tournament_id', tournament.id)
+        .order('seed', { ascending: true, nullsFirst: false })
 
-    if (data) setTournamentTeams(data as TournamentTeamWithSchool[])
+      if (error) throw error
+      if (data) setTournamentTeams(data as TournamentTeamWithSchool[])
+    } catch (err) {
+      console.error('Error fetching tournament teams:', err)
+      toast({ type: 'error', text: 'Failed to load tournament teams' })
+    }
   }
 
   // Add team to tournament

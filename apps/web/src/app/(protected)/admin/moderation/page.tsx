@@ -394,6 +394,7 @@ function MessageCard({
             )}
             <span>
               {new Date(message.created_at).toLocaleString('en-US', {
+                timeZone: 'Pacific/Honolulu',
                 month: 'short',
                 day: 'numeric',
                 hour: 'numeric',

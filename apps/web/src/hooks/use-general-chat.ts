@@ -61,6 +61,9 @@ export function useGeneralChat(
   // Track how many messages were fetched from DB (excludes realtime inserts)
   // so loadMore pagination offset stays correct
   const fetchedCountRef = useRef(0)
+  // Ref for reading current messages inside callbacks without adding to deps
+  const messagesRef = useRef<GeneralChatMessage[]>([])
+  messagesRef.current = messages
 
   // Fetch messages
   const fetchMessages = useCallback(async (offset = 0) => {
@@ -324,7 +327,7 @@ export function useGeneralChat(
   const toggleLike = useCallback(async (messageId: string): Promise<void> => {
     if (!user || !supabase) return
 
-    const message = messages.find(m => m.id === messageId)
+    const message = messagesRef.current.find(m => m.id === messageId)
     if (!message) return
 
     const isLiked = message.user_has_liked
@@ -367,7 +370,7 @@ export function useGeneralChat(
     } catch (err) {
       console.error('Error toggling like:', err)
     }
-  }, [supabase, user, messages])
+  }, [supabase, user])
 
   // Report message
   const reportMessage = useCallback(async (messageId: string): Promise<boolean> => {
@@ -381,9 +384,10 @@ export function useGeneralChat(
 
       if (error) {
         // If function doesn't exist, just increment report count directly
+        const currentCount = messagesRef.current.find(m => m.id === messageId)?.report_count ?? 0
         const { error: updateError } = await (supabase as any)
           .from('general_chat_messages')
-          .update({ report_count: (messages.find(m => m.id === messageId)?.report_count ?? 0) + 1 })
+          .update({ report_count: currentCount + 1 })
           .eq('id', messageId)
 
         if (updateError) {
@@ -397,7 +401,7 @@ export function useGeneralChat(
       console.error('Error reporting message:', err)
       return false
     }
-  }, [supabase, user, messages])
+  }, [supabase, user])
 
   // Delete message (soft delete by setting is_hidden)
   const deleteMessage = useCallback(async (messageId: string, isAdmin = false): Promise<boolean> => {

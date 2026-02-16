@@ -4,6 +4,10 @@ import { useEffect, useRef, useCallback, type ReactNode } from 'react'
 import { X } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
+// Module-level counter to track stacked modals.
+// Only unlock scroll when ALL modals have closed.
+let openModalCount = 0
+
 interface ModalProps {
   isOpen: boolean
   onClose: () => void
@@ -87,15 +91,18 @@ export function Modal({
     }
   }, [])
 
-  // Prevent body scroll when modal is open
+  // Prevent body scroll when modal is open (supports stacked modals)
   useEffect(() => {
     if (isOpen) {
+      openModalCount++
       document.body.style.overflow = 'hidden'
-    } else {
-      document.body.style.overflow = ''
-    }
-    return () => {
-      document.body.style.overflow = ''
+      return () => {
+        openModalCount--
+        if (openModalCount <= 0) {
+          openModalCount = 0
+          document.body.style.overflow = ''
+        }
+      }
     }
   }, [isOpen])
 
