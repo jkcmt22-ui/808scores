@@ -6,9 +6,10 @@ Sentry.init({
   // Performance Monitoring
   tracesSampleRate: 0.1, // 10% of transactions for performance monitoring
 
-  // Session Replay - capture 10% of sessions, 100% on error
-  replaysSessionSampleRate: 0.1,
-  replaysOnErrorSampleRate: 1.0,
+  // Session Replay - disabled to avoid CSP unsafe-eval violations
+  // Sentry Replay uses new Function() internally which is blocked by our CSP
+  replaysSessionSampleRate: 0,
+  replaysOnErrorSampleRate: 0,
 
   // Only enable in production
   enabled: process.env.NODE_ENV === "production",
