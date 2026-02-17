@@ -13,7 +13,7 @@ import { createClient } from '@/lib/supabase/client'
 import { useAuth } from '@/hooks'
 import { useToast } from '@/components/ui/toast'
 import { ConfirmModal } from '@/components/admin/confirm-modal'
-import { executeRaffleDrawing, getRaffleEntries, type DrawingResult, type DrawingEntry } from '@/lib/raffle/drawing'
+import { getRaffleEntries, type DrawingResult, type DrawingEntry } from '@/lib/raffle/drawing'
 import { cn } from '@/lib/utils'
 import type { RaffleWithPrize, RaffleEntryWithUser, RaffleWinnerWithDetails, Prize, RafflePrize } from '@/types/database'
 
@@ -148,14 +148,20 @@ export default function AdminRaffleDetailPage() {
 
         const fallbackPrizeId = raffle.prize_id || undefined
 
-        const result = await executeRaffleDrawing(
-          raffle.id,
-          raffle.winner_count,
-          fallbackPrizeId,
-          raffle.raffle_type as 'monthly' | 'season_end' | 'special',
-          raffleMonth,
-          prizeMap
-        )
+        // Call server-side API route (bypasses RLS, ensures full point_events access)
+        const drawRes = await fetch('/api/admin/raffle/draw', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            raffleId: raffle.id,
+            winnerCount: raffle.winner_count,
+            prizeId: fallbackPrizeId,
+            raffleType: raffle.raffle_type,
+            month: raffleMonth,
+            prizeMap,
+          }),
+        })
+        const result = await drawRes.json()
 
         if (result.success && result.winners) {
           setDrawingResults(result.winners)

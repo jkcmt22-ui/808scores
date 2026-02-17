@@ -72,7 +72,7 @@ export function useSearch(options: UseSearchOptions = {}): UseSearchReturn {
       try {
         // Sanitize search term: strip PostgREST filter syntax characters
         // to prevent filter injection via commas, parens, etc.
-        const searchTerm = debouncedQuery.toLowerCase().replace(/[,()]/g, '')
+        const searchTerm = debouncedQuery.toLowerCase().replace(/[,()%_\\]/g, '')
         const searchResults: SearchResult[] = []
 
         // Search schools

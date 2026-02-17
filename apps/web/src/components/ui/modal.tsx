@@ -93,7 +93,7 @@ export function Modal({
 
   // Prevent body scroll when modal is open (supports stacked modals)
   useEffect(() => {
-    if (isOpen) {
+    if (isOpen && typeof window !== 'undefined') {
       openModalCount++
       document.body.style.overflow = 'hidden'
       return () => {

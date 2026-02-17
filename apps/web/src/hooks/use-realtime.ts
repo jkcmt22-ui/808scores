@@ -63,8 +63,7 @@ export function useRealtimeGame(gameId: string) {
           table: 'games',
           filter: `id=eq.${gameId}`,
         },
-        (payload) => {
-          console.log('Game update received:', payload)
+        () => {
           // Refetch to get full data with relations
           fetchGame()
         }
@@ -137,8 +136,7 @@ export function useRealtimeLiveGames() {
           schema: 'public',
           table: 'games',
         },
-        (payload) => {
-          console.log('Games update received:', payload)
+        () => {
           fetchLiveGames()
         }
       )

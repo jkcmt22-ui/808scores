@@ -223,16 +223,16 @@ export function useGeneralChat(
         isSubscribedRef.current = false
       }
     }
-  }, [supabase])
+  }, [supabase, user?.id])
 
-  // Send message
+  // Send message via server-side API route (validates, rate-limits, checks bans server-side)
   const sendMessage = useCallback(async (content: string, replyToId?: string | null): Promise<boolean> => {
-    if (!user || !content.trim() || !supabase) {
+    if (!user || !content.trim()) {
       setError(new Error('Cannot send message: not logged in or empty content'))
       return false
     }
 
-    // Content filtering: profanity, spam, rate limiting, length checks
+    // Client-side validation for fast UX feedback (server validates authoritatively)
     const validation = validateMessage(content, user.id)
     if (!validation.valid) {
       setError(new Error(validation.error || 'Message not allowed'))
@@ -242,55 +242,41 @@ export function useGeneralChat(
     setIsSending(true)
 
     try {
-      // Extract mentions from content
-      const mentionRegex = /@(\w+)/g
-      const mentionMatches = content.match(mentionRegex) || []
-      const mentionedUsernames = mentionMatches.map(m => m.slice(1))
+      const res = await fetch('/api/chat/send', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          content,
+          reply_to_id: replyToId || null,
+          message_type: 'text',
+        }),
+      })
 
-      // Look up mentioned user IDs
-      let mentionedUserIds: string[] = []
-      if (mentionedUsernames.length > 0) {
-        const { data: mentionedUsers } = await supabase
-          .from('users')
-          .select('id, display_name')
-          .in('display_name', mentionedUsernames)
-
-        mentionedUserIds = (mentionedUsers as { id: string }[] || []).map(u => u.id)
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({ error: 'Failed to send message' }))
+        throw new Error(data.error || 'Failed to send message')
       }
 
-      const { error: insertError } = await (supabase as any)
-        .from('general_chat_messages')
-        .insert({
-          user_id: user.id,
-          content: content.trim(),
-          reply_to_id: replyToId || null,
-          mentions: mentionedUserIds,
-          message_type: 'text',
-        })
-
-      if (insertError) throw insertError
-
-      // Record for rate limiting
+      // Record for client-side rate limiting UX
       recordMessage(user.id)
 
       return true
     } catch (err) {
-      console.error('Error sending message:', err)
       setError(err instanceof Error ? err : new Error('Failed to send message'))
       return false
     } finally {
       setIsSending(false)
     }
-  }, [supabase, user])
+  }, [user])
 
-  // Send GIF
+  // Send GIF via server-side API route
   const sendGif = useCallback(async (gif: { id: string; url: string }, replyToId?: string | null): Promise<boolean> => {
-    if (!user || !supabase) {
+    if (!user) {
       setError(new Error('Cannot send GIF: not logged in'))
       return false
     }
 
-    // SECURITY: Validate GIF URL is from allowed domain
+    // Client-side validation for fast UX feedback
     if (!isValidGifUrl(gif.url)) {
       setError(new Error('Invalid GIF URL: only GIPHY images are allowed'))
       return false
@@ -299,29 +285,31 @@ export function useGeneralChat(
     setIsSending(true)
 
     try {
-      const { error: insertError } = await (supabase as any)
-        .from('general_chat_messages')
-        .insert({
-          user_id: user.id,
+      const res = await fetch('/api/chat/send', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
           content: '',
           reply_to_id: replyToId || null,
-          mentions: [],
           message_type: 'gif',
           gif_url: gif.url,
           gif_id: gif.id,
-        })
+        }),
+      })
 
-      if (insertError) throw insertError
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({ error: 'Failed to send GIF' }))
+        throw new Error(data.error || 'Failed to send GIF')
+      }
 
       return true
     } catch (err) {
-      console.error('Error sending GIF:', err)
       setError(err instanceof Error ? err : new Error('Failed to send GIF'))
       return false
     } finally {
       setIsSending(false)
     }
-  }, [supabase, user])
+  }, [user])
 
   // Toggle like
   const toggleLike = useCallback(async (messageId: string): Promise<void> => {

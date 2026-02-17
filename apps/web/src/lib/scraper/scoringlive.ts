@@ -178,8 +178,6 @@ export function parseSchedulePage(html: string, sportUrlPath: string): ScrapedGa
     }
   })
 
-  console.log(`Found ${dateHeaders.length} date headers`)
-
   // Process each game table
   $('table.table-condensed').each((_, tableEl) => {
     const table = $(tableEl)
@@ -300,8 +298,6 @@ export function parseSchedulePage(html: string, sportUrlPath: string): ScrapedGa
 
     // Parse the scheduled time
     const scheduledAt = parseGameDateTime(gameDate, timeStr)
-    console.log(`Game ${gameId}: date="${gameDate}" time="${timeStr}" -> ${scheduledAt.toISOString()}`)
-
     // Normalize team names
     const awayTeam = normalizeSchoolName(teams[0].name)
     const homeTeam = normalizeSchoolName(teams[1].name)
@@ -420,12 +416,9 @@ export function parseSchedulePage(html: string, sportUrlPath: string): ScrapedGa
 export async function scrapeSport(sportUrlPath: string): Promise<ScrapedGame[]> {
   const url = `${BASE_URL}/${sportUrlPath}/schedules.php`
 
-  console.log(`Scraping ${sportUrlPath} from ${url}`)
-
   try {
     const html = await fetchPage(url)
     const games = parseSchedulePage(html, sportUrlPath)
-    console.log(`Found ${games.length} games for ${sportUrlPath}`)
     return games
   } catch (error) {
     console.error(`Error scraping ${sportUrlPath}:`, error)

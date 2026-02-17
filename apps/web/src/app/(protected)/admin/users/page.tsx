@@ -96,7 +96,7 @@ export default function AdminUsersPage() {
 
       // Apply search filter
       if (debouncedSearch) {
-        const sanitized = debouncedSearch.replace(/[,()]/g, '')
+        const sanitized = debouncedSearch.replace(/[,()%_\\]/g, '')
         query = query.or(`display_name.ilike.%${sanitized}%,email.ilike.%${sanitized}%,phone.ilike.%${sanitized}%`)
       }
 

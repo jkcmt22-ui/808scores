@@ -32,8 +32,6 @@ export async function GET(request: NextRequest) {
 
     const result = Array.isArray(data) ? data[0] : data
 
-    console.log('Score promotion completed:', result)
-
     return NextResponse.json({
       success: true,
       promoted_count: result?.promoted_count ?? 0,

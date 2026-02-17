@@ -9,6 +9,22 @@
  */
 
 import { createClient } from '@/lib/supabase/client'
+import type { SupabaseClient } from '@supabase/supabase-js'
+
+/**
+ * Unbiased random integer in [0, max) using rejection sampling.
+ * Avoids modulo bias from crypto.getRandomValues().
+ */
+function unbiasedRandomInt(max: number): number {
+  const limit = Math.floor(0x100000000 / max) * max
+  const buf = new Uint32Array(1)
+  let value: number
+  do {
+    crypto.getRandomValues(buf)
+    value = buf[0]
+  } while (value >= limit)
+  return value % max
+}
 
 export type RaffleType = 'monthly' | 'season_end' | 'special'
 
@@ -57,10 +73,7 @@ export function performDrawing(
   // Shuffle using Fisher-Yates algorithm with crypto-random
   const shuffled = [...ticketPool]
   for (let i = shuffled.length - 1; i > 0; i--) {
-    // Use crypto.getRandomValues for better randomness
-    const randomBuffer = new Uint32Array(1)
-    crypto.getRandomValues(randomBuffer)
-    const j = randomBuffer[0] % (i + 1);
+    const j = unbiasedRandomInt(i + 1);
     [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]]
   }
 
@@ -101,27 +114,28 @@ export function performDrawing(
 export async function getRaffleEntries(
   raffleId: string,
   raffleType: RaffleType = 'monthly',
-  month?: string // Format: '2024-01' for monthly raffles
+  month?: string, // Format: '2024-01' for monthly raffles
+  client?: SupabaseClient
 ): Promise<DrawingEntry[]> {
-  const supabase = createClient()
+  const supabase = client || createClient()
   if (!supabase) {
     return []
   }
 
   if (raffleType === 'season_end' || raffleType === 'special') {
     // For season-end/special raffles, use total season points
-    return getSeasonPointEntries()
+    return getSeasonPointEntries(supabase)
   } else {
     // For monthly raffles, use points earned that month
-    return getMonthlyPointEntries(month)
+    return getMonthlyPointEntries(month, supabase)
   }
 }
 
 /**
  * Get entries based on total season points (for season-end raffles)
  */
-async function getSeasonPointEntries(): Promise<DrawingEntry[]> {
-  const supabase = createClient()
+async function getSeasonPointEntries(client?: SupabaseClient): Promise<DrawingEntry[]> {
+  const supabase = client || createClient()
   if (!supabase) return []
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -155,8 +169,8 @@ async function getSeasonPointEntries(): Promise<DrawingEntry[]> {
  * Get entries based on points earned in a specific month
  * Points come from: predictions + chat engagement
  */
-async function getMonthlyPointEntries(month?: string): Promise<DrawingEntry[]> {
-  const supabase = createClient()
+async function getMonthlyPointEntries(month?: string, client?: SupabaseClient): Promise<DrawingEntry[]> {
+  const supabase = client || createClient()
   if (!supabase) return []
 
   // Determine the month range
@@ -195,59 +209,31 @@ async function getMonthlyPointEntries(month?: string): Promise<DrawingEntry[]> {
     endDate = new Date(`${nextYear}-${String(nextMonth).padStart(2, '0')}-01T00:00:00-10:00`)
   }
 
-  // Get points from point_events table (centralized ledger since migration 056)
+  // Use server-side RPC to aggregate points (avoids 1000-row default limit)
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { data, error } = await (supabase as any)
-    .from('point_events')
-    .select(`
-      user_id,
-      points,
-      user:users(id, display_name, avatar_url)
-    `)
-    .gte('created_at', startDate.toISOString())
-    .lt('created_at', endDate.toISOString())
+  const { data, error } = await (supabase as any).rpc('get_raffle_eligible_users', {
+    p_start: startDate.toISOString(),
+    p_end: endDate.toISOString(),
+  })
 
   if (error) {
-    console.error('Error fetching monthly point entries:', error)
-    // Fall back to season points if point_events query fails
-    return getSeasonPointEntries()
+    // Fall back to season points if RPC fails
+    return getSeasonPointEntries(supabase)
   }
 
-  // Aggregate points per user
-  const userPoints = new Map<string, {
-    displayName: string
-    avatarUrl: string | null
-    points: number
-  }>()
-
-  interface RawLog {
+  interface RpcRow {
     user_id: string
-    points: number
-    user: { id: string; display_name: string | null; avatar_url: string | null } | null
+    display_name: string | null
+    avatar_url: string | null
+    total_points: number
   }
 
-  for (const log of (data || []) as RawLog[]) {
-    const existing = userPoints.get(log.user_id)
-    if (existing) {
-      existing.points += log.points
-    } else {
-      userPoints.set(log.user_id, {
-        displayName: log.user?.display_name || 'User',
-        avatarUrl: log.user?.avatar_url || null,
-        points: log.points,
-      })
-    }
-  }
-
-  return Array.from(userPoints.entries())
-    .filter(([, data]) => data.points > 0)
-    .map(([userId, data]) => ({
-      userId,
-      displayName: data.displayName,
-      entryCount: data.points,
-      avatarUrl: data.avatarUrl,
-    }))
-    .sort((a, b) => b.entryCount - a.entryCount)
+  return ((data || []) as RpcRow[]).map((row) => ({
+    userId: row.user_id,
+    displayName: row.display_name || 'User',
+    entryCount: row.total_points,
+    avatarUrl: row.avatar_url,
+  }))
 }
 
 /**
@@ -272,15 +258,16 @@ export async function executeRaffleDrawing(
   prizeId?: string,
   raffleType: RaffleType = 'monthly',
   month?: string,
-  prizeMap?: Record<number, string | null>
+  prizeMap?: Record<number, string | null>,
+  client?: SupabaseClient
 ): Promise<{ success: boolean; winners?: DrawingResult[]; error?: string }> {
-  const supabase = createClient()
+  const supabase = client || createClient()
   if (!supabase) {
     return { success: false, error: 'Supabase client not available' }
   }
 
   // Get automatic entries based on points
-  const entries = await getRaffleEntries(raffleId, raffleType, month)
+  const entries = await getRaffleEntries(raffleId, raffleType, month, supabase)
   if (entries.length === 0) {
     return { success: false, error: 'No eligible users found (no one has earned points)' }
   }

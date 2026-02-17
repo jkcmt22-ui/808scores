@@ -1,5 +1,6 @@
 import { createClient } from '@/lib/supabase/server'
 import { NextRequest, NextResponse } from 'next/server'
+import { isScoreReasonable } from '@/lib/verification/engine'
 
 interface SubmitScoreRequest {
   submission_type: 'period_score' | 'final_score' | 'live_update'
@@ -27,6 +28,7 @@ interface GameRow {
   is_verified: boolean
   official_submission_id: string | null
   golden_game: boolean
+  sport?: { code: string } | null
 }
 
 interface SubmissionRow {
@@ -49,6 +51,13 @@ export async function POST(
 
     if (!user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
+
+    // 1b. Check if user is banned
+    const { data: permData } = await supabase.rpc('get_user_permissions', { p_user_id: user.id } as never)
+    const perms = (Array.isArray(permData) ? permData[0] : permData) as { is_banned?: boolean } | null
+    if (perms?.is_banned) {
+      return NextResponse.json({ error: 'Account suspended' }, { status: 403 })
     }
 
     // 2. Parse request body
@@ -85,6 +94,14 @@ export async function POST(
     if (home_score < 0 || away_score < 0) {
       return NextResponse.json(
         { error: 'Invalid scores', message: 'Scores cannot be negative' },
+        { status: 400 }
+      )
+    }
+
+    // Hard cap — no sport has scores above 999
+    if (home_score > 999 || away_score > 999) {
+      return NextResponse.json(
+        { error: 'Invalid scores', message: 'Scores exceed maximum allowed value' },
         { status: 400 }
       )
     }
@@ -139,7 +156,7 @@ export async function POST(
     // 6. Get current game state
     const { data: game, error: gameError } = await supabase
       .from('games')
-      .select('id, home_score, away_score, status, is_verified, official_submission_id, golden_game')
+      .select('id, home_score, away_score, status, is_verified, official_submission_id, golden_game, sport:sports(code)')
       .eq('id', gameId)
       .single()
 
@@ -156,6 +173,15 @@ export async function POST(
     if (!['scheduled', 'in_progress'].includes(gameData.status)) {
       return NextResponse.json(
         { error: 'Game not active', message: 'Scores can only be submitted for active games' },
+        { status: 400 }
+      )
+    }
+
+    // 6c. Sport-specific score validation
+    const sportCode = gameData.sport?.code
+    if (sportCode && !isScoreReasonable(home_score, away_score, sportCode)) {
+      return NextResponse.json(
+        { error: 'Invalid scores', message: 'Scores are outside the reasonable range for this sport' },
         { status: 400 }
       )
     }

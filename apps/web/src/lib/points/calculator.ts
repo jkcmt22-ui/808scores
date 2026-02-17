@@ -7,6 +7,21 @@
 
 import type { Submission, User, Game } from '@/types/database'
 
+/**
+ * Unbiased random integer in [0, max) using rejection sampling.
+ * Avoids modulo bias from crypto.getRandomValues().
+ */
+function unbiasedRandomInt(max: number): number {
+  const limit = Math.floor(0x100000000 / max) * max
+  const buf = new Uint32Array(1)
+  let value: number
+  do {
+    crypto.getRandomValues(buf)
+    value = buf[0]
+  } while (value >= limit)
+  return value % max
+}
+
 export interface PointsBreakdown {
   base: number
   firstToReport: number
@@ -221,9 +236,7 @@ export function selectGoldenGames(gameIds: string[], percentage: number = 0.05):
   // Fisher-Yates shuffle with crypto-secure randomness
   const shuffled = [...gameIds]
   for (let i = shuffled.length - 1; i > 0; i--) {
-    const randomBuffer = new Uint32Array(1)
-    crypto.getRandomValues(randomBuffer)
-    const j = randomBuffer[0] % (i + 1);
+    const j = unbiasedRandomInt(i + 1);
     [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]]
   }
   return shuffled.slice(0, count)

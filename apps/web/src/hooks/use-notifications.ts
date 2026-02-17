@@ -58,6 +58,16 @@ export function useNotifications(userId: string | undefined) {
     }
   }, [supabase, userId])
 
+  // Reset fetch/subscribe state when user changes so the new user gets fresh data
+  const prevUserIdRef = useRef(userId)
+  useEffect(() => {
+    if (prevUserIdRef.current !== userId) {
+      prevUserIdRef.current = userId
+      hasFetchedRef.current = false
+      setNotifications([])
+    }
+  }, [userId])
+
   useEffect(() => {
     // Prevent double-fetch on mount (React StrictMode)
     if (hasFetchedRef.current) return

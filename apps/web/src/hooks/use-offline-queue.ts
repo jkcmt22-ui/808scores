@@ -50,9 +50,7 @@ export function useOfflineQueue() {
         }
 
         const result = await syncSubmission(submission)
-        if (result.success) {
-          console.log('[OfflineQueue] Synced submission:', submission.id)
-        } else {
+        if (!result.success) {
           console.error('[OfflineQueue] Failed to sync:', submission.id, result.error)
         }
       }
@@ -95,7 +93,6 @@ export function useOfflineQueue() {
         loadPendingSubmissions()
       } else if (event.data?.type === 'SYNC_SUBMISSIONS') {
         // Service worker is requesting us to sync
-        console.log('[OfflineQueue] Service worker requested sync')
         syncAll()
       }
     }

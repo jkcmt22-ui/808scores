@@ -85,7 +85,7 @@ export async function updateSession(request: NextRequest) {
   const isAdminPath = path.startsWith('/admin')
 
   // Single database query for user permissions (consolidates 2 queries into 1)
-  let userData: { has_beta_access: boolean; is_admin: boolean; is_super_admin: boolean } | null = null
+  let userData: { has_beta_access: boolean; is_admin: boolean; is_super_admin: boolean; is_banned: boolean } | null = null
 
   if (user && (!isPublicPath || isAdminPath || path === '/beta-landing')) {
     const { data, error } = await supabase
@@ -93,8 +93,16 @@ export async function updateSession(request: NextRequest) {
 
     if (!error && data) {
       // Handle both array and object responses
-      userData = (Array.isArray(data) ? data[0] : data) as { has_beta_access: boolean; is_admin: boolean; is_super_admin: boolean }
+      userData = (Array.isArray(data) ? data[0] : data) as { has_beta_access: boolean; is_admin: boolean; is_super_admin: boolean; is_banned: boolean }
     }
+  }
+
+  // Block banned users from all non-public pages
+  if (userData?.is_banned && !isPublicPath) {
+    const url = request.nextUrl.clone()
+    url.pathname = '/beta-landing'
+    url.searchParams.set('reason', 'banned')
+    return NextResponse.redirect(url)
   }
 
   // Redirect authenticated users AWAY from beta-landing to main app

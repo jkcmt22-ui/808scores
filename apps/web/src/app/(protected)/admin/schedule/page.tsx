@@ -310,7 +310,6 @@ export default function ScheduleAdminPage() {
     if (teamsError) {
       console.error('Error fetching teams:', teamsError)
     } else if (teamsData) {
-      console.log('Fetched teams count:', teamsData.length)
       setTeams(teamsData as TeamWithSchool[])
     }
   }, [supabase])
@@ -502,8 +501,6 @@ export default function ScheduleAdminPage() {
         tournament_id: formData.tournament_id || null,
         tournament_round: formData.tournament_round || null,
       }
-      console.log('Inserting game with data:', insertData, 'from Hawaii time:', formData.scheduled_at)
-
       const { error } = await supabase
         .from('games')
         .insert(insertData as never)

@@ -143,9 +143,6 @@ function LoginForm() {
         },
       })
 
-      // Log the full response for debugging
-      console.log('OTP Response:', { data, error: signInError, phone: cleanPhone })
-
       if (signInError) {
         console.error('OTP Error details:', {
           message: signInError.message,

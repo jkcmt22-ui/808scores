@@ -314,7 +314,6 @@ export default function SchoolsAdminPage() {
 
       // Only update state if this is still the active request (prevents stale data)
       if (loadingTeamsForSchoolIdRef.current !== requestId) {
-        console.log('Race condition avoided: skipping stale teams response')
         return
       }
 
@@ -355,7 +354,6 @@ export default function SchoolsAdminPage() {
       console.error('Error creating team:', error)
       toast({ type: 'error', text: `Failed to create team: ${error.message}` })
     } else {
-      console.log('Created team:', data)
       toast({ type: 'success', text: 'Team created' })
       // Refresh teams
       openTeamManagement(managingTeamsFor)
@@ -440,7 +438,6 @@ export default function SchoolsAdminPage() {
       console.error('Error creating teams:', error)
       toast({ type: 'error', text: `Failed to create teams: ${error.message}` })
     } else {
-      console.log('Created teams:', data)
       toast({ type: 'success', text: `Created ${data?.length || teamsToCreate.length} teams` })
       openTeamManagement(managingTeamsFor)
     }

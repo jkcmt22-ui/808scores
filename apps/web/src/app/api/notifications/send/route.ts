@@ -211,7 +211,6 @@ export async function POST(request: NextRequest) {
 
     // Get all push subscriptions from Supabase
     if (!SUPABASE_SERVICE_KEY) {
-      console.log('No service role key - skipping push notifications')
       return NextResponse.json({
         success: true,
         message: 'Service role key not configured',
@@ -298,7 +297,6 @@ export async function POST(request: NextRequest) {
           }
 
           subscriptions = (userSubs || []) as PushSubscription[]
-          console.log(`${isRegularSeason ? 'Regular season' : 'Playoff'} notification: ${subscriptions.length} subscribers for teams ${homeTeamId}, ${awayTeamId}`)
         }
       }
     } else {
