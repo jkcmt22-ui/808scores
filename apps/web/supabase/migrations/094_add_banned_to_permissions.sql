@@ -1,30 +1,19 @@
 -- ============================================
--- MIGRATION 094: Add is_banned to permissions function
--- Allows middleware to check ban status in a single RPC
+-- MIGRATION 094: Add is_user_banned() function
+-- Separate function because get_user_permissions() signature
+-- can't be altered (RLS policies depend on it)
 -- ============================================
 
-CREATE OR REPLACE FUNCTION get_user_permissions(p_user_id UUID)
-RETURNS TABLE(
-  has_beta_access BOOLEAN,
-  is_admin BOOLEAN,
-  is_super_admin BOOLEAN,
-  is_trusted_reporter BOOLEAN,
-  is_banned BOOLEAN
-)
+CREATE OR REPLACE FUNCTION is_user_banned(p_user_id UUID)
+RETURNS BOOLEAN
 LANGUAGE SQL
 STABLE
 SECURITY DEFINER
 SET search_path = public
 AS $$
-  SELECT
-    has_beta_access,
-    is_admin,
-    is_super_admin,
-    is_trusted_reporter,
-    is_banned
+  SELECT COALESCE(is_banned, false)
   FROM users
   WHERE id = p_user_id;
 $$;
 
--- Grant remains the same
-GRANT EXECUTE ON FUNCTION get_user_permissions(UUID) TO authenticated;
+GRANT EXECUTE ON FUNCTION is_user_banned(UUID) TO authenticated;

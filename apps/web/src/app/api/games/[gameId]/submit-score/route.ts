@@ -54,9 +54,8 @@ export async function POST(
     }
 
     // 1b. Check if user is banned
-    const { data: permData } = await supabase.rpc('get_user_permissions', { p_user_id: user.id } as never)
-    const perms = (Array.isArray(permData) ? permData[0] : permData) as { is_banned?: boolean } | null
-    if (perms?.is_banned) {
+    const { data: isBanned } = await supabase.rpc('is_user_banned', { p_user_id: user.id } as never)
+    if (isBanned) {
       return NextResponse.json({ error: 'Account suspended' }, { status: 403 })
     }
 
